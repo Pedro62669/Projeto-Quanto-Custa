@@ -1,0 +1,21 @@
+# Dependências (cada projeto tem as suas; ver também backend/.gitignore e
+# frontend/.gitignore, que o git aplica em cascata)
+/node_modules
+
+# Segredos — NUNCA versionar.
+# Os arquivos .env carregam senha de banco e credenciais de admin.
+# Use os .env.example como referência.
+.env
+.env.*
+!.env.example
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+/.idea
+/.vscode
+/.zed
+
+# Logs
+*.log
+npm-debug.log*

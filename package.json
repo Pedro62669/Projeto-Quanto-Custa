@@ -1,0 +1,30 @@
+{
+  "name": "quantocusta",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Orçamento e precificação de embalagens sob medida — runner dos dois projetos",
+  "//": "Este package.json NÃO é uma aplicação: é o atalho que sobe backend e frontend juntos. O código do frontend vive em frontend/, o do backend em backend/.",
+  "scripts": {
+    "predev": "node scripts/preflight.mjs",
+    "dev": "concurrently --names \"api,web\" --prefix-colors \"magenta,cyan\" --kill-others \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "cd backend && php artisan serve --port=8000",
+    "dev:web": "npm --prefix frontend run dev",
+
+    "build": "npm --prefix frontend run build",
+
+    "test": "npm run test:api && npm run test:web",
+    "test:api": "cd backend && php artisan test",
+    "test:web": "npm --prefix frontend run verify",
+    "test:e2e": "npm --prefix frontend run test:e2e",
+
+    "lint": "cd backend && ./vendor/bin/pint --test app/ database/ routes/ tests/ config/",
+    "format": "cd backend && ./vendor/bin/pint app/ database/ routes/ tests/ config/",
+
+    "fixtures": "cd backend && php artisan pricing:export-fixtures",
+
+    "setup": "npm --prefix frontend install && cd backend && composer install && php artisan migrate --seed --seeder=InitialDataSeeder"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
+  }
+}

@@ -1,0 +1,1150 @@
+{
+    "engine_version": "1.0.0",
+    "generated_at": "2026-07-30T18:16:29+00:00",
+    "cases": [
+        {
+            "name": "rsc-padrao",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.4811,
+                "unit_price": 5.8254,
+                "total_cost": 448.11,
+                "total_price": 582.54,
+                "profit_amount": 134.43,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modo-margin",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "margin"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.4811,
+                "unit_price": 6.4016,
+                "total_cost": 448.11,
+                "total_price": 640.16,
+                "profit_amount": 192.05,
+                "tax_amount": 0,
+                "effective_margin_percent": 30
+            }
+        },
+        {
+            "name": "margem-zero",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 0,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.4811,
+                "unit_price": 4.4811,
+                "total_cost": 448.11,
+                "total_price": 448.11,
+                "profit_amount": 0,
+                "tax_amount": 0,
+                "effective_margin_percent": 0
+            }
+        },
+        {
+            "name": "margem-alta-markup",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 250,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.4811,
+                "unit_price": 15.6838,
+                "total_cost": 448.11,
+                "total_price": 1568.38,
+                "profit_amount": 1120.27,
+                "tax_amount": 0,
+                "effective_margin_percent": 71.43
+            }
+        },
+        {
+            "name": "margem-99-margin",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 99,
+                "pricing_mode": "margin"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.4811,
+                "unit_price": 448.1087,
+                "total_cost": 448.11,
+                "total_price": 44810.87,
+                "profit_amount": 44362.76,
+                "tax_amount": 0,
+                "effective_margin_percent": 99
+            }
+        },
+        {
+            "name": "sem-desperdicio",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 0,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 32.725,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.0472,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.3764,
+                "unit_price": 5.6893,
+                "total_cost": 437.64,
+                "total_price": 568.93,
+                "profit_amount": 131.29,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "desperdicio-alto",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 45.5,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 47.614875,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.5237,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.8528,
+                "unit_price": 6.3087,
+                "total_cost": 485.28,
+                "total_price": 630.87,
+                "profit_amount": 145.59,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "com-rateio",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 12,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0.5377,
+                "unit_cost": 5.0188,
+                "unit_price": 6.5245,
+                "total_cost": 501.88,
+                "total_price": 652.45,
+                "profit_amount": 150.57,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "com-imposto",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 8
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.4811,
+                "unit_price": 6.332,
+                "total_cost": 448.11,
+                "total_price": 633.2,
+                "profit_amount": 134.43,
+                "tax_amount": 50.66,
+                "effective_margin_percent": 21.23
+            }
+        },
+        {
+            "name": "rateio-e-imposto",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 12,
+                "tax_percent": 8
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0.5377,
+                "unit_cost": 5.0188,
+                "unit_price": 7.0918,
+                "total_cost": 501.88,
+                "total_price": 709.18,
+                "profit_amount": 150.57,
+                "tax_amount": 56.73,
+                "effective_margin_percent": 21.23
+            }
+        },
+        {
+            "name": "material-por-quilo",
+            "material": {
+                "cost_per_m2": 2.55,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 0.9179,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.2471,
+                "unit_price": 5.5212,
+                "total_cost": 424.71,
+                "total_price": 552.12,
+                "profit_amount": 127.41,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "material-espesso",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 7
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.350532,
+                "area_m2_total": 38.55852,
+                "blank_width_mm": 963,
+                "blank_height_mm": 364,
+                "material_cost": 1.2339,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.563,
+                "unit_price": 5.932,
+                "total_cost": 456.3,
+                "total_price": 593.2,
+                "profit_amount": 136.9,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "caixa-minima",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 10,
+                "height_mm": 10,
+                "depth_mm": 10,
+                "quantity": 1,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.0015,
+                "area_m2_total": 0.00165,
+                "blank_width_mm": 75,
+                "blank_height_mm": 20,
+                "material_cost": 0.0053,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.3344,
+                "unit_price": 4.3348,
+                "total_cost": 3.33,
+                "total_price": 4.33,
+                "profit_amount": 1,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.09
+            }
+        },
+        {
+            "name": "caixa-maxima",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 3000,
+                "height_mm": 3000,
+                "depth_mm": 3000,
+                "quantity": 1,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 72.21,
+                "area_m2_total": 79.431,
+                "blank_width_mm": 12035,
+                "blank_height_mm": 6000,
+                "material_cost": 254.1792,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 257.5084,
+                "unit_price": 334.7609,
+                "total_cost": 257.51,
+                "total_price": 334.76,
+                "profit_amount": 77.25,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "dimensoes-fracionadas",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 237.5,
+                "height_mm": 118.3,
+                "depth_mm": 91.7,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.145614,
+                "area_m2_total": 16.01754,
+                "blank_width_mm": 693.4,
+                "blank_height_mm": 210,
+                "material_cost": 0.5126,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.8417,
+                "unit_price": 4.9942,
+                "total_cost": 384.17,
+                "total_price": 499.42,
+                "profit_amount": 115.25,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "quantidade-alta",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 1000000,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 359975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.4811,
+                "unit_price": 5.8254,
+                "total_cost": 4481100,
+                "total_price": 5825400,
+                "profit_amount": 1344300,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tempo-zero",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 0,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 0,
+                "machine_cost": 0,
+                "energy_cost": 0,
+                "overhead_cost": 0,
+                "unit_cost": 1.1519,
+                "unit_price": 1.4975,
+                "total_cost": 115.19,
+                "total_price": 149.75,
+                "profit_amount": 34.56,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tudo-combinado",
+            "material": {
+                "cost_per_m2": 4.32,
+                "thickness_mm": 0.6
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 12,
+                "tax_percent": 8
+            },
+            "spec": {
+                "box_model": "tray",
+                "width_mm": 412.7,
+                "height_mm": 233.1,
+                "depth_mm": 187.9,
+                "quantity": 7500,
+                "waste_percent": 17.5,
+                "production_minutes_per_unit": 4.25,
+                "profit_margin_percent": 42,
+                "pricing_mode": "margin"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.783747,
+                "area_m2_total": 6906.773424,
+                "blank_width_mm": 880.1,
+                "blank_height_mm": 890.52,
+                "material_cost": 3.9783,
+                "labor_cost": 1.9833,
+                "machine_cost": 3.1875,
+                "energy_cost": 0.4888,
+                "overhead_cost": 1.1565,
+                "unit_cost": 10.7944,
+                "unit_price": 21.5889,
+                "total_cost": 80958,
+                "total_price": 161916.75,
+                "profit_amount": 68005.41,
+                "tax_amount": 12953.34,
+                "effective_margin_percent": 42
+            }
+        },
+        {
+            "name": "modelo-rsc",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.32725,
+                "area_m2_total": 35.9975,
+                "blank_width_mm": 935,
+                "blank_height_mm": 350,
+                "material_cost": 1.1519,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.4811,
+                "unit_price": 5.8254,
+                "total_cost": 448.11,
+                "total_price": 582.54,
+                "profit_amount": 134.43,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-rsc-espesso",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 3
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "rsc",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.337132,
+                "area_m2_total": 37.08452,
+                "blank_width_mm": 947,
+                "blank_height_mm": 356,
+                "material_cost": 1.1867,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.5159,
+                "unit_price": 5.8706,
+                "total_cost": 451.59,
+                "total_price": 587.06,
+                "profit_amount": 135.47,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-tray",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tray",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.515536,
+                "area_m2_total": 56.70896,
+                "blank_width_mm": 700,
+                "blank_height_mm": 736.48,
+                "material_cost": 1.8147,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.1439,
+                "unit_price": 6.687,
+                "total_cost": 514.39,
+                "total_price": 668.7,
+                "profit_amount": 154.31,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-tray-espesso",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 3
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tray",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.527536,
+                "area_m2_total": 58.02896,
+                "blank_width_mm": 706,
+                "blank_height_mm": 747.22,
+                "material_cost": 1.8569,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.1861,
+                "unit_price": 6.7419,
+                "total_cost": 518.61,
+                "total_price": 674.19,
+                "profit_amount": 155.58,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-sleeve",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "sleeve",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.187,
+                "area_m2_total": 20.57,
+                "blank_width_mm": 935,
+                "blank_height_mm": 200,
+                "material_cost": 0.6582,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.9874,
+                "unit_price": 5.1836,
+                "total_cost": 398.74,
+                "total_price": 518.36,
+                "profit_amount": 119.62,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-sleeve-espesso",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 3
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "sleeve",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.1894,
+                "area_m2_total": 20.834,
+                "blank_width_mm": 947,
+                "blank_height_mm": 200,
+                "material_cost": 0.6667,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.9959,
+                "unit_price": 5.1946,
+                "total_cost": 399.59,
+                "total_price": 519.46,
+                "profit_amount": 119.87,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-pouch",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "pouch",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.1824,
+                "area_m2_total": 20.064,
+                "blank_width_mm": 320,
+                "blank_height_mm": 570,
+                "material_cost": 0.642,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.9712,
+                "unit_price": 5.1626,
+                "total_cost": 397.12,
+                "total_price": 516.26,
+                "profit_amount": 119.14,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-pouch-espesso",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 3
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "pouch",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup"
+            },
+            "expected": {
+                "area_m2_per_unit": 0.1824,
+                "area_m2_total": 20.064,
+                "blank_width_mm": 320,
+                "blank_height_mm": 570,
+                "material_cost": 0.642,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.9712,
+                "unit_price": 5.1626,
+                "total_cost": 397.12,
+                "total_price": 516.26,
+                "profit_amount": 119.14,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        }
+    ]
+}
