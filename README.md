@@ -30,7 +30,7 @@ backend/
     Policies/QuotePolicy.php
   config/cors.php              origens permitidas via FRONTEND_URL
   database/migrations/ seeders/ factories/
-  tests/                       51 testes
+  tests/                       67 testes
 
 frontend/
   lib/pricing/
@@ -61,7 +61,7 @@ especificação —, então não há caminho pelo qual o navegador defina o pre�
 (coberto por teste: `o_preco_enviado_pelo_cliente_e_ignorado`).
 
 O risco da duplicação é os dois divergirem em silêncio. Fechado por
-`npm run test:parity`: 26 cenários gerados pelo PHP, 416 campos comparados com
+`npm run test:parity`: 39 cenários gerados pelo PHP, 741 campos comparados com
 **tolerância zero**. Alterou uma fórmula? Rode
 `php artisan pricing:export-fixtures` e o teste acusa qualquer divergência.
 
@@ -69,6 +69,21 @@ O risco da duplicação é os dois divergirem em silêncio. Fechado por
 colagem e de fechamento que se sobrepõem. `BlankCalculator` usa a planificação
 real de cada modelo. Somar as 6 faces subestima o consumo num RSC em 15–30% —
 o suficiente para o orçamento sair no prejuízo.
+
+**Cinco modelos, cinco planificações.** Caixa americana (RSC), caixa com
+tampa, luva, saco e tubo cilíndrico — cada um com sua fórmula de blank em
+`BlankCalculator`. O tubo reaproveita `width_mm` como diâmetro e ignora a
+profundidade: num cilindro as duas SÃO a mesma medida, então a caixa
+envolvente continua verdadeira e nenhuma coluna nova é necessária. Seu corpo é
+planificado pela circunferência da linha média (π×(D+espessura)), porque
+enrolar uma chapa faz a face externa percorrer caminho maior que a interna.
+
+**Tampa: sugerida, não imposta.** Bandeja e tubo têm tampa como peça separada.
+As medidas nascem derivadas da base e podem ser digitadas eixo a eixo — fixar
+só a altura deixa o resto acompanhando a caixa. O `null` significa "automático",
+e é persistido como tal para que reabrir o orçamento reproduza a mesma peça. A
+tampa informada entra no **plano de corte**, não só no desenho: caso contrário
+uma tampa mais alta sairia de graça.
 
 **Orçamento é documento, não consulta.** Os valores são colunas materializadas
 e `pricing_snapshot` guarda os parâmetros vigentes na emissão. Reajustar o
@@ -94,7 +109,7 @@ projetos, com um `package.json` que serve só de atalho:
 
 ```bash
 npm run dev          # sobe API (:8000) e frontend (:3000) juntos
-npm test             # 51 testes PHP + tipos, lint, paridade e build do front
+npm test             # 67 testes PHP + tipos, lint, paridade e build do front
 npm run test:e2e     # navegador real (exige os servidores no ar)
                      # credenciais: E2E_EMAIL / E2E_PASSWORD
 npm run lint         # Pint
@@ -165,7 +180,7 @@ npm run dev     # → http://localhost:3000
 ## Verificação
 
 ```bash
-# Backend — 51 testes
+# Backend — 67 testes
 cd backend
 php artisan test
 ./vendor/bin/pint --test app/ database/ routes/ tests/ config/
