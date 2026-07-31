@@ -103,7 +103,13 @@ export function BoxViewer({
             // Trava abaixo do horizonte: olhar a caixa "por baixo do chão"
             // não informa nada e desorienta o usuário.
             maxPolarAngle={Math.PI / 2.05}
-            target={[0, 0.6, 0]}
+            /**
+             * Ponto focal mais alto quando há tampa: a vista explodida
+             * empilha base + vão + tampa, e mirar na altura da base sozinha
+             * jogaria o conjunto para o topo do quadro, deixando o terço
+             * inferior vazio.
+             */
+            target={[0, boxProps.boxModel === "tray" ? 1.05 : 0.6, 0]}
           />
         </Suspense>
       </Canvas>

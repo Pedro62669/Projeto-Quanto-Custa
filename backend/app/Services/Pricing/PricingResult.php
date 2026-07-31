@@ -20,6 +20,11 @@ final readonly class PricingResult
         public float $blankWidthMm,
         public float $blankHeightMm,
 
+        // Tampa: null nos modelos que não têm peça separada.
+        public ?float $lidWidthMm,
+        public ?float $lidDepthMm,
+        public ?float $lidHeightMm,
+
         // Custos unitários (R$)
         public float $materialCost,
         public float $laborCost,
@@ -39,7 +44,7 @@ final readonly class PricingResult
         public float $effectiveMarginPercent,
     ) {}
 
-    /** @return array<string, float> */
+    /** @return array<string, float|null> */
     public function toArray(): array
     {
         return [
@@ -47,6 +52,9 @@ final readonly class PricingResult
             'area_m2_total' => $this->areaM2Total,
             'blank_width_mm' => $this->blankWidthMm,
             'blank_height_mm' => $this->blankHeightMm,
+            'lid_width_mm' => $this->lidWidthMm,
+            'lid_depth_mm' => $this->lidDepthMm,
+            'lid_height_mm' => $this->lidHeightMm,
             'material_cost' => $this->materialCost,
             'labor_cost' => $this->laborCost,
             'machine_cost' => $this->machineCost,

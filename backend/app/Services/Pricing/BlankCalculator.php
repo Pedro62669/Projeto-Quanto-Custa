@@ -106,6 +106,40 @@ final class BlankCalculator
     }
 
     /**
+     * Dimensões FÍSICAS da tampa (não do plano de corte), em milímetros.
+     *
+     * Existe separado de blankDimensions() porque atende outra pergunta: o
+     * blank responde "quanto material comprar", isto responde "que tamanho
+     * tem a peça". A UI mostra estas medidas ao usuário e o renderizador 3D
+     * as usa para desenhar a tampa — ambos a partir desta única definição,
+     * em vez de repetirem as constantes de folga e altura.
+     *
+     * Devolve null para modelos que não têm tampa separada.
+     *
+     * @return array{width: float, depth: float, height: float}|null
+     */
+    public function lidDimensions(
+        BoxModel $model,
+        float $widthMm,
+        float $heightMm,
+        float $depthMm,
+    ): ?array {
+        if ($model !== BoxModel::Tray) {
+            return null;
+        }
+
+        $t = $this->thicknessMm;
+
+        return [
+            // A tampa encaixa POR FORA da base: precisa vencer a folga de
+            // encaixe e ainda a espessura das paredes dela própria.
+            'width' => $widthMm + 2 * self::LID_CLEARANCE_MM + 2 * $t,
+            'depth' => $depthMm + 2 * self::LID_CLEARANCE_MM + 2 * $t,
+            'height' => $heightMm * self::LID_HEIGHT_RATIO,
+        ];
+    }
+
+    /**
      * Bandeja = base (com paredes dobradas para cima) + tampa telescópica.
      *
      * Como são duas peças, devolvemos um retângulo equivalente cuja ÁREA

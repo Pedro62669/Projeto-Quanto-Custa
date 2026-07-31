@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { Edges, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import type { BoxModel } from "@/lib/pricing/types";
+import { lidDimensions } from "@/lib/pricing/engine";
 
 /**
  * Escala da cena: a MAIOR aresta da embalagem sempre ocupa este número de
@@ -24,6 +25,15 @@ const LERP_SPEED = 8;
  * continue LEGÍVEL como caixa oca, mesmo com materiais finíssimos.
  */
 const MIN_WALL_UNITS = 0.022;
+
+/**
+ * Distância entre a base e a tampa, em fração da altura da base.
+ *
+ * A tampa é desenhada FLUTUANDO acima — vista explodida. Encaixada, ela
+ * esconderia o interior da caixa e o usuário perderia justamente o que a
+ * renderização oca veio mostrar. Separada, comunica que são duas peças.
+ */
+const LID_GAP_RATIO = 0.28;
 
 export interface BoxDimensions {
   /** Largura (frente) em milímetros. */
@@ -174,6 +184,13 @@ export function BoxMesh({
   const frente = useRef<THREE.Mesh>(null);
   const tras = useRef<THREE.Mesh>(null);
 
+  // Tampa telescópica (só o modelo "bandeja"): topo + 4 saias descendo.
+  const tampaTopo = useRef<THREE.Mesh>(null);
+  const tampaEsq = useRef<THREE.Mesh>(null);
+  const tampaDir = useRef<THREE.Mesh>(null);
+  const tampaFrente = useRef<THREE.Mesh>(null);
+  const tampaTras = useRef<THREE.Mesh>(null);
+
   /**
    * Alvo da animação: valor comum de render, capturado por closure no useFrame.
    *
@@ -184,6 +201,16 @@ export function BoxMesh({
   const { size: alvo, mmPorUnidade } = toSceneScale({ widthMm, heightMm, depthMm });
 
   const aberturas = APERTURAS[boxModel] ?? APERTURAS.rsc;
+
+  /**
+   * Medidas da tampa vindas do motor de precificação compartilhado.
+   *
+   * Não recalculamos folga e altura aqui: são regra de negócio, definidas em
+   * lidDimensions() e espelhadas no PHP. Duplicá-las no componente faria o
+   * desenho divergir das medidas exibidas ao usuário.
+   */
+  const tampaMm = lidDimensions(boxModel, widthMm, heightMm, depthMm, thicknessMm ?? 0);
+  const temTampa = tampaMm !== null;
 
   // Espessura real do material convertida para a escala da cena, com piso
   // visual para que materiais finos ainda apareçam como parede.
@@ -241,6 +268,29 @@ export function BoxMesh({
     // Frente e trás: encaixam ENTRE as laterais.
     set(frente, larguraInterna, h, t, 0, h / 2, (d - t) / 2);
     set(tras, larguraInterna, h, t, 0, h / 2, -(d - t) / 2);
+
+    // ── Tampa telescópica ────────────────────────────────────────────────
+    if (!temTampa || !tampaMm) return;
+
+    // Converte as medidas em mm para a escala da cena usando o MESMO fator da
+    // base — assim a folga de encaixe aparece na proporção correta.
+    const fator = alvo.x / Math.max(widthMm, 1);
+    const tw = tampaMm.widthMm * fator;
+    const td = tampaMm.depthMm * fator;
+    const th = tampaMm.heightMm * fator;
+
+    // Altura da base já animada + o vão da vista explodida.
+    const base = h + h * LID_GAP_RATIO;
+    const twInterna = Math.max(tw - 2 * t, 0.001);
+
+    // Topo da tampa.
+    set(tampaTopo, tw, t, td, 0, base + th - t / 2, 0);
+
+    // Saias descendo a partir do topo.
+    set(tampaEsq, t, th, td, -(tw - t) / 2, base + th / 2, 0);
+    set(tampaDir, t, th, td, (tw - t) / 2, base + th / 2, 0);
+    set(tampaFrente, twInterna, th, t, 0, base + th / 2, (td - t) / 2);
+    set(tampaTras, twInterna, th, t, 0, base + th / 2, -(td - t) / 2);
   });
 
   // Um elemento de material reutilizado em todos os painéis. A textura em si é
@@ -267,6 +317,17 @@ export function BoxMesh({
       <Painel refObj={direita} material={material} showEdges={showEdges} />
       <Painel refObj={frente} material={material} showEdges={showEdges} />
       <Painel refObj={tras} material={material} showEdges={showEdges} />
+
+      {/* Tampa telescópica, flutuando acima da base (vista explodida). */}
+      {temTampa && (
+        <>
+          <Painel refObj={tampaTopo} material={material} showEdges={showEdges} />
+          <Painel refObj={tampaEsq} material={material} showEdges={showEdges} />
+          <Painel refObj={tampaDir} material={material} showEdges={showEdges} />
+          <Painel refObj={tampaFrente} material={material} showEdges={showEdges} />
+          <Painel refObj={tampaTras} material={material} showEdges={showEdges} />
+        </>
+      )}
     </group>
   );
 }

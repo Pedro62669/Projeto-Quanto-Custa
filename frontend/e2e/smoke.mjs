@@ -13,7 +13,7 @@ const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
  * trocada — um teste de fumaça não pode depender de um dado que muda por fora.
  */
 const EMAIL = process.env.E2E_EMAIL ?? "admin@quantocusta.local";
-const SENHA = process.env.E2E_PASSWORD ?? "senha-forte-trocar";
+const SENHA = process.env.E2E_PASSWORD ?? "admin123";
 const OUT = "/tmp/claude-1000/-var-www-html-quantoCusta/6a279545-fa78-41fb-8b54-46d2abb886a9/scratchpad";
 
 const log = (...a) => console.log(...a);
@@ -102,7 +102,48 @@ await page.waitForTimeout(1500);
 const margemReal = await page.textContent("text=/de margem real/");
 check("alternar para modo margem entrega 30% reais", /\b30([.,]0+)?%/.test(margemReal ?? ""), `${margemMarkup?.trim()} → ${margemReal?.trim()}`);
 
-// ── 8. Salvar orçamento ──────────────────────────────────────────────────
+// ── 8. Tampa: renderização e medidas ─────────────────────────────────────
+await page.click("#box-model");
+await page.click('[role="option"]:has-text("Caixa com tampa")');
+await page.waitForTimeout(2500);
+
+const medidasTampa = await page.evaluate(() => {
+  const alvo = [...document.querySelectorAll("div")].find((e) =>
+    e.textContent?.startsWith("Tampa (L × P × A)"),
+  );
+  return alvo?.textContent ?? null;
+});
+check(
+  "a bandeja expõe as medidas da tampa",
+  /Tampa \(L × P × A\)\s*[\d.]+ × [\d.]+ × [\d.]+ mm/.test(medidasTampa ?? ""),
+  medidasTampa,
+);
+
+// A tampa encaixa POR FORA: precisa ser mais larga que a base.
+const [larguraTampa] = (medidasTampa ?? "").match(/[\d.]+(?= ×)/) ?? [];
+check(
+  "a tampa é mais larga que a base",
+  Number(larguraTampa) > Number(await page.inputValue("#width")),
+  `tampa ${larguraTampa} > base ${await page.inputValue("#width")}`,
+);
+
+// Os modelos sem tampa não podem exibir a linha.
+await page.click("#box-model");
+await page.click('[role="option"]:has-text("Saco / envelope")');
+await page.waitForTimeout(2000);
+const semTampa = await page.evaluate(() =>
+  [...document.querySelectorAll("div")].some((e) =>
+    e.textContent?.startsWith("Tampa (L × P × A)"),
+  ),
+);
+check("modelo sem tampa não mostra a linha", semTampa === false);
+
+// Volta ao RSC para o restante do fluxo.
+await page.click("#box-model");
+await page.click('[role="option"]:has-text("Caixa americana")');
+await page.waitForTimeout(2000);
+
+// ── 9. Salvar orçamento ──────────────────────────────────────────────────
 await page.click('button:has-text("Salvar orçamento")');
 await page.waitForSelector("#client_name", { timeout: 10000 });
 await page.fill("#client_name", "Cliente E2E");
@@ -116,7 +157,7 @@ check("orçamento salvo com referência", /ORC-\d{4}-\d{6}/.test(toast ?? ""), t
 
 await page.screenshot({ path: `${OUT}/04-salvo.png` });
 
-// ── 9. Console limpo ─────────────────────────────────────────────────────
+// ── 10. Console limpo ────────────────────────────────────────────────────
 const relevantes = consoleErrors.filter((e) => !/favicon|DevTools/i.test(e));
 check("sem erros de console", relevantes.length === 0, relevantes.slice(0, 3).join(" | "));
 

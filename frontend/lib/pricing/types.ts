@@ -57,6 +57,11 @@ export interface PricingBreakdown {
   blank_width_mm: number;
   blank_height_mm: number;
 
+  /** Medidas físicas da tampa; null nos modelos sem peça separada. */
+  lid_width_mm: number | null;
+  lid_depth_mm: number | null;
+  lid_height_mm: number | null;
+
   material_cost: number;
   labor_cost: number;
   machine_cost: number;

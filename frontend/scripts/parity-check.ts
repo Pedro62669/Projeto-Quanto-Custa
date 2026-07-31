@@ -106,11 +106,27 @@ function run(): number {
       const actualValue = actual[field as keyof PricingBreakdown];
       comparisons++;
 
-      if (Math.abs(actualValue - (expectedValue as number)) > TOLERANCE) {
-        diffs.push(
-          `    ${field}: PHP=${expectedValue}  TS=${actualValue}  ` +
-            `(Δ ${(actualValue - (expectedValue as number)).toExponential(3)})`,
-        );
+      /**
+       * Nulos são comparados por identidade, não por subtração.
+       *
+       * Campos como as medidas da tampa são null nos modelos sem tampa, e
+       * `Math.abs(null - 5)` produz NaN — que NÃO é maior que a tolerância.
+       * Uma divergência null/número passaria despercebida se o comparador
+       * fosse só aritmético.
+       */
+      const umEhNulo = actualValue === null || expectedValue === null;
+
+      const divergiu = umEhNulo
+        ? actualValue !== expectedValue
+        : Math.abs((actualValue as number) - (expectedValue as number)) > TOLERANCE;
+
+      if (divergiu) {
+        const delta =
+          umEhNulo || Number.isNaN(Number(actualValue) - Number(expectedValue))
+            ? ""
+            : ` (Δ ${((actualValue as number) - (expectedValue as number)).toExponential(3)})`;
+
+        diffs.push(`    ${field}: PHP=${expectedValue}  TS=${actualValue}${delta}`);
       }
     }
 

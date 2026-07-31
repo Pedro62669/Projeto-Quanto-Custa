@@ -140,6 +140,16 @@ export function PriceSummary() {
             value={`${result.blank_width_mm} × ${result.blank_height_mm} mm`}
             hint="Retângulo de material que cada peça consome, já com abas de colagem e fechamento."
           />
+
+          {/* Só aparece nos modelos com tampa separada — nos demais, os
+              campos vêm nulos da API e a linha não faz sentido. */}
+          {result.lid_width_mm !== null && (
+            <CostLine
+              label="Tampa (L × P × A)"
+              value={`${result.lid_width_mm} × ${result.lid_depth_mm} × ${result.lid_height_mm} mm`}
+              hint="Medidas externas da tampa. Já incluem a folga de encaixe e a espessura do material, para que ela deslize sobre a base."
+            />
+          )}
           <CostLine
             label="Área por unidade"
             value={`${result.area_m2_per_unit.toFixed(4)} m²`}

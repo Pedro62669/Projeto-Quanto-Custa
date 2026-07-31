@@ -41,6 +41,45 @@ export interface BlankDimensions {
   height: number;
 }
 
+/** Medidas físicas da tampa, em milímetros. */
+export interface LidDimensions {
+  widthMm: number;
+  depthMm: number;
+  heightMm: number;
+}
+
+/**
+ * Dimensões FÍSICAS da tampa (não do plano de corte).
+ *
+ * Espelha BlankCalculator::lidDimensions(). Responde "que tamanho tem a peça",
+ * enquanto blankDimensions responde "quanto material comprar".
+ *
+ * É a fonte única consumida tanto pelo painel de medidas quanto pelo
+ * renderizador 3D — sem esta função, as constantes de folga e de altura da
+ * tampa acabariam duplicadas dentro do componente three.js.
+ *
+ * Devolve null para modelos sem tampa separada.
+ */
+export function lidDimensions(
+  model: BoxModel,
+  widthMm: number,
+  heightMm: number,
+  depthMm: number,
+  thicknessMm = 0,
+): LidDimensions | null {
+  if (model !== "tray") return null;
+
+  const t = thicknessMm;
+
+  return {
+    // A tampa encaixa POR FORA da base: vence a folga de encaixe e a
+    // espessura das paredes dela própria.
+    widthMm: widthMm + 2 * LID_CLEARANCE_MM + 2 * t,
+    depthMm: depthMm + 2 * LID_CLEARANCE_MM + 2 * t,
+    heightMm: heightMm * LID_HEIGHT_RATIO,
+  };
+}
+
 /**
  * Dimensões do plano de corte (blank) em milímetros.
  *
@@ -163,11 +202,23 @@ export function calculatePricing({
   const tax_amount = money(total_price * (settings.tax_percent / 100), 2);
   const profit_amount = money(total_price - total_cost - tax_amount, 2);
 
+  const lid = lidDimensions(
+    spec.box_model,
+    spec.width_mm,
+    spec.height_mm,
+    spec.depth_mm,
+    material.thickness_mm ?? 0,
+  );
+
   return {
     area_m2_per_unit: round(netAreaPerUnit, 6),
     area_m2_total: round(grossAreaTotal, 6),
     blank_width_mm: round(blank.width, 2),
     blank_height_mm: round(blank.height, 2),
+
+    lid_width_mm: lid ? round(lid.widthMm, 2) : null,
+    lid_depth_mm: lid ? round(lid.depthMm, 2) : null,
+    lid_height_mm: lid ? round(lid.heightMm, 2) : null,
 
     material_cost: money(materialCost),
     labor_cost: money(laborCost),
@@ -224,9 +275,35 @@ function applyProfitAndTax(
   return price / (1 - Math.min(tax, 99.99) / 100);
 }
 
+/**
+ * Arredondamento decimal compatível com o round() do PHP.
+ *
+ * Multiplicar por 10^n e arredondar falha nos limites exatos de meio centavo:
+ * 81,585 é armazenado em binário como 81,58499999…, então `81.585 * 100`
+ * resulta em 8158,4999… e arredonda para BAIXO — enquanto o PHP devolve
+ * 81,59. Isso fazia o preview divergir do valor gravado pelo servidor.
+ *
+ * Deslocar a vírgula pela notação exponencial em STRING contorna o problema:
+ * "81.585e2" é interpretado como exatamente 8158,5.
+ */
 function round(value: number, precision: number): number {
-  const factor = 10 ** precision;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
+  if (!Number.isFinite(value)) return value;
+
+  const sinal = value < 0 ? -1 : 1;
+  const abs = Math.abs(value);
+
+  // Números muito grandes/pequenos já vêm em notação exponencial e
+  // quebrariam a concatenação; nesses casos o método aritmético basta.
+  if (abs.toString().includes("e")) {
+    const factor = 10 ** precision;
+    return Math.round(value * factor) / factor;
+  }
+
+  const deslocado = Number(`${abs}e${precision}`);
+
+  // Math.round arredonda 0,5 para cima; com o sinal aplicado por fora, o
+  // resultado é "meio para longe do zero", igual ao PHP.
+  return sinal * Number(`${Math.round(deslocado)}e${-precision}`);
 }
 
 /**

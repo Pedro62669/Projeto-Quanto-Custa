@@ -43,6 +43,14 @@ final class PricingEngine
             $input->depthMm,
         );
 
+        // Medidas físicas da tampa (null se o modelo não tiver uma).
+        $lid = $blankCalculator->lidDimensions(
+            $input->boxModel,
+            $input->widthMm,
+            $input->heightMm,
+            $input->depthMm,
+        );
+
         $netAreaPerUnit = ($blank['width'] * $blank['height']) / 1_000_000.0;
 
         // Desperdício: aparas, refile e perdas de setup. Incide sobre a área,
@@ -93,6 +101,10 @@ final class PricingEngine
             areaM2Total: round($grossAreaTotal, 6),
             blankWidthMm: round($blank['width'], 2),
             blankHeightMm: round($blank['height'], 2),
+
+            lidWidthMm: $lid ? round($lid['width'], 2) : null,
+            lidDepthMm: $lid ? round($lid['depth'], 2) : null,
+            lidHeightMm: $lid ? round($lid['height'], 2) : null,
 
             materialCost: $this->money($materialCost),
             laborCost: $this->money($laborCost),

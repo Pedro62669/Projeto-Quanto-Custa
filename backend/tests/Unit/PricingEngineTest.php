@@ -301,6 +301,48 @@ class PricingEngineTest extends TestCase
     }
 
     #[Test]
+    public function a_bandeja_expoe_as_medidas_fisicas_da_tampa(): void
+    {
+        // Base 300×200×150 em material de 3mm:
+        //   largura = 300 + 2×2 (folga) + 2×3 (espessura) = 310
+        //   profund.= 150 + 2×2        + 2×3              = 160
+        //   altura  = 200 × 0,35                          = 70
+        $result = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tray,
+            'material' => $this->material(['thickness_mm' => 3.0]),
+        ]));
+
+        $this->assertSame(310.0, $result->lidWidthMm);
+        $this->assertSame(160.0, $result->lidDepthMm);
+        $this->assertSame(70.0, $result->lidHeightMm);
+    }
+
+    #[Test]
+    public function a_tampa_encaixa_por_fora_da_base(): void
+    {
+        // Invariante física: sem isto a tampa não desliza sobre a base.
+        $result = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tray,
+            'material' => $this->material(['thickness_mm' => 3.0]),
+        ]));
+
+        $this->assertGreaterThan(300.0, $result->lidWidthMm);
+        $this->assertGreaterThan(150.0, $result->lidDepthMm);
+    }
+
+    #[Test]
+    public function modelos_sem_tampa_nao_reportam_medidas_de_tampa(): void
+    {
+        foreach ([BoxModel::Rsc, BoxModel::Sleeve, BoxModel::Pouch] as $model) {
+            $result = $this->engine->calculate($this->input(['boxModel' => $model]));
+
+            $this->assertNull($result->lidWidthMm, "modelo {$model->value}");
+            $this->assertNull($result->lidDepthMm, "modelo {$model->value}");
+            $this->assertNull($result->lidHeightMm, "modelo {$model->value}");
+        }
+    }
+
+    #[Test]
     public function a_espessura_do_material_aumenta_o_consumo(): void
     {
         $fino = $this->engine->calculate($this->input(['material' => $this->material(['thickness_mm' => 0.0])]));
