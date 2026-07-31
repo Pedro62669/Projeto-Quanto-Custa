@@ -1,6 +1,6 @@
 {
     "engine_version": "1.0.0",
-    "generated_at": "2026-07-31T10:57:37+00:00",
+    "generated_at": "2026-07-31T18:07:41+00:00",
     "cases": [
         {
             "name": "rsc-padrao",
@@ -1103,6 +1103,306 @@
             }
         },
         {
+            "name": "tubo-padrao",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tube",
+                "width_mm": 100,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.115969,
+                "area_m2_total": 12.756551,
+                "blank_width_mm": 361.73,
+                "blank_height_mm": 320.6,
+                "lid_width_mm": 104,
+                "lid_depth_mm": 104,
+                "lid_height_mm": 70,
+                "material_cost": 0.4082,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.7374,
+                "unit_price": 4.8586,
+                "total_cost": 373.74,
+                "total_price": 485.86,
+                "profit_amount": 112.12,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tubo-espesso",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 7
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tube",
+                "width_mm": 100,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.128093,
+                "area_m2_total": 14.090232,
+                "blank_width_mm": 427.7,
+                "blank_height_mm": 299.49,
+                "lid_width_mm": 118,
+                "lid_depth_mm": 118,
+                "lid_height_mm": 70,
+                "material_cost": 0.4509,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.7801,
+                "unit_price": 4.9141,
+                "total_cost": 378.01,
+                "total_price": 491.41,
+                "profit_amount": 113.4,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tubo-profundidade-absurda",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tube",
+                "width_mm": 100,
+                "height_mm": 200,
+                "depth_mm": 2500,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.115969,
+                "area_m2_total": 12.756551,
+                "blank_width_mm": 361.73,
+                "blank_height_mm": 320.6,
+                "lid_width_mm": 104,
+                "lid_depth_mm": 104,
+                "lid_height_mm": 70,
+                "material_cost": 0.4082,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.7374,
+                "unit_price": 4.8586,
+                "total_cost": 373.74,
+                "total_price": 485.86,
+                "profit_amount": 112.12,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tubo-tampa-manual",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tube",
+                "width_mm": 100,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": 118,
+                "lid_depth_mm": null,
+                "lid_height_mm": 130
+            },
+            "expected": {
+                "area_m2_per_unit": 0.146498,
+                "area_m2_total": 16.114767,
+                "blank_width_mm": 405.71,
+                "blank_height_mm": 361.09,
+                "lid_width_mm": 118,
+                "lid_depth_mm": 104,
+                "lid_height_mm": 130,
+                "material_cost": 0.5157,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.8448,
+                "unit_price": 4.9983,
+                "total_cost": 384.48,
+                "total_price": 499.83,
+                "profit_amount": 115.35,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tubo-fracionado",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tube",
+                "width_mm": 87.3,
+                "height_mm": 241.9,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.118015,
+                "area_m2_total": 12.981622,
+                "blank_width_mm": 321.83,
+                "blank_height_mm": 366.7,
+                "lid_width_mm": 91.3,
+                "lid_depth_mm": 91.3,
+                "lid_height_mm": 84.66,
+                "material_cost": 0.4154,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.7446,
+                "unit_price": 4.868,
+                "total_cost": 374.46,
+                "total_price": 486.8,
+                "profit_amount": 112.34,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tubo-minimo",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tube",
+                "width_mm": 10,
+                "height_mm": 10,
+                "depth_mm": 150,
+                "quantity": 1,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.001237,
+                "area_m2_total": 0.00136,
+                "blank_width_mm": 78.98,
+                "blank_height_mm": 15.66,
+                "lid_width_mm": 14,
+                "lid_depth_mm": 14,
+                "lid_height_mm": 3.5,
+                "material_cost": 0.0044,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.3335,
+                "unit_price": 4.3336,
+                "total_cost": 3.33,
+                "total_price": 4.33,
+                "profit_amount": 1,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.09
+            }
+        },
+        {
             "name": "tudo-combinado",
             "material": {
                 "cost_per_m2": 4.32,
@@ -1548,6 +1848,106 @@
                 "total_cost": 397.12,
                 "total_price": 516.26,
                 "profit_amount": 119.14,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-tube",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tube",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.447215,
+                "area_m2_total": 49.193612,
+                "blank_width_mm": 990.04,
+                "blank_height_mm": 451.71,
+                "lid_width_mm": 304,
+                "lid_depth_mm": 304,
+                "lid_height_mm": 70,
+                "material_cost": 1.5742,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.9034,
+                "unit_price": 6.3744,
+                "total_cost": 490.34,
+                "total_price": 637.44,
+                "profit_amount": 147.1,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-tube-espesso",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 3
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tube",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.454763,
+                "area_m2_total": 50.023909,
+                "blank_width_mm": 1018.32,
+                "blank_height_mm": 446.58,
+                "lid_width_mm": 310,
+                "lid_depth_mm": 310,
+                "lid_height_mm": 70,
+                "material_cost": 1.6008,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.9299,
+                "unit_price": 6.4089,
+                "total_cost": 492.99,
+                "total_price": 640.89,
+                "profit_amount": 147.9,
                 "tax_amount": 0,
                 "effective_margin_percent": 23.08
             }

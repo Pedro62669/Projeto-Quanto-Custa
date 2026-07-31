@@ -115,6 +115,14 @@ final class BlankCalculator
                 'width' => $widthMm + 2 * self::SEAL_MM,
                 'height' => 2 * $heightMm + $depthMm + 2 * self::SEAL_MM,
             ],
+
+            // Tubo cilíndrico: a largura é o DIÂMETRO; a profundidade é ignorada.
+            BoxModel::Tube => $this->tubeBlank(
+                $widthMm,
+                $heightMm,
+                $t,
+                $lidMm ?? $this->defaultLidDimensions($model, $widthMm, $heightMm, $depthMm),
+            ),
         };
     }
 
@@ -140,17 +148,23 @@ final class BlankCalculator
         float $heightMm,
         float $depthMm,
     ): ?array {
-        if ($model !== BoxModel::Tray) {
+        if (! $model->hasSeparateLid()) {
             return null;
         }
 
         $t = $this->thicknessMm;
 
+        // A tampa encaixa POR FORA da base: precisa vencer a folga de encaixe
+        // e ainda a espessura das paredes dela própria.
+        $folga = 2 * self::LID_CLEARANCE_MM + 2 * $t;
+
+        // Num cilindro largura e profundidade são o mesmo diâmetro; devolver
+        // valores diferentes produziria uma tampa oval.
+        $depthBase = $model->isCylindrical() ? $widthMm : $depthMm;
+
         return [
-            // A tampa encaixa POR FORA da base: precisa vencer a folga de
-            // encaixe e ainda a espessura das paredes dela própria.
-            'width' => $widthMm + 2 * self::LID_CLEARANCE_MM + 2 * $t,
-            'depth' => $depthMm + 2 * self::LID_CLEARANCE_MM + 2 * $t,
+            'width' => $widthMm + $folga,
+            'depth' => $depthBase + $folga,
             'height' => $heightMm * self::LID_HEIGHT_RATIO,
         ];
     }
@@ -181,6 +195,53 @@ final class BlankCalculator
             'width' => $overrides['width'] ?? $default['width'],
             'depth' => $overrides['depth'] ?? $default['depth'],
             'height' => $overrides['height'] ?? $default['height'],
+        ];
+    }
+
+    /**
+     * Tubo cilíndrico = corpo enrolado + disco de fundo + tampa com saia.
+     *
+     * Duas decisões de engenharia importantes aqui:
+     *
+     * 1. O corpo é planificado pela circunferência da LINHA MÉDIA da parede
+     *    (π × (D + espessura)), e não pelo diâmetro interno. Enrolar uma chapa
+     *    faz a face externa percorrer um caminho maior que a interna; usar o
+     *    diâmetro interno subestima o comprimento e o tubo não fecha. Em
+     *    papelão de 7mm num tubo de 100mm, a diferença passa de 20mm.
+     *
+     * 2. Os discos são orçados pelo QUADRADO que os circunscreve, não pela
+     *    área do círculo. Recortar um disco de uma chapa descarta os cantos —
+     *    e esse descarte é consumo real de matéria-prima, não desperdício de
+     *    processo. Cobrar só π·r² faria o fundo e a tampa saírem 21% baratos
+     *    demais. Quem aninha os discos para aproveitar melhor pode compensar
+     *    reduzindo o percentual de desperdício.
+     *
+     * @param  array{width: float, depth: float, height: float}|null  $lid
+     * @return array{width: float, height: float}
+     */
+    private function tubeBlank(float $diameterMm, float $h, float $t, ?array $lid): array
+    {
+        // Corpo: retângulo cujo comprimento é a circunferência média.
+        $bodyW = M_PI * ($diameterMm + $t) + self::GLUE_FLAP_MM;
+        $bodyH = $h;
+
+        // Fundo: disco recortado de um quadrado de lado igual ao diâmetro.
+        $bottomArea = $diameterMm ** 2;
+
+        $totalArea = $bodyW * $bodyH + $bottomArea;
+        $widest = max($bodyW, $diameterMm);
+
+        if ($lid !== null) {
+            // Tampa: saia enrolada (mesma lógica de circunferência) + disco.
+            $lidSkirtW = M_PI * ($lid['width'] + $t) + self::GLUE_FLAP_MM;
+
+            $totalArea += $lidSkirtW * $lid['height'] + $lid['width'] ** 2;
+            $widest = max($widest, $lidSkirtW, $lid['width']);
+        }
+
+        return [
+            'width' => $widest,
+            'height' => $totalArea / $widest,
         ];
     }
 

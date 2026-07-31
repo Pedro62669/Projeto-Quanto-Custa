@@ -169,6 +169,26 @@ class ExportPricingFixtures extends Command
                 'lidWidthMm' => 999.0, 'lidHeightMm' => 999.0,
             ]),
 
+            // Embalagem cilíndrica: largura = diâmetro, profundidade ignorada.
+            'tubo-padrao' => $base(['boxModel' => BoxModel::Tube, 'widthMm' => 100.0, 'heightMm' => 200.0]),
+            'tubo-espesso' => $base([
+                'boxModel' => BoxModel::Tube, 'widthMm' => 100.0, 'heightMm' => 200.0,
+                'material' => ['thickness_mm' => 7.0],
+            ]),
+            'tubo-profundidade-absurda' => $base([
+                'boxModel' => BoxModel::Tube, 'widthMm' => 100.0, 'depthMm' => 2500.0,
+            ]),
+            'tubo-tampa-manual' => $base([
+                'boxModel' => BoxModel::Tube, 'widthMm' => 100.0,
+                'lidWidthMm' => 118.0, 'lidHeightMm' => 130.0,
+            ]),
+            'tubo-fracionado' => $base([
+                'boxModel' => BoxModel::Tube, 'widthMm' => 87.3, 'heightMm' => 241.9,
+            ]),
+            'tubo-minimo' => $base([
+                'boxModel' => BoxModel::Tube, 'widthMm' => 10.0, 'heightMm' => 10.0, 'quantity' => 1,
+            ]),
+
             'tudo-combinado' => $base([
                 'material' => ['cost_unit' => MaterialUnit::Kilogram, 'cost_per_unit' => 24.0, 'grammage_kg_per_m2' => 0.18, 'thickness_mm' => 0.6],
                 'settings' => ['overhead_percent' => 12.0, 'tax_percent' => 8.0],

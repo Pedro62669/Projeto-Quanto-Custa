@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { useQuoteStore, selectResult } from "@/store/useQuoteStore";
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency, isCylindrical } from "@/lib/pricing/engine";
 
 /**
  * Painel financeiro.
@@ -24,7 +24,7 @@ import { formatCurrency } from "@/lib/pricing/engine";
  * principal, não para competir com ele.
  */
 export function PriceSummary() {
-  const { result, currency, isSyncing, isConfirmed, error, isEngineStale, quantity } =
+  const { result, currency, isSyncing, isConfirmed, error, isEngineStale, quantity, cilindrico } =
     useQuoteStore(
       useShallow((s) => ({
         result: selectResult(s),
@@ -34,6 +34,7 @@ export function PriceSummary() {
         error: s.error,
         isEngineStale: s.isEngineStale,
         quantity: s.spec.quantity,
+        cilindrico: isCylindrical(s.spec.box_model),
       })),
     );
 
@@ -145,8 +146,12 @@ export function PriceSummary() {
               campos vêm nulos da API e a linha não faz sentido. */}
           {result.lid_width_mm !== null && (
             <CostLine
-              label="Tampa (L × P × A)"
-              value={`${result.lid_width_mm} × ${result.lid_depth_mm} × ${result.lid_height_mm} mm`}
+              label={cilindrico ? "Tampa (Ø × A)" : "Tampa (L × P × A)"}
+              value={
+                cilindrico
+                  ? `Ø${result.lid_width_mm} × ${result.lid_height_mm} mm`
+                  : `${result.lid_width_mm} × ${result.lid_depth_mm} × ${result.lid_height_mm} mm`
+              }
               hint="Medidas externas da tampa. Já incluem a folga de encaixe e a espessura do material, para que ela deslize sobre a base."
             />
           )}

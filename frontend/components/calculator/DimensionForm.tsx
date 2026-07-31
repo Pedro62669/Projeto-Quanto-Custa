@@ -24,7 +24,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import { useQuoteStore } from "@/store/useQuoteStore";
-import { defaultLidDimensions } from "@/lib/pricing/engine";
+import { defaultLidDimensions, hasSeparateLid, isCylindrical } from "@/lib/pricing/engine";
 import type { BoxModel, PricingMode } from "@/lib/pricing/types";
 
 const BOX_MODELS: Array<{ value: BoxModel; label: string }> = [
@@ -32,6 +32,7 @@ const BOX_MODELS: Array<{ value: BoxModel; label: string }> = [
   { value: "tray", label: "Caixa com tampa" },
   { value: "sleeve", label: "Luva / cinta" },
   { value: "pouch", label: "Saco / envelope" },
+  { value: "tube", label: "Tubo / lata cilíndrica" },
 ];
 
 /**
@@ -52,6 +53,8 @@ export function DimensionForm() {
     })),
   );
 
+  const cilindrico = isCylindrical(spec.box_model);
+
   return (
     <div className="space-y-6">
       {/* ── Dimensões ──────────────────────────────────────────────────── */}
@@ -62,12 +65,27 @@ export function DimensionForm() {
           <span className="ml-auto text-xs text-muted-foreground">mm</span>
         </header>
 
-        <div className="grid grid-cols-3 gap-3">
+        {/*
+          Um cilindro não tem largura e profundidade independentes: tem
+          diâmetro. Mostrar três campos pediria ao usuário um dado que não
+          existe — e que o motor ignoraria em silêncio.
+        */}
+        <div
+          className={
+            cilindrico ? "grid grid-cols-2 gap-3" : "grid grid-cols-3 gap-3"
+          }
+        >
           <DimensionInput
             id="width"
-            label="Largura"
+            label={cilindrico ? "Diâmetro" : "Largura"}
             value={spec.width_mm}
-            onChange={(width_mm) => updateSpec({ width_mm })}
+            onChange={(width_mm) =>
+              updateSpec(
+                // Profundidade acompanha o diâmetro: para um cilindro, ambas
+                // SÃO a mesma medida (é a caixa envolvente da peça).
+                cilindrico ? { width_mm, depth_mm: width_mm } : { width_mm },
+              )
+            }
           />
           <DimensionInput
             id="height"
@@ -75,12 +93,14 @@ export function DimensionForm() {
             value={spec.height_mm}
             onChange={(height_mm) => updateSpec({ height_mm })}
           />
-          <DimensionInput
-            id="depth"
-            label="Profundidade"
-            value={spec.depth_mm}
-            onChange={(depth_mm) => updateSpec({ depth_mm })}
-          />
+          {!cilindrico && (
+            <DimensionInput
+              id="depth"
+              label="Profundidade"
+              value={spec.depth_mm}
+              onChange={(depth_mm) => updateSpec({ depth_mm })}
+            />
+          )}
         </div>
       </section>
 
@@ -156,8 +176,8 @@ export function DimensionForm() {
         </div>
       </section>
 
-      {/* ── Tampa: só existe no modelo bandeja ──────────────────────────── */}
-      {spec.box_model === "tray" && <LidFields />}
+      {/* ── Tampa: bandeja e tubo têm peça separada ─────────────────────── */}
+      {hasSeparateLid(spec.box_model) && <LidFields />}
 
       <Separator />
 
@@ -297,6 +317,8 @@ function LidFields() {
 
   if (!sugerida) return null;
 
+  const cilindrico = isCylindrical(spec.box_model);
+
   const manual =
     spec.lid_width_mm !== null ||
     spec.lid_depth_mm !== null ||
@@ -333,21 +355,33 @@ function LidFields() {
         )}
       </header>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div
+        className={cilindrico ? "grid grid-cols-2 gap-3" : "grid grid-cols-3 gap-3"}
+      >
         <DimensionInput
           id="lid-width"
-          label="Largura"
+          label={cilindrico ? "Diâmetro" : "Largura"}
           value={arredonda(spec.lid_width_mm ?? sugerida.widthMm)}
-          onChange={(lid_width_mm) => updateSpec({ lid_width_mm })}
+          onChange={(lid_width_mm) =>
+            // Tampa de cilindro é circular: os dois eixos andam juntos, senão
+            // ela sairia oval e não encaixaria no corpo redondo.
+            updateSpec(
+              cilindrico
+                ? { lid_width_mm, lid_depth_mm: lid_width_mm }
+                : { lid_width_mm },
+            )
+          }
           min={spec.width_mm}
         />
-        <DimensionInput
-          id="lid-depth"
-          label="Profundidade"
-          value={arredonda(spec.lid_depth_mm ?? sugerida.depthMm)}
-          onChange={(lid_depth_mm) => updateSpec({ lid_depth_mm })}
-          min={spec.depth_mm}
-        />
+        {!cilindrico && (
+          <DimensionInput
+            id="lid-depth"
+            label="Profundidade"
+            value={arredonda(spec.lid_depth_mm ?? sugerida.depthMm)}
+            onChange={(lid_depth_mm) => updateSpec({ lid_depth_mm })}
+            min={spec.depth_mm}
+          />
+        )}
         <DimensionInput
           id="lid-height"
           label="Altura"
@@ -358,8 +392,9 @@ function LidFields() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        A tampa encaixa por fora: largura e profundidade não podem ser menores
-        que as da caixa.
+        {cilindrico
+          ? "A tampa encaixa por fora: o diâmetro não pode ser menor que o do tubo."
+          : "A tampa encaixa por fora: largura e profundidade não podem ser menores que as da caixa."}
       </p>
     </section>
   );

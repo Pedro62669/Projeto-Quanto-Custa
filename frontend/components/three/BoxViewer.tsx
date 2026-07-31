@@ -10,6 +10,7 @@ import {
   Html,
 } from "@react-three/drei";
 import { BoxMesh, assemblyHeightUnits, type BoxMeshProps } from "./BoxMesh";
+import { isCylindrical } from "@/lib/pricing/engine";
 
 export interface BoxViewerProps extends BoxMeshProps {
   /** Rótulo exibido no canto (ex.: nome do material selecionado). */
@@ -139,10 +140,17 @@ function DimensionBadge({
   widthMm,
   heightMm,
   depthMm,
-}: Pick<BoxMeshProps, "widthMm" | "heightMm" | "depthMm">) {
+  boxModel,
+}: Pick<BoxMeshProps, "widthMm" | "heightMm" | "depthMm" | "boxModel">) {
+  // Num cilindro a profundidade não é uma medida do produto — é o próprio
+  // diâmetro repetido. Exibi-la sugeriria um grau de liberdade que não existe.
+  const legenda = isCylindrical(boxModel ?? "rsc")
+    ? `Ø${widthMm} × ${heightMm} mm`
+    : `${widthMm} × ${heightMm} × ${depthMm} mm`;
+
   return (
     <span className="rounded-md bg-background/80 px-2.5 py-1 font-mono text-xs text-muted-foreground backdrop-blur">
-      {widthMm} × {heightMm} × {depthMm} mm
+      {legenda}
     </span>
   );
 }

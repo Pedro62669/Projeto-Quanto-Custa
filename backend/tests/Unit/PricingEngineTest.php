@@ -409,6 +409,121 @@ class PricingEngineTest extends TestCase
         }
     }
 
+    /* ── Embalagem cilíndrica ──────────────────────────────────────────── */
+
+    #[Test]
+    public function o_tubo_planifica_o_corpo_pela_circunferencia(): void
+    {
+        // Tubo Ø100 × 200mm, espessura 0:
+        //   corpo   = (π × 100 + 35 de aba) × 200 = 349,1593 × 200 = 69.831,85
+        //   fundo   = 100²                                        = 10.000,00
+        //   tampa Ø = 100 + 2×2 de folga                          =     104
+        //   saia    = (π × 104 + 35) × 70 = 361,7256 × 70         = 25.320,79
+        //   disco   = 104²                                        = 10.816,00
+        //   total   = 115.968,64 mm² ≈ 0,115969 m²
+        $result = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tube,
+            'widthMm' => 100,
+            'heightMm' => 200,
+        ]));
+
+        $this->assertEqualsWithDelta(0.115969, $result->areaM2PerUnit, 0.000001);
+    }
+
+    #[Test]
+    public function a_espessura_alonga_o_corpo_do_tubo(): void
+    {
+        // A invariante que justifica usar a circunferência da LINHA MÉDIA:
+        // enrolar uma chapa faz a face externa percorrer caminho maior que a
+        // interna. Planificar pelo diâmetro interno produziria um tubo que
+        // não fecha.
+        $fino = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tube,
+            'material' => $this->material(['thickness_mm' => 0.0]),
+        ]));
+
+        $grosso = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tube,
+            'material' => $this->material(['thickness_mm' => 7.0]),
+        ]));
+
+        $this->assertGreaterThan($fino->areaM2PerUnit, $grosso->areaM2PerUnit);
+    }
+
+    #[Test]
+    public function a_profundidade_e_irrelevante_num_cilindro(): void
+    {
+        // Só o diâmetro (largura) e a altura definem um cilindro. Se a
+        // profundidade entrasse na conta, o mesmo tubo teria dois preços.
+        $a = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tube,
+            'widthMm' => 100,
+            'depthMm' => 100,
+        ]));
+
+        $b = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tube,
+            'widthMm' => 100,
+            'depthMm' => 2500,
+        ]));
+
+        $this->assertSame($a->areaM2PerUnit, $b->areaM2PerUnit);
+        $this->assertSame($a->unitPrice, $b->unitPrice);
+    }
+
+    #[Test]
+    public function a_tampa_do_tubo_e_circular(): void
+    {
+        // Largura e profundidade iguais: uma tampa com medidas diferentes
+        // seria oval e não encaixaria no corpo redondo.
+        $result = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tube,
+            'widthMm' => 100,
+            'depthMm' => 2500, // ignorada
+        ]));
+
+        $this->assertSame(104.0, $result->lidWidthMm);
+        $this->assertSame(104.0, $result->lidDepthMm);
+    }
+
+    #[Test]
+    public function o_tubo_aceita_medidas_de_tampa_informadas(): void
+    {
+        $result = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tube,
+            'widthMm' => 100,
+            'lidHeightMm' => 130.0,
+        ]));
+
+        $this->assertSame(130.0, $result->lidHeightMm);
+
+        // E a tampa maior precisa encarecer, como na bandeja.
+        $padrao = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tube,
+            'widthMm' => 100,
+        ]));
+
+        $this->assertGreaterThan($padrao->materialCost, $result->materialCost);
+    }
+
+    #[Test]
+    public function um_tubo_consome_menos_que_a_caixa_que_o_contem(): void
+    {
+        // Sanidade geométrica: o cilindro inscrito no cubo usa menos material
+        // que um RSC das mesmas medidas externas.
+        $tubo = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tube,
+            'widthMm' => 200, 'heightMm' => 200, 'depthMm' => 200,
+        ]));
+
+        $caixa = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Rsc,
+            'widthMm' => 200, 'heightMm' => 200, 'depthMm' => 200,
+        ]));
+
+        $this->assertLessThan($caixa->areaM2PerUnit, $tubo->areaM2PerUnit);
+    }
+
     #[Test]
     public function a_espessura_do_material_aumenta_o_consumo(): void
     {

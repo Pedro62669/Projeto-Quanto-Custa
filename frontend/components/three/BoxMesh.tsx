@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { Edges, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import type { BoxModel } from "@/lib/pricing/types";
-import { resolveLidDimensions } from "@/lib/pricing/engine";
+import { resolveLidDimensions, isCylindrical } from "@/lib/pricing/engine";
 
 /**
  * Escala da cena: a MAIOR aresta da embalagem sempre ocupa este número de
@@ -75,7 +75,13 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
   tray: { topo: true, fundo: false },
   sleeve: { topo: true, fundo: true },
   pouch: { topo: false, fundo: false },
+  // O tubo é desenhado por revolução (ver TuboMesh), não por painéis; a
+  // entrada existe só para o mapa continuar exaustivo sobre BoxModel.
+  tube: { topo: true, fundo: false },
 };
+
+/** Segmentos da revolução: acima disso o ganho visual não paga o custo. */
+const TUBO_SEGMENTOS = 64;
 
 /**
  * Converte milímetros em unidades de cena mantendo a PROPORÇÃO real entre
@@ -115,11 +121,13 @@ function toSceneScale(
  * muda de tamanho.
  */
 export function assemblyHeightMm(props: BoxMeshProps): number {
+  const modelo = props.boxModel ?? "rsc";
+
   const tampa = resolveLidDimensions(
-    props.boxModel ?? "rsc",
+    modelo,
     props.widthMm,
     props.heightMm,
-    props.depthMm,
+    isCylindrical(modelo) ? props.widthMm : props.depthMm,
     props.thicknessMm ?? 0,
     {
       lid_width_mm: props.lidWidthMm,
@@ -136,7 +144,10 @@ export function assemblyHeightMm(props: BoxMeshProps): number {
 /** Altura do conjunto já convertida para unidades de cena (≤ SCENE_MAX_UNITS). */
 export function assemblyHeightUnits(props: BoxMeshProps): number {
   const alturaMm = assemblyHeightMm(props);
-  const largest = Math.max(props.widthMm, props.depthMm, alturaMm, 1);
+  const profundidade = isCylindrical(props.boxModel ?? "rsc")
+    ? props.widthMm
+    : props.depthMm;
+  const largest = Math.max(props.widthMm, profundidade, alturaMm, 1);
 
   return (alturaMm * SCENE_MAX_UNITS) / largest;
 }
@@ -203,6 +214,111 @@ const Painel = ({
     {showEdges && <Edges threshold={15} color="#00000030" />}
   </mesh>
 );
+
+/**
+ * Perfil de um copo aberto em cima, para revolução.
+ *
+ * Os pontos traçam: fundo externo → parede externa → bordo → parede interna →
+ * piso interno. Começar e terminar sobre o eixo (x = 0) fecha o sólido.
+ *
+ * Por que LatheGeometry e não um cilindro simples: um `cylinderGeometry` com
+ * `openEnded` é uma casca sem espessura — o bordo some quando visto de cima e
+ * a peça não comunica a espessura do material. A revolução de um perfil em
+ * "U" produz um tubo com parede real, coerente com as caixas ocas.
+ */
+function perfilCopo(rInterno: number, rExterno: number, altura: number, fundo: number) {
+  return [
+    new THREE.Vector2(0, 0),
+    new THREE.Vector2(rExterno, 0),
+    new THREE.Vector2(rExterno, altura),
+    new THREE.Vector2(rInterno, altura),
+    new THREE.Vector2(rInterno, fundo),
+    new THREE.Vector2(0, fundo),
+  ];
+}
+
+/** Perfil da tampa: um copo invertido, aberto embaixo. */
+function perfilTampa(rInterno: number, rExterno: number, altura: number, topo: number) {
+  return [
+    new THREE.Vector2(0, altura),
+    new THREE.Vector2(rExterno, altura),
+    new THREE.Vector2(rExterno, 0),
+    new THREE.Vector2(rInterno, 0),
+    new THREE.Vector2(rInterno, altura - topo),
+    new THREE.Vector2(0, altura - topo),
+  ];
+}
+
+/**
+ * Embalagem cilíndrica: corpo + tampa, ambos por revolução.
+ *
+ * Não interpola as dimensões como a caixa: a geometria de revolução é
+ * reconstruída a cada mudança de medida, e animar por escala engrossaria a
+ * parede junto com o diâmetro — uma mentira visual sobre o material. Como o
+ * perfil tem 6 pontos e 64 segmentos, reconstruir é barato.
+ */
+function TuboMesh({
+  diametroMm,
+  alturaMm,
+  espessuraMm,
+  tampaMm,
+  material,
+  showEdges,
+}: {
+  diametroMm: number;
+  alturaMm: number;
+  espessuraMm: number;
+  tampaMm: { widthMm: number; heightMm: number } | null;
+  material: ReactNode;
+  showEdges: boolean;
+}) {
+  const alturaConjunto = tampaMm
+    ? alturaMm * (1 + LID_GAP_RATIO) + tampaMm.heightMm
+    : alturaMm;
+
+  const fator = SCENE_MAX_UNITS / Math.max(diametroMm, alturaConjunto, 1);
+
+  // Espessura visível com o mesmo piso das caixas, e limitada a um terço do
+  // raio para que tubos estreitos não virem um bastão maciço.
+  const raio = (diametroMm / 2) * fator;
+  const t = Math.min(Math.max(espessuraMm * fator, MIN_WALL_UNITS), raio / 3);
+
+  const altura = alturaMm * fator;
+
+  const corpo = perfilCopo(raio, raio + t, altura, t);
+
+  const tampa = tampaMm
+    ? {
+        // lid.widthMm é o diâmetro INTERNO da tampa: ela desliza por fora do
+        // corpo, então o raio interno dela já embute a folga de encaixe.
+        perfil: perfilTampa(
+          (tampaMm.widthMm / 2) * fator,
+          (tampaMm.widthMm / 2) * fator + t,
+          tampaMm.heightMm * fator,
+          t,
+        ),
+        y: altura + altura * LID_GAP_RATIO,
+      }
+    : null;
+
+  return (
+    <group>
+      <mesh castShadow receiveShadow>
+        <latheGeometry args={[corpo, TUBO_SEGMENTOS]} />
+        {material}
+        {showEdges && <Edges threshold={30} color="#00000030" />}
+      </mesh>
+
+      {tampa && (
+        <mesh position={[0, tampa.y, 0]} castShadow receiveShadow>
+          <latheGeometry args={[tampa.perfil, TUBO_SEGMENTOS]} />
+          {material}
+          {showEdges && <Edges threshold={30} color="#00000030" />}
+        </mesh>
+      )}
+    </group>
+  );
+}
 
 /**
  * A malha da embalagem — uma caixa OCA, montada painel a painel.
@@ -275,11 +391,13 @@ export function BoxMesh({
    * lidDimensions() e espelhadas no PHP. Duplicá-las no componente faria o
    * desenho divergir das medidas exibidas ao usuário.
    */
+  const profundidadeEfetiva = isCylindrical(boxModel) ? widthMm : depthMm;
+
   const tampaMm = resolveLidDimensions(
     boxModel,
     widthMm,
     heightMm,
-    depthMm,
+    profundidadeEfetiva,
     thicknessMm ?? 0,
     {
       lid_width_mm: lidWidthMm,
@@ -381,6 +499,25 @@ export function BoxMesh({
       )}
     </Suspense>
   );
+
+  /*
+   * Modelos cilíndricos são desenhados por revolução, não por painéis planos.
+   * O desvio fica aqui e não em outro componente da árvore para que o
+   * chamador (BoxViewer) não precise saber que existem duas famílias de
+   * geometria — ele só pede "desenhe a embalagem".
+   */
+  if (isCylindrical(boxModel)) {
+    return (
+      <TuboMesh
+        diametroMm={widthMm}
+        alturaMm={heightMm}
+        espessuraMm={thicknessMm ?? 0}
+        tampaMm={tampaMm}
+        material={material}
+        showEdges={showEdges}
+      />
+    );
+  }
 
   return (
     <group ref={grupo}>

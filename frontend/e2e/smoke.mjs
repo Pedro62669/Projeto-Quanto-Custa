@@ -173,6 +173,49 @@ const semTampa = await page.evaluate(() =>
 );
 check("modelo sem tampa não mostra a linha", semTampa === false);
 
+// ── Embalagem cilíndrica ─────────────────────────────────────────────────
+await page.click("#box-model");
+await page.click('[role="option"]:has-text("Tubo")');
+await page.waitForTimeout(2500);
+
+// Um cilindro não tem profundidade: o campo precisa sumir e o rótulo mudar.
+const rotulos = await page.evaluate(() =>
+  [...document.querySelectorAll("label")].map((l) => l.textContent),
+);
+check(
+  "cilindro troca Largura por Diâmetro e esconde Profundidade",
+  rotulos.includes("Diâmetro") && !rotulos.includes("Profundidade"),
+  rotulos.filter((r) => ["Diâmetro", "Largura", "Profundidade", "Altura"].includes(r)).join(", "),
+);
+
+// A tampa do tubo é circular: um único eixo de diâmetro.
+const tampaTubo = await page.evaluate(() => {
+  const alvo = [...document.querySelectorAll("div")].find((e) =>
+    e.textContent?.startsWith("Tampa (Ø × A)"),
+  );
+  return alvo?.textContent ?? null;
+});
+check("a tampa do tubo é circular", /Tampa \(Ø × A\)Ø[\d.]+ × [\d.]+ mm/.test(tampaTubo ?? ""), tampaTubo);
+
+// Mudar o diâmetro tem que mover o preço — prova que o motor usa a largura
+// como diâmetro em vez de ignorá-la.
+// Dobra o valor ATUAL em vez de cravar um número: os passos anteriores já
+// mexeram na largura, e um valor fixo poderia significar uma redução.
+const diametroAtual = Number(await page.inputValue("#width"));
+const precoTubo = await page.textContent(".font-mono.text-4xl");
+await page.fill("#width", String(diametroAtual * 2));
+await page.waitForFunction(
+  (antigo) => document.querySelector(".font-mono.text-4xl")?.textContent?.trim() !== antigo,
+  precoTubo?.trim(),
+  { timeout: 20000 },
+);
+const precoTuboLargo = await page.textContent(".font-mono.text-4xl");
+check(
+  "aumentar o diâmetro encarece o tubo",
+  num(precoTuboLargo) > num(precoTubo),
+  `Ø${diametroAtual} → Ø${diametroAtual * 2}: ${precoTubo?.trim()} → ${precoTuboLargo?.trim()}`,
+);
+
 // Volta ao RSC para o restante do fluxo.
 await page.click("#box-model");
 await page.click('[role="option"]:has-text("Caixa americana")');

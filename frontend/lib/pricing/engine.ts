@@ -41,6 +41,16 @@ export interface BlankDimensions {
   height: number;
 }
 
+/** Modelos com seção circular: a largura passa a significar o diâmetro. */
+export function isCylindrical(model: BoxModel): boolean {
+  return model === "tube";
+}
+
+/** Modelos que têm uma tampa como peça separada. */
+export function hasSeparateLid(model: BoxModel): boolean {
+  return model === "tray" || model === "tube";
+}
+
 /** Medidas físicas da tampa, em milímetros. */
 export interface LidDimensions {
   widthMm: number;
@@ -74,15 +84,19 @@ export function defaultLidDimensions(
   depthMm: number,
   thicknessMm = 0,
 ): LidDimensions | null {
-  if (model !== "tray") return null;
+  if (!hasSeparateLid(model)) return null;
 
-  const t = thicknessMm;
+  // A tampa encaixa POR FORA da base: vence a folga de encaixe e a espessura
+  // das paredes dela própria.
+  const folga = 2 * LID_CLEARANCE_MM + 2 * thicknessMm;
+
+  // Num cilindro largura e profundidade são o mesmo diâmetro; devolver
+  // valores diferentes produziria uma tampa oval.
+  const baseDepth = isCylindrical(model) ? widthMm : depthMm;
 
   return {
-    // A tampa encaixa POR FORA da base: vence a folga de encaixe e a
-    // espessura das paredes dela própria.
-    widthMm: widthMm + 2 * LID_CLEARANCE_MM + 2 * t,
-    depthMm: depthMm + 2 * LID_CLEARANCE_MM + 2 * t,
+    widthMm: widthMm + folga,
+    depthMm: baseDepth + folga,
     heightMm: heightMm * LID_HEIGHT_RATIO,
   };
 }
@@ -168,6 +182,32 @@ export function blankDimensions(
         width: widthMm + 2 * SEAL_MM,
         height: 2 * heightMm + depthMm + 2 * SEAL_MM,
       };
+
+    case "tube": {
+      // A largura é o DIÂMETRO; a profundidade é ignorada.
+      //
+      // O corpo é planificado pela circunferência da LINHA MÉDIA da parede:
+      // enrolar uma chapa faz a face externa percorrer caminho maior que a
+      // interna, e usar o diâmetro interno produziria um tubo que não fecha.
+      const bodyW = Math.PI * (widthMm + t) + GLUE_FLAP_MM;
+
+      // Os discos são orçados pelo QUADRADO que os circunscreve: recortar um
+      // disco descarta os cantos, e esse descarte é consumo real de material.
+      let totalArea = bodyW * heightMm + widthMm ** 2;
+      let widest = Math.max(bodyW, widthMm);
+
+      const lid =
+        lidMm ?? defaultLidDimensions(model, widthMm, heightMm, depthMm, t);
+
+      if (lid) {
+        const lidSkirtW = Math.PI * (lid.widthMm + t) + GLUE_FLAP_MM;
+
+        totalArea += lidSkirtW * lid.heightMm + lid.widthMm ** 2;
+        widest = Math.max(widest, lidSkirtW, lid.widthMm);
+      }
+
+      return { width: widest, height: totalArea / widest };
+    }
   }
 }
 

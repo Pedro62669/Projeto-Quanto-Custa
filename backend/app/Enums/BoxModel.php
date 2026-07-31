@@ -26,6 +26,17 @@ enum BoxModel: string
     /** Saco / envelope: duas faces planas seladas nas bordas. */
     case Pouch = 'pouch';
 
+    /**
+     * Tubo / lata cilíndrica: corpo enrolado, fundo em disco e tampa.
+     *
+     * Um cilindro não tem largura e profundidade independentes — tem
+     * diâmetro. O modelo reaproveita `width_mm` como diâmetro, e a
+     * profundidade é ignorada: para um cilindro, ambas SÃO o diâmetro
+     * (é literalmente a caixa envolvente da peça), então não há distorção
+     * semântica em gravar as duas iguais.
+     */
+    case Tube = 'tube';
+
     public function label(): string
     {
         return match ($this) {
@@ -33,7 +44,25 @@ enum BoxModel: string
             self::Tray => 'Caixa com tampa',
             self::Sleeve => 'Luva / cinta',
             self::Pouch => 'Saco / envelope',
+            self::Tube => 'Tubo / lata cilíndrica',
         };
+    }
+
+    /**
+     * Modelos cuja seção é circular.
+     *
+     * Quem consome: a UI (renomeia "Largura" para "Diâmetro" e esconde a
+     * profundidade) e o motor (usa a largura como diâmetro).
+     */
+    public function isCylindrical(): bool
+    {
+        return $this === self::Tube;
+    }
+
+    /** Modelos que têm uma tampa como peça separada. */
+    public function hasSeparateLid(): bool
+    {
+        return in_array($this, [self::Tray, self::Tube], true);
     }
 
     /**
@@ -47,6 +76,7 @@ enum BoxModel: string
             self::Tray => 4.0,
             self::Sleeve => 1.2,
             self::Pouch => 1.0,
+            self::Tube => 3.0,
         };
     }
 }
