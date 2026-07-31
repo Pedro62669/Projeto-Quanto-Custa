@@ -48,6 +48,16 @@ export interface QuoteSpecification {
   production_minutes_per_unit: number;
   profit_margin_percent: number;
   pricing_mode: PricingMode;
+
+  /**
+   * Medidas da tampa informadas pelo usuário, em mm.
+   *
+   * null significa "automático": a medida acompanha a base. Cada eixo é
+   * independente, então dá para fixar só a altura da tampa.
+   */
+  lid_width_mm: number | null;
+  lid_depth_mm: number | null;
+  lid_height_mm: number | null;
 }
 
 /** Saída do cálculo — idêntica ao PricingResult do PHP. */

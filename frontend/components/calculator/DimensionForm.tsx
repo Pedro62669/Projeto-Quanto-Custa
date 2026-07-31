@@ -1,8 +1,9 @@
 "use client";
 
 import { useShallow } from "zustand/react/shallow";
-import { Box, Layers, Percent, Timer } from "lucide-react";
+import { Box, Layers, PackageOpen, Percent, RotateCcw, Timer } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -23,6 +24,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import { useQuoteStore } from "@/store/useQuoteStore";
+import { defaultLidDimensions } from "@/lib/pricing/engine";
 import type { BoxModel, PricingMode } from "@/lib/pricing/types";
 
 const BOX_MODELS: Array<{ value: BoxModel; label: string }> = [
@@ -154,6 +156,9 @@ export function DimensionForm() {
         </div>
       </section>
 
+      {/* ── Tampa: só existe no modelo bandeja ──────────────────────────── */}
+      {spec.box_model === "tray" && <LidFields />}
+
       <Separator />
 
       {/* ── Margem de lucro (sempre visível: é a alavanca principal) ────── */}
@@ -262,6 +267,105 @@ export function DimensionForm() {
 }
 
 /**
+ * Medidas da tampa.
+ *
+ * Os campos nascem preenchidos com a sugestão calculada a partir da base e
+ * ficam em modo AUTOMÁTICO: mexer na caixa move a tampa junto. Digitar em um
+ * campo o fixa — e só ele; dá para travar a altura da tampa e deixar largura
+ * e profundidade acompanhando a base.
+ *
+ * Esse é o ponto do desenho: o valor sugerido é um bom palpite, não uma
+ * imposição, e o usuário não precisa recalcular nada para começar.
+ */
+function LidFields() {
+  const { spec, material, updateSpec } = useQuoteStore(
+    useShallow((s) => ({
+      spec: s.spec,
+      material: s.materials.find((m) => m.id === s.spec.material_id) ?? null,
+      updateSpec: s.updateSpec,
+    })),
+  );
+
+  // Mesma função usada pelo motor de preço e pelo 3D — sem constante repetida.
+  const sugerida = defaultLidDimensions(
+    spec.box_model,
+    spec.width_mm,
+    spec.height_mm,
+    spec.depth_mm,
+    material?.thickness_mm ?? 0,
+  );
+
+  if (!sugerida) return null;
+
+  const manual =
+    spec.lid_width_mm !== null ||
+    spec.lid_depth_mm !== null ||
+    spec.lid_height_mm !== null;
+
+  const arredonda = (v: number) => Math.round(v * 10) / 10;
+
+  return (
+    <section className="space-y-3 rounded-lg border border-dashed p-3">
+      <header className="flex items-center gap-2">
+        <PackageOpen className="size-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold">Tampa</h2>
+
+        {manual ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto h-6 gap-1 px-2 text-xs font-normal text-muted-foreground"
+            onClick={() =>
+              updateSpec({
+                lid_width_mm: null,
+                lid_depth_mm: null,
+                lid_height_mm: null,
+              })
+            }
+          >
+            <RotateCcw className="size-3" />
+            Automático
+          </Button>
+        ) : (
+          <span className="ml-auto text-xs text-muted-foreground">
+            automático · acompanha a caixa
+          </span>
+        )}
+      </header>
+
+      <div className="grid grid-cols-3 gap-3">
+        <DimensionInput
+          id="lid-width"
+          label="Largura"
+          value={arredonda(spec.lid_width_mm ?? sugerida.widthMm)}
+          onChange={(lid_width_mm) => updateSpec({ lid_width_mm })}
+          min={spec.width_mm}
+        />
+        <DimensionInput
+          id="lid-depth"
+          label="Profundidade"
+          value={arredonda(spec.lid_depth_mm ?? sugerida.depthMm)}
+          onChange={(lid_depth_mm) => updateSpec({ lid_depth_mm })}
+          min={spec.depth_mm}
+        />
+        <DimensionInput
+          id="lid-height"
+          label="Altura"
+          value={arredonda(spec.lid_height_mm ?? sugerida.heightMm)}
+          onChange={(lid_height_mm) => updateSpec({ lid_height_mm })}
+          min={1}
+        />
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        A tampa encaixa por fora: largura e profundidade não podem ser menores
+        que as da caixa.
+      </p>
+    </section>
+  );
+}
+
+/**
  * Input de dimensão.
  *
  * `value || ""` em vez de `value`: sem isso, apagar o campo mostraria "0" e o
@@ -273,11 +377,13 @@ function DimensionInput({
   label,
   value,
   onChange,
+  min = 10,
 }: {
   id: string;
   label: string;
   value: number;
   onChange: (value: number) => void;
+  min?: number;
 }) {
   return (
     <div className="space-y-1.5">
@@ -288,8 +394,8 @@ function DimensionInput({
         id={id}
         type="number"
         inputMode="numeric"
-        min={10}
-        max={3000}
+        min={min}
+        max={3200}
         value={value || ""}
         onChange={(e) => onChange(Number(e.target.value) || 0)}
         className="font-mono tabular-nums"

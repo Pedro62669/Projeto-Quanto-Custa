@@ -36,19 +36,29 @@ final class PricingEngine
         // ── 1. Geometria: quanto material a peça consome ────────────────────
         $blankCalculator = new BlankCalculator(thicknessMm: $material->thickness_mm ?? 0.0);
 
+        /*
+         * A tampa é resolvida ANTES do plano de corte, e de propósito: o
+         * consumo de material precisa refletir a tampa REAL. Calcular o blank
+         * com a tampa sugerida faria uma tampa mais alta sair de graça.
+         */
+        $lid = $blankCalculator->resolveLidDimensions(
+            $input->boxModel,
+            $input->widthMm,
+            $input->heightMm,
+            $input->depthMm,
+            [
+                'width' => $input->lidWidthMm,
+                'depth' => $input->lidDepthMm,
+                'height' => $input->lidHeightMm,
+            ],
+        );
+
         $blank = $blankCalculator->blankDimensions(
             $input->boxModel,
             $input->widthMm,
             $input->heightMm,
             $input->depthMm,
-        );
-
-        // Medidas físicas da tampa (null se o modelo não tiver uma).
-        $lid = $blankCalculator->lidDimensions(
-            $input->boxModel,
-            $input->widthMm,
-            $input->heightMm,
-            $input->depthMm,
+            $lid,
         );
 
         $netAreaPerUnit = ($blank['width'] * $blank['height']) / 1_000_000.0;

@@ -127,6 +127,41 @@ check(
   `tampa ${larguraTampa} > base ${await page.inputValue("#width")}`,
 );
 
+// Digitar a altura da tampa: fixa só esse eixo e encarece a peça.
+const precoAutomatico = await page.textContent(".font-mono.text-4xl");
+await page.fill("#lid-height", "150");
+await page.waitForFunction(
+  (antigo) => document.querySelector(".font-mono.text-4xl")?.textContent?.trim() !== antigo,
+  precoAutomatico?.trim(),
+  { timeout: 20000 },
+);
+const precoTampaAlta = await page.textContent(".font-mono.text-4xl");
+check(
+  "tampa mais alta consome mais material e custa mais",
+  num(precoTampaAlta) > num(precoAutomatico),
+  `${precoAutomatico?.trim()} → ${precoTampaAlta?.trim()}`,
+);
+
+// Largura e profundidade continuam automáticas — só a altura foi fixada.
+const larguraAposAltura = await page.inputValue("#lid-width");
+await page.fill("#width", "400");
+await page.waitForTimeout(1500);
+check(
+  "os eixos não fixados continuam acompanhando a caixa",
+  (await page.inputValue("#lid-width")) !== larguraAposAltura &&
+    (await page.inputValue("#lid-height")) === "150",
+  `largura ${larguraAposAltura} → ${await page.inputValue("#lid-width")}, altura fixa em ${await page.inputValue("#lid-height")}`,
+);
+
+// Botão "Automático" devolve todos os eixos ao cálculo derivado.
+await page.click('button:has-text("Automático")');
+await page.waitForTimeout(1500);
+check(
+  "restaurar automático desfaz as medidas manuais",
+  (await page.inputValue("#lid-height")) !== "150",
+  `altura voltou para ${await page.inputValue("#lid-height")}`,
+);
+
 // Os modelos sem tampa não podem exibir a linha.
 await page.click("#box-model");
 await page.click('[role="option"]:has-text("Saco / envelope")');

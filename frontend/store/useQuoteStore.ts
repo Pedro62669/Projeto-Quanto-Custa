@@ -31,6 +31,11 @@ const DEFAULT_SPEC: QuoteSpecification = {
   production_minutes_per_unit: 2.5,
   profit_margin_percent: 30,
   pricing_mode: "markup",
+
+  // Tampa em modo automático: acompanha as dimensões da base.
+  lid_width_mm: null,
+  lid_depth_mm: null,
+  lid_height_mm: null,
 };
 
 interface QuoteState {
@@ -225,6 +230,11 @@ export const selectDimensions = (s: QuoteState) => ({
   heightMm: s.spec.height_mm,
   depthMm: s.spec.depth_mm,
   boxModel: s.spec.box_model,
+
+  // As medidas da tampa também redesenham a malha.
+  lidWidthMm: s.spec.lid_width_mm,
+  lidDepthMm: s.spec.lid_depth_mm,
+  lidHeightMm: s.spec.lid_height_mm,
 });
 
 export const selectActiveMaterial = (s: QuoteState) =>

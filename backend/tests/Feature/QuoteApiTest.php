@@ -113,6 +113,71 @@ class QuoteApiTest extends TestCase
             ->assertJsonValidationErrors('material_id');
     }
 
+    /* ── Tampa informada pelo usuário ──────────────────────────────────── */
+
+    #[Test]
+    public function aceita_as_medidas_de_tampa_informadas(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->postJson('/api/quotes/simulate', $this->spec([
+                'box_model' => 'tray',
+                'lid_width_mm' => 340,
+                'lid_depth_mm' => 190,
+                'lid_height_mm' => 120,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.lid_width_mm', 340)
+            ->assertJsonPath('data.lid_height_mm', 120);
+    }
+
+    #[Test]
+    public function rejeita_tampa_menor_que_a_caixa(): void
+    {
+        // A tampa encaixa por fora: menor que a base é peça impossível.
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson('/api/quotes/simulate', $this->spec([
+                'box_model' => 'tray',
+                'lid_width_mm' => 250, // base tem 300
+            ]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('lid_width_mm');
+
+        $this->actingAs($user)
+            ->postJson('/api/quotes/simulate', $this->spec([
+                'box_model' => 'tray',
+                'lid_depth_mm' => 100, // base tem 150
+            ]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('lid_depth_mm');
+    }
+
+    #[Test]
+    public function o_orcamento_salvo_preserva_o_modo_da_tampa(): void
+    {
+        $user = User::factory()->create();
+
+        // Automático: os campos ficam nulos, e null aqui SIGNIFICA algo —
+        // é a escolha de deixar o sistema derivar da base.
+        $this->actingAs($user)
+            ->postJson('/api/quotes', $this->spec(['box_model' => 'tray', 'client_name' => 'Auto']))
+            ->assertCreated();
+
+        $this->assertNull(Quote::latest('id')->first()->lid_height_mm);
+
+        // Manual: a medida informada é gravada como tal.
+        $this->actingAs($user)
+            ->postJson('/api/quotes', $this->spec([
+                'box_model' => 'tray',
+                'client_name' => 'Manual',
+                'lid_height_mm' => 120,
+            ]))
+            ->assertCreated();
+
+        $this->assertSame(120.0, (float) Quote::latest('id')->first()->lid_height_mm);
+    }
+
     /* ── Gravação: a garantia central ──────────────────────────────────── */
 
     #[Test]

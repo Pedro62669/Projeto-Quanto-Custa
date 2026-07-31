@@ -110,6 +110,12 @@ class QuoteController extends Controller
             'box_model' => $data['box_model'] ?? 'rsc',
             'quantity' => (int) ($data['quantity'] ?? 1),
 
+            // Null = tampa automática. Guardado como o usuário informou (e não
+            // como resolvido) para que o orçamento reabra no mesmo modo.
+            'lid_width_mm' => $data['lid_width_mm'] ?? null,
+            'lid_depth_mm' => $data['lid_depth_mm'] ?? null,
+            'lid_height_mm' => $data['lid_height_mm'] ?? null,
+
             'waste_percent' => $data['waste_percent'] ?? $material->default_waste_percent,
             'production_minutes_per_unit' => $data['production_minutes_per_unit'] ?? 0,
             'profit_margin_percent' => $data['profit_margin_percent'] ?? $settings->default_profit_margin_percent,

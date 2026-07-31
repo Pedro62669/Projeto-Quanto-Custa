@@ -52,6 +52,9 @@ class ExportPricingFixtures extends Command
                 productionMinutesPerUnit: $scenario['productionMinutes'],
                 profitMarginPercent: $scenario['marginPercent'],
                 pricingMode: $scenario['pricingMode'],
+                lidWidthMm: $scenario['lidWidthMm'],
+                lidDepthMm: $scenario['lidDepthMm'],
+                lidHeightMm: $scenario['lidHeightMm'],
             );
 
             $cases[] = [
@@ -77,6 +80,9 @@ class ExportPricingFixtures extends Command
                     'production_minutes_per_unit' => $scenario['productionMinutes'],
                     'profit_margin_percent' => $scenario['marginPercent'],
                     'pricing_mode' => $scenario['pricingMode'],
+                    'lid_width_mm' => $scenario['lidWidthMm'],
+                    'lid_depth_mm' => $scenario['lidDepthMm'],
+                    'lid_height_mm' => $scenario['lidHeightMm'],
                 ],
                 'expected' => $engine->calculate($input)->toArray(),
             ];
@@ -118,6 +124,9 @@ class ExportPricingFixtures extends Command
             'productionMinutes' => $o['productionMinutes'] ?? 2.5,
             'marginPercent' => $o['marginPercent'] ?? 30.0,
             'pricingMode' => $o['pricingMode'] ?? 'markup',
+            'lidWidthMm' => $o['lidWidthMm'] ?? null,
+            'lidDepthMm' => $o['lidDepthMm'] ?? null,
+            'lidHeightMm' => $o['lidHeightMm'] ?? null,
         ];
 
         $scenarios = [
@@ -142,6 +151,24 @@ class ExportPricingFixtures extends Command
             'dimensoes-fracionadas' => $base(['widthMm' => 237.5, 'heightMm' => 118.3, 'depthMm' => 91.7]),
             'quantidade-alta' => $base(['quantity' => 1000000]),
             'tempo-zero' => $base(['productionMinutes' => 0.0]),
+            // Tampa informada pelo usuário: cada eixo e a combinação completa.
+            'tampa-manual-completa' => $base([
+                'boxModel' => BoxModel::Tray,
+                'lidWidthMm' => 340.0, 'lidDepthMm' => 190.0, 'lidHeightMm' => 120.0,
+            ]),
+            'tampa-so-altura' => $base(['boxModel' => BoxModel::Tray, 'lidHeightMm' => 120.0]),
+            'tampa-so-largura' => $base(['boxModel' => BoxModel::Tray, 'lidWidthMm' => 355.5]),
+            'tampa-manual-espessa' => $base([
+                'boxModel' => BoxModel::Tray,
+                'material' => ['thickness_mm' => 7.0],
+                'lidWidthMm' => 340.0, 'lidHeightMm' => 95.5,
+            ]),
+            // Medidas de tampa num modelo sem tampa: devem ser ignoradas.
+            'tampa-ignorada-em-saco' => $base([
+                'boxModel' => BoxModel::Pouch,
+                'lidWidthMm' => 999.0, 'lidHeightMm' => 999.0,
+            ]),
+
             'tudo-combinado' => $base([
                 'material' => ['cost_unit' => MaterialUnit::Kilogram, 'cost_per_unit' => 24.0, 'grammage_kg_per_m2' => 0.18, 'thickness_mm' => 0.6],
                 'settings' => ['overhead_percent' => 12.0, 'tax_percent' => 8.0],

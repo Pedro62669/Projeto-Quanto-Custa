@@ -48,19 +48,26 @@ export interface LidDimensions {
   heightMm: number;
 }
 
+/** Medidas da tampa informadas pelo usuário; null em um eixo = automático. */
+export interface LidOverrides {
+  lid_width_mm?: number | null;
+  lid_depth_mm?: number | null;
+  lid_height_mm?: number | null;
+}
+
 /**
- * Dimensões FÍSICAS da tampa (não do plano de corte).
+ * Dimensões FÍSICAS SUGERIDAS da tampa (não do plano de corte).
  *
- * Espelha BlankCalculator::lidDimensions(). Responde "que tamanho tem a peça",
- * enquanto blankDimensions responde "quanto material comprar".
+ * Espelha BlankCalculator::defaultLidDimensions(). Responde "que tamanho tem
+ * a peça", enquanto blankDimensions responde "quanto material comprar".
  *
- * É a fonte única consumida tanto pelo painel de medidas quanto pelo
- * renderizador 3D — sem esta função, as constantes de folga e de altura da
- * tampa acabariam duplicadas dentro do componente three.js.
+ * É a fonte única consumida pelo painel de medidas, pelos campos do
+ * formulário e pelo renderizador 3D — sem ela, as constantes de folga e de
+ * altura da tampa acabariam duplicadas em três lugares.
  *
  * Devolve null para modelos sem tampa separada.
  */
-export function lidDimensions(
+export function defaultLidDimensions(
   model: BoxModel,
   widthMm: number,
   heightMm: number,
@@ -81,6 +88,31 @@ export function lidDimensions(
 }
 
 /**
+ * Medidas efetivas: o que o usuário informou, ou a sugestão.
+ *
+ * Cada eixo é independente — dá para fixar só a altura da tampa e deixar
+ * largura e profundidade acompanhando a base.
+ */
+export function resolveLidDimensions(
+  model: BoxModel,
+  widthMm: number,
+  heightMm: number,
+  depthMm: number,
+  thicknessMm = 0,
+  overrides: LidOverrides = {},
+): LidDimensions | null {
+  const padrao = defaultLidDimensions(model, widthMm, heightMm, depthMm, thicknessMm);
+
+  if (!padrao) return null;
+
+  return {
+    widthMm: overrides.lid_width_mm ?? padrao.widthMm,
+    depthMm: overrides.lid_depth_mm ?? padrao.depthMm,
+    heightMm: overrides.lid_height_mm ?? padrao.heightMm,
+  };
+}
+
+/**
  * Dimensões do plano de corte (blank) em milímetros.
  *
  * Não é a soma das 6 faces: uma embalagem é uma chapa única dobrada, com abas
@@ -93,6 +125,8 @@ export function blankDimensions(
   heightMm: number,
   depthMm: number,
   thicknessMm = 0,
+  /** Medidas efetivas da tampa; null usa a sugestão. */
+  lidMm: LidDimensions | null = null,
 ): BlankDimensions {
   const t = thicknessMm; // compensação de dobra: cada vinco consome ~1 espessura
 
@@ -108,10 +142,13 @@ export function blankDimensions(
       const baseW = widthMm + 2 * heightMm + 2 * t;
       const baseH = depthMm + 2 * heightMm + 2 * t;
 
-      // Tampa telescópica: mais larga (folga) e mais baixa
-      const lidHeight = heightMm * LID_HEIGHT_RATIO;
-      const lidW = widthMm + 2 * LID_CLEARANCE_MM + 2 * lidHeight + 2 * t;
-      const lidH = depthMm + 2 * LID_CLEARANCE_MM + 2 * lidHeight + 2 * t;
+      // Tampa: planificação das medidas físicas EFETIVAS. Usar a sugestão
+      // aqui faria uma tampa customizada mais alta sair de graça.
+      const lid =
+        lidMm ?? defaultLidDimensions(model, widthMm, heightMm, depthMm, t)!;
+
+      const lidW = lid.widthMm + 2 * lid.heightMm;
+      const lidH = lid.depthMm + 2 * lid.heightMm;
 
       // Duas peças reduzidas a um retângulo de área equivalente.
       const totalArea = baseW * baseH + lidW * lidH;
@@ -156,12 +193,25 @@ export function calculatePricing({
   settings,
 }: CalculateArgs): PricingBreakdown {
   // ── 1. Geometria ──────────────────────────────────────────────────────────
+  //
+  // A tampa é resolvida ANTES do plano de corte: o consumo de material precisa
+  // refletir a tampa REAL, não a sugerida.
+  const lid = resolveLidDimensions(
+    spec.box_model,
+    spec.width_mm,
+    spec.height_mm,
+    spec.depth_mm,
+    material.thickness_mm ?? 0,
+    spec,
+  );
+
   const blank = blankDimensions(
     spec.box_model,
     spec.width_mm,
     spec.height_mm,
     spec.depth_mm,
     material.thickness_mm ?? 0,
+    lid,
   );
 
   const netAreaPerUnit = (blank.width * blank.height) / MM2_PER_M2;
@@ -201,14 +251,6 @@ export function calculatePricing({
   const total_price = money(unit_price * spec.quantity, 2);
   const tax_amount = money(total_price * (settings.tax_percent / 100), 2);
   const profit_amount = money(total_price - total_cost - tax_amount, 2);
-
-  const lid = lidDimensions(
-    spec.box_model,
-    spec.width_mm,
-    spec.height_mm,
-    spec.depth_mm,
-    material.thickness_mm ?? 0,
-  );
 
   return {
     area_m2_per_unit: round(netAreaPerUnit, 6),

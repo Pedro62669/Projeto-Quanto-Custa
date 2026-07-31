@@ -30,6 +30,17 @@ final readonly class PricingInput
         public float $profitMarginPercent,
         /** 'markup' => custo × (1+m) | 'margin' => custo ÷ (1−m) */
         public string $pricingMode = 'markup',
+
+        /*
+         * Medidas da tampa informadas pelo usuário, em mm.
+         *
+         * Null significa "usar a sugestão" — e cada eixo é independente, para
+         * que dê para fixar só a altura da tampa e deixar largura e
+         * profundidade acompanhando a base.
+         */
+        public ?float $lidWidthMm = null,
+        public ?float $lidDepthMm = null,
+        public ?float $lidHeightMm = null,
     ) {}
 
     /**
@@ -61,6 +72,11 @@ final readonly class PricingInput
                 $data['profit_margin_percent'] ?? $settings->default_profit_margin_percent
             ),
             pricingMode: $data['pricing_mode'] ?? 'markup',
+
+            // Ausente ou null => tampa automática.
+            lidWidthMm: isset($data['lid_width_mm']) ? (float) $data['lid_width_mm'] : null,
+            lidDepthMm: isset($data['lid_depth_mm']) ? (float) $data['lid_depth_mm'] : null,
+            lidHeightMm: isset($data['lid_height_mm']) ? (float) $data['lid_height_mm'] : null,
         );
     }
 }

@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { Edges, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import type { BoxModel } from "@/lib/pricing/types";
-import { lidDimensions } from "@/lib/pricing/engine";
+import { resolveLidDimensions } from "@/lib/pricing/engine";
 
 /**
  * Escala da cena: a MAIOR aresta da embalagem sempre ocupa este número de
@@ -55,6 +55,11 @@ export interface BoxMeshProps extends BoxDimensions {
   textureUrl?: string | null;
   /** Destaca os vincos/dobras da planificação. */
   showEdges?: boolean;
+
+  /** Medidas da tampa informadas pelo usuário; null em um eixo = automático. */
+  lidWidthMm?: number | null;
+  lidDepthMm?: number | null;
+  lidHeightMm?: number | null;
 }
 
 /**
@@ -77,17 +82,63 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
  * largura, altura e profundidade — que é o ponto do preview: o usuário precisa
  * perceber que digitou uma caixa achatada ou uma coluna estreita.
  */
-function toSceneScale({ widthMm, heightMm, depthMm }: BoxDimensions): {
+function toSceneScale(
+  { widthMm, heightMm, depthMm }: BoxDimensions,
+  /** Altura total do conjunto em mm (base + vão + tampa), se houver tampa. */
+  alturaConjuntoMm = heightMm,
+): {
   size: THREE.Vector3;
   mmPorUnidade: number;
 } {
-  const largest = Math.max(widthMm, heightMm, depthMm, 1); // guarda contra 0
+  /*
+   * A referência é o CONJUNTO, não só a caixa.
+   *
+   * Normalizar apenas pela caixa fazia uma tampa alta estourar o quadro: o
+   * usuário digitava 160mm de tampa e a peça saía pela borda do canvas.
+   * Incluir a altura empilhada aqui garante que tudo caiba, e como o fator é
+   * o mesmo nos três eixos, as proporções continuam fiéis.
+   */
+  const largest = Math.max(widthMm, depthMm, alturaConjuntoMm, 1); // guarda contra 0
   const factor = SCENE_MAX_UNITS / largest;
 
   return {
     size: new THREE.Vector3(widthMm * factor, heightMm * factor, depthMm * factor),
     mmPorUnidade: factor,
   };
+}
+
+/**
+ * Altura total do conjunto, em mm: base + vão da vista explodida + tampa.
+ *
+ * Exportada porque o BoxViewer precisa dela para mirar a câmera no centro do
+ * que está desenhado — cravar um alvo fixo descentraliza assim que a tampa
+ * muda de tamanho.
+ */
+export function assemblyHeightMm(props: BoxMeshProps): number {
+  const tampa = resolveLidDimensions(
+    props.boxModel ?? "rsc",
+    props.widthMm,
+    props.heightMm,
+    props.depthMm,
+    props.thicknessMm ?? 0,
+    {
+      lid_width_mm: props.lidWidthMm,
+      lid_depth_mm: props.lidDepthMm,
+      lid_height_mm: props.lidHeightMm,
+    },
+  );
+
+  if (!tampa) return props.heightMm;
+
+  return props.heightMm * (1 + LID_GAP_RATIO) + tampa.heightMm;
+}
+
+/** Altura do conjunto já convertida para unidades de cena (≤ SCENE_MAX_UNITS). */
+export function assemblyHeightUnits(props: BoxMeshProps): number {
+  const alturaMm = assemblyHeightMm(props);
+  const largest = Math.max(props.widthMm, props.depthMm, alturaMm, 1);
+
+  return (alturaMm * SCENE_MAX_UNITS) / largest;
 }
 
 /**
@@ -174,6 +225,9 @@ export function BoxMesh({
   colorHex = "#C8A06A",
   textureUrl,
   showEdges = true,
+  lidWidthMm = null,
+  lidDepthMm = null,
+  lidHeightMm = null,
 }: BoxMeshProps) {
   const grupo = useRef<THREE.Group>(null);
 
@@ -198,7 +252,19 @@ export function BoxMesh({
    * (o React Compiler acusa). Como o callback do useFrame é recriado a cada
    * render, ele sempre enxerga o alvo mais recente.
    */
-  const { size: alvo, mmPorUnidade } = toSceneScale({ widthMm, heightMm, depthMm });
+  const { size: alvo, mmPorUnidade } = toSceneScale(
+    { widthMm, heightMm, depthMm },
+    assemblyHeightMm({
+      widthMm,
+      heightMm,
+      depthMm,
+      boxModel,
+      thicknessMm,
+      lidWidthMm,
+      lidDepthMm,
+      lidHeightMm,
+    }),
+  );
 
   const aberturas = APERTURAS[boxModel] ?? APERTURAS.rsc;
 
@@ -209,7 +275,18 @@ export function BoxMesh({
    * lidDimensions() e espelhadas no PHP. Duplicá-las no componente faria o
    * desenho divergir das medidas exibidas ao usuário.
    */
-  const tampaMm = lidDimensions(boxModel, widthMm, heightMm, depthMm, thicknessMm ?? 0);
+  const tampaMm = resolveLidDimensions(
+    boxModel,
+    widthMm,
+    heightMm,
+    depthMm,
+    thicknessMm ?? 0,
+    {
+      lid_width_mm: lidWidthMm,
+      lid_depth_mm: lidDepthMm,
+      lid_height_mm: lidHeightMm,
+    },
+  );
   const temTampa = tampaMm !== null;
 
   // Espessura real do material convertida para a escala da cena, com piso

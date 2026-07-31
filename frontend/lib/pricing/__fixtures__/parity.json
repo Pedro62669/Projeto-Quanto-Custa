@@ -1,6 +1,6 @@
 {
     "engine_version": "1.0.0",
-    "generated_at": "2026-07-30T19:55:59+00:00",
+    "generated_at": "2026-07-31T10:57:37+00:00",
     "cases": [
         {
             "name": "rsc-padrao",
@@ -25,7 +25,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -72,7 +75,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "margin"
+                "pricing_mode": "margin",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -119,7 +125,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 0,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -166,7 +175,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 250,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -213,7 +225,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 99,
-                "pricing_mode": "margin"
+                "pricing_mode": "margin",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -260,7 +275,10 @@
                 "waste_percent": 0,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -307,7 +325,10 @@
                 "waste_percent": 45.5,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -354,7 +375,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -401,7 +425,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -448,7 +475,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -495,7 +525,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -542,7 +575,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.350532,
@@ -589,7 +625,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.0015,
@@ -636,7 +675,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 72.21,
@@ -683,7 +725,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.145614,
@@ -730,7 +775,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -777,7 +825,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 0,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -797,6 +848,256 @@
                 "total_cost": 115.19,
                 "total_price": 149.75,
                 "profit_amount": 34.56,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tampa-manual-completa",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tray",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": 340,
+                "lid_depth_mm": 190,
+                "lid_height_mm": 120
+            },
+            "expected": {
+                "area_m2_per_unit": 0.6344,
+                "area_m2_total": 69.784,
+                "blank_width_mm": 700,
+                "blank_height_mm": 906.29,
+                "lid_width_mm": 340,
+                "lid_depth_mm": 190,
+                "lid_height_mm": 120,
+                "material_cost": 2.2331,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.5623,
+                "unit_price": 7.2309,
+                "total_cost": 556.23,
+                "total_price": 723.09,
+                "profit_amount": 166.86,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tampa-so-altura",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tray",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": 120
+            },
+            "expected": {
+                "area_m2_per_unit": 0.599336,
+                "area_m2_total": 65.92696,
+                "blank_width_mm": 700,
+                "blank_height_mm": 856.19,
+                "lid_width_mm": 304,
+                "lid_depth_mm": 154,
+                "lid_height_mm": 120,
+                "material_cost": 2.1097,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.4388,
+                "unit_price": 7.0705,
+                "total_cost": 543.88,
+                "total_price": 707.05,
+                "profit_amount": 163.17,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tampa-so-largura",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tray",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": 355.5,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.530677,
+                "area_m2_total": 58.37447,
+                "blank_width_mm": 700,
+                "blank_height_mm": 758.11,
+                "lid_width_mm": 355.5,
+                "lid_depth_mm": 154,
+                "lid_height_mm": 70,
+                "material_cost": 1.868,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.1971,
+                "unit_price": 6.7563,
+                "total_cost": 519.71,
+                "total_price": 675.63,
+                "profit_amount": 155.92,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tampa-manual-espessa",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 7
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "tray",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": 340,
+                "lid_depth_mm": null,
+                "lid_height_mm": 95.5
+            },
+            "expected": {
+                "area_m2_per_unit": 0.593325,
+                "area_m2_total": 65.26575,
+                "blank_width_mm": 714,
+                "blank_height_mm": 830.99,
+                "lid_width_mm": 340,
+                "lid_depth_mm": 168,
+                "lid_height_mm": 95.5,
+                "material_cost": 2.0885,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.4177,
+                "unit_price": 7.043,
+                "total_cost": 541.77,
+                "total_price": 704.3,
+                "profit_amount": 162.53,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "tampa-ignorada-em-saco",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "pouch",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": 999,
+                "lid_depth_mm": null,
+                "lid_height_mm": 999
+            },
+            "expected": {
+                "area_m2_per_unit": 0.1824,
+                "area_m2_total": 20.064,
+                "blank_width_mm": 320,
+                "blank_height_mm": 570,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 0.642,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.9712,
+                "unit_price": 5.1626,
+                "total_cost": 397.12,
+                "total_price": 516.26,
+                "profit_amount": 119.14,
                 "tax_amount": 0,
                 "effective_margin_percent": 23.08
             }
@@ -824,7 +1125,10 @@
                 "waste_percent": 17.5,
                 "production_minutes_per_unit": 4.25,
                 "profit_margin_percent": 42,
-                "pricing_mode": "margin"
+                "pricing_mode": "margin",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.783747,
@@ -871,7 +1175,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -918,7 +1225,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.337132,
@@ -965,7 +1275,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.515536,
@@ -1012,7 +1325,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.527536,
@@ -1059,7 +1375,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.187,
@@ -1106,7 +1425,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.1894,
@@ -1153,7 +1475,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.1824,
@@ -1200,7 +1525,10 @@
                 "waste_percent": 10,
                 "production_minutes_per_unit": 2.5,
                 "profit_margin_percent": 30,
-                "pricing_mode": "markup"
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
             },
             "expected": {
                 "area_m2_per_unit": 0.1824,

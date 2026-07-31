@@ -42,6 +42,20 @@ class SimulateQuoteRequest extends FormRequest
             'production_minutes_per_unit' => ['nullable', 'numeric', 'min:0', 'max:600'],
             'profit_margin_percent' => ['nullable', 'numeric', 'min:0', 'max:1000'],
             'pricing_mode' => ['nullable', Rule::in(['markup', 'margin'])],
+
+            /*
+             * Medidas da tampa. Omitir (ou enviar null) mantém o cálculo
+             * automático a partir da base.
+             *
+             * gte na largura e na profundidade porque a tampa encaixa POR
+             * FORA: uma tampa menor que a base é fisicamente impossível de
+             * fechar, e aceitar isso produziria um orçamento de uma peça que
+             * não existe. A altura é livre — tampa rasa ou funda é escolha
+             * legítima de projeto.
+             */
+            'lid_width_mm' => ['nullable', 'numeric', 'min:10', 'max:3200', 'gte:width_mm'],
+            'lid_depth_mm' => ['nullable', 'numeric', 'min:10', 'max:3200', 'gte:depth_mm'],
+            'lid_height_mm' => ['nullable', 'numeric', 'min:1', 'max:3000'],
         ];
     }
 
@@ -50,6 +64,8 @@ class SimulateQuoteRequest extends FormRequest
     {
         return [
             'material_id.exists' => 'A matéria-prima selecionada não existe ou está inativa.',
+            'lid_width_mm.gte' => 'A tampa encaixa por fora: sua largura não pode ser menor que a da caixa.',
+            'lid_depth_mm.gte' => 'A tampa encaixa por fora: sua profundidade não pode ser menor que a da caixa.',
             '*.min' => 'O campo :attribute está abaixo do mínimo permitido.',
             '*.max' => 'O campo :attribute excede o máximo permitido.',
         ];

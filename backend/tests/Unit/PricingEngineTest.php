@@ -76,6 +76,9 @@ class PricingEngineTest extends TestCase
             productionMinutesPerUnit: $overrides['productionMinutesPerUnit'] ?? 2.5,
             profitMarginPercent: $overrides['profitMarginPercent'] ?? 30.0,
             pricingMode: $overrides['pricingMode'] ?? 'markup',
+            lidWidthMm: $overrides['lidWidthMm'] ?? null,
+            lidDepthMm: $overrides['lidDepthMm'] ?? null,
+            lidHeightMm: $overrides['lidHeightMm'] ?? null,
         );
     }
 
@@ -328,6 +331,70 @@ class PricingEngineTest extends TestCase
 
         $this->assertGreaterThan(300.0, $result->lidWidthMm);
         $this->assertGreaterThan(150.0, $result->lidDepthMm);
+    }
+
+    #[Test]
+    public function as_medidas_informadas_da_tampa_prevalecem_sobre_a_sugestao(): void
+    {
+        $result = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tray,
+            'lidWidthMm' => 340.0,
+            'lidDepthMm' => 190.0,
+            'lidHeightMm' => 120.0,
+        ]));
+
+        $this->assertSame(340.0, $result->lidWidthMm);
+        $this->assertSame(190.0, $result->lidDepthMm);
+        $this->assertSame(120.0, $result->lidHeightMm);
+    }
+
+    #[Test]
+    public function cada_eixo_da_tampa_e_resolvido_de_forma_independente(): void
+    {
+        // Fixar só a altura precisa deixar largura e profundidade seguindo a
+        // base — é o que permite "quero a tampa mais funda, o resto igual".
+        $result = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tray,
+            'lidHeightMm' => 120.0,
+        ]));
+
+        $this->assertSame(120.0, $result->lidHeightMm);
+        $this->assertSame(304.0, $result->lidWidthMm);  // 300 + 2×2 de folga
+        $this->assertSame(154.0, $result->lidDepthMm);  // 150 + 2×2 de folga
+    }
+
+    #[Test]
+    public function uma_tampa_maior_consome_mais_material_e_custa_mais(): void
+    {
+        // A garantia central desta funcionalidade: a tampa informada entra no
+        // plano de corte. Se o blank usasse a tampa sugerida, uma tampa mais
+        // alta sairia de graça e o orçamento sairia no prejuízo.
+        $padrao = $this->engine->calculate($this->input(['boxModel' => BoxModel::Tray]));
+
+        $alta = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Tray,
+            'lidHeightMm' => 150.0, // sugerida seria 70
+        ]));
+
+        $this->assertGreaterThan($padrao->areaM2PerUnit, $alta->areaM2PerUnit);
+        $this->assertGreaterThan($padrao->materialCost, $alta->materialCost);
+        $this->assertGreaterThan($padrao->unitPrice, $alta->unitPrice);
+    }
+
+    #[Test]
+    public function a_tampa_informada_e_ignorada_em_modelos_sem_tampa(): void
+    {
+        // Enviar medidas de tampa para um saco não pode alterar o consumo.
+        $limpo = $this->engine->calculate($this->input(['boxModel' => BoxModel::Pouch]));
+
+        $comLixo = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Pouch,
+            'lidWidthMm' => 999.0,
+            'lidHeightMm' => 999.0,
+        ]));
+
+        $this->assertSame($limpo->areaM2PerUnit, $comLixo->areaM2PerUnit);
+        $this->assertNull($comLixo->lidWidthMm);
     }
 
     #[Test]

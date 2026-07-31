@@ -9,7 +9,7 @@ import {
   Grid,
   Html,
 } from "@react-three/drei";
-import { BoxMesh, type BoxMeshProps } from "./BoxMesh";
+import { BoxMesh, assemblyHeightUnits, type BoxMeshProps } from "./BoxMesh";
 
 export interface BoxViewerProps extends BoxMeshProps {
   /** Rótulo exibido no canto (ex.: nome do material selecionado). */
@@ -104,12 +104,14 @@ export function BoxViewer({
             // não informa nada e desorienta o usuário.
             maxPolarAngle={Math.PI / 2.05}
             /**
-             * Ponto focal mais alto quando há tampa: a vista explodida
-             * empilha base + vão + tampa, e mirar na altura da base sozinha
-             * jogaria o conjunto para o topo do quadro, deixando o terço
-             * inferior vazio.
+             * Mira no centro geométrico do que está desenhado.
+             *
+             * Um alvo fixo descentraliza assim que a tampa muda de altura —
+             * e com tampa alta o conjunto saía pela borda do quadro. Derivar
+             * do próprio conjunto mantém o enquadramento correto para
+             * qualquer combinação de medidas.
              */
-            target={[0, boxProps.boxModel === "tray" ? 1.05 : 0.6, 0]}
+            target={[0, assemblyHeightUnits(boxProps) / 2, 0]}
           />
         </Suspense>
       </Canvas>

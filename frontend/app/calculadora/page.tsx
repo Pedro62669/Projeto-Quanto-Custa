@@ -123,6 +123,9 @@ export default function CalculadoraPage() {
               heightMm={dimensions.heightMm}
               depthMm={dimensions.depthMm}
               boxModel={dimensions.boxModel}
+              lidWidthMm={dimensions.lidWidthMm}
+              lidDepthMm={dimensions.lidDepthMm}
+              lidHeightMm={dimensions.lidHeightMm}
               // Espessura real do material: vira a espessura visível das
               // paredes, para que a caixa oca mostre o que foi escolhido.
               thicknessMm={material?.thickness_mm}

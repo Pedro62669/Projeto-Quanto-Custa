@@ -66,6 +66,12 @@ final class BlankCalculator
      * 820 × 540 mm" — informação que o operador usa para escolher o formato
      * da bobina/chapa.
      *
+     * O parâmetro $lidMm carrega as medidas efetivas da tampa (ver
+     * resolveLidDimensions). Null usa a sugestão — o consumo de material
+     * acompanha a tampa REAL, e não a padrão, senão uma tampa mais alta
+     * sairia de graça.
+     *
+     * @param  array{width: float, depth: float, height: float}|null  $lidMm
      * @return array{width: float, height: float}
      */
     public function blankDimensions(
@@ -73,6 +79,7 @@ final class BlankCalculator
         float $widthMm,
         float $heightMm,
         float $depthMm,
+        ?array $lidMm = null,
     ): array {
         // Compensação de dobra: cada vinco perde ~1 espessura.
         $t = $this->thicknessMm;
@@ -89,7 +96,13 @@ final class BlankCalculator
 
             // Bandeja com tampa: dois blanks somados no mesmo retângulo
             // equivalente (base empilhada sobre a tampa no plano de corte).
-            BoxModel::Tray => $this->trayBlank($widthMm, $heightMm, $depthMm, $t),
+            BoxModel::Tray => $this->trayBlank(
+                $widthMm,
+                $heightMm,
+                $depthMm,
+                $t,
+                $lidMm ?? $this->defaultLidDimensions($model, $widthMm, $heightMm, $depthMm),
+            ),
 
             // Luva: cinta fechada ao redor do produto, sem topo nem fundo.
             BoxModel::Sleeve => [
@@ -106,7 +119,7 @@ final class BlankCalculator
     }
 
     /**
-     * Dimensões FÍSICAS da tampa (não do plano de corte), em milímetros.
+     * Dimensões FÍSICAS SUGERIDAS da tampa (não do plano de corte), em mm.
      *
      * Existe separado de blankDimensions() porque atende outra pergunta: o
      * blank responde "quanto material comprar", isto responde "que tamanho
@@ -114,11 +127,14 @@ final class BlankCalculator
      * as usa para desenhar a tampa — ambos a partir desta única definição,
      * em vez de repetirem as constantes de folga e altura.
      *
+     * É uma SUGESTÃO: o usuário pode informar as próprias medidas, e nesse
+     * caso quem manda é resolveLidDimensions().
+     *
      * Devolve null para modelos que não têm tampa separada.
      *
      * @return array{width: float, depth: float, height: float}|null
      */
-    public function lidDimensions(
+    public function defaultLidDimensions(
         BoxModel $model,
         float $widthMm,
         float $heightMm,
@@ -140,24 +156,56 @@ final class BlankCalculator
     }
 
     /**
+     * Medidas efetivas da tampa: o que o usuário informou, ou a sugestão.
+     *
+     * Cada eixo é resolvido de forma independente — dá para fixar só a altura
+     * da tampa e deixar largura e profundidade acompanhando a base.
+     *
+     * @param  array{width: ?float, depth: ?float, height: ?float}  $overrides
+     * @return array{width: float, depth: float, height: float}|null
+     */
+    public function resolveLidDimensions(
+        BoxModel $model,
+        float $widthMm,
+        float $heightMm,
+        float $depthMm,
+        array $overrides = ['width' => null, 'depth' => null, 'height' => null],
+    ): ?array {
+        $default = $this->defaultLidDimensions($model, $widthMm, $heightMm, $depthMm);
+
+        if ($default === null) {
+            return null;
+        }
+
+        return [
+            'width' => $overrides['width'] ?? $default['width'],
+            'depth' => $overrides['depth'] ?? $default['depth'],
+            'height' => $overrides['height'] ?? $default['height'],
+        ];
+    }
+
+    /**
      * Bandeja = base (com paredes dobradas para cima) + tampa telescópica.
      *
      * Como são duas peças, devolvemos um retângulo equivalente cuja ÁREA
      * corresponde à soma das duas — mantendo a largura da peça maior para que
      * o número exibido ainda faça sentido como largura de chapa.
      *
+     * O blank da tampa é obtido rebatendo as saias a partir das medidas
+     * FÍSICAS dela: cada lado cresce duas alturas de tampa.
+     *
+     * @param  array{width: float, depth: float, height: float}  $lid
      * @return array{width: float, height: float}
      */
-    private function trayBlank(float $w, float $h, float $d, float $t): array
+    private function trayBlank(float $w, float $h, float $d, float $t, array $lid): array
     {
         // Base: fundo + 4 paredes rebatidas.
         $baseW = $w + 2 * $h + 2 * $t;
         $baseH = $d + 2 * $h + 2 * $t;
 
-        // Tampa: um pouco maior (folga) e mais baixa.
-        $lidHeight = $h * self::LID_HEIGHT_RATIO;
-        $lidW = $w + 2 * self::LID_CLEARANCE_MM + 2 * $lidHeight + 2 * $t;
-        $lidH = $d + 2 * self::LID_CLEARANCE_MM + 2 * $lidHeight + 2 * $t;
+        // Tampa: planificação das medidas físicas informadas (ou sugeridas).
+        $lidW = $lid['width'] + 2 * $lid['height'];
+        $lidH = $lid['depth'] + 2 * $lid['height'];
 
         $totalArea = ($baseW * $baseH) + ($lidW * $lidH);
         $width = max($baseW, $lidW);
