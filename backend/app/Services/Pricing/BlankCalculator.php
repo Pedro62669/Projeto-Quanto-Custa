@@ -116,6 +116,9 @@ final class BlankCalculator
                 'height' => 2 * $heightMm + $depthMm + 2 * self::SEAL_MM,
             ],
 
+            // Caixa gaveta: luva externa + gaveta interna, duas peças.
+            BoxModel::Drawer => $this->drawerBlank($widthMm, $heightMm, $depthMm, $t),
+
             // Tubo cilíndrico: a largura é o DIÂMETRO; a profundidade é ignorada.
             BoxModel::Tube => $this->tubeBlank(
                 $widthMm,
@@ -195,6 +198,43 @@ final class BlankCalculator
             'width' => $overrides['width'] ?? $default['width'],
             'depth' => $overrides['depth'] ?? $default['depth'],
             'height' => $overrides['height'] ?? $default['height'],
+        ];
+    }
+
+    /**
+     * Caixa gaveta = gaveta interna + luva externa.
+     *
+     * As dimensões informadas são as INTERNAS da gaveta (o espaço útil). A
+     * luva não é dimensionada pela caixa "por fora" de forma aproximada: ela
+     * precisa envolver a gaveta JÁ MONTADA, ou seja, vencer as paredes dela
+     * (duas espessuras em cada eixo) mais a folga de deslize. Sem isso a
+     * gaveta não entra — e o orçamento sairia de uma peça que não encaixa.
+     *
+     * A gaveta é uma bandeja: fundo com as quatro paredes rebatidas. A luva é
+     * uma cinta fechada, aberta nas duas pontas, cujo comprimento é a
+     * profundidade da caixa (o eixo do deslize).
+     *
+     * @return array{width: float, height: float}
+     */
+    private function drawerBlank(float $w, float $h, float $d, float $t): array
+    {
+        // Gaveta: fundo + 4 paredes rebatidas.
+        $gavetaW = $w + 2 * $h + 2 * $t;
+        $gavetaH = $d + 2 * $h + 2 * $t;
+
+        // Luva: seção interna = gaveta montada + folga de deslize.
+        $secaoLargura = $w + 2 * $t + self::LID_CLEARANCE_MM;
+        $secaoAltura = $h + 2 * $t + self::LID_CLEARANCE_MM;
+
+        $luvaW = 2 * ($secaoLargura + $secaoAltura) + self::GLUE_FLAP_MM;
+        $luvaH = $d;
+
+        $totalArea = $gavetaW * $gavetaH + $luvaW * $luvaH;
+        $width = max($gavetaW, $luvaW);
+
+        return [
+            'width' => $width,
+            'height' => $totalArea / $width,
         ];
     }
 

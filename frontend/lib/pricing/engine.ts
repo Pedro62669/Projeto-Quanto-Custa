@@ -183,6 +183,27 @@ export function blankDimensions(
         height: 2 * heightMm + depthMm + 2 * SEAL_MM,
       };
 
+    case "drawer": {
+      // Caixa gaveta: gaveta interna (bandeja) + luva externa.
+      //
+      // A luva envolve a gaveta JÁ MONTADA — vence as paredes dela (duas
+      // espessuras por eixo) mais a folga de deslize. Dimensioná-la pela
+      // caixa "por fora" produziria uma gaveta que não entra.
+      const gavetaW = widthMm + 2 * heightMm + 2 * t;
+      const gavetaH = depthMm + 2 * heightMm + 2 * t;
+
+      const secaoLargura = widthMm + 2 * t + LID_CLEARANCE_MM;
+      const secaoAltura = heightMm + 2 * t + LID_CLEARANCE_MM;
+
+      const luvaW = 2 * (secaoLargura + secaoAltura) + GLUE_FLAP_MM;
+      const luvaH = depthMm;
+
+      const totalArea = gavetaW * gavetaH + luvaW * luvaH;
+      const width = Math.max(gavetaW, luvaW);
+
+      return { width, height: totalArea / width };
+    }
+
     case "tube": {
       // A largura é o DIÂMETRO; a profundidade é ignorada.
       //

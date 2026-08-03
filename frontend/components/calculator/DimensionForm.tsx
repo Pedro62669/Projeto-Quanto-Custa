@@ -33,6 +33,7 @@ const BOX_MODELS: Array<{ value: BoxModel; label: string }> = [
   { value: "sleeve", label: "Luva / cinta" },
   { value: "pouch", label: "Saco / envelope" },
   { value: "tube", label: "Tubo / lata cilíndrica" },
+  { value: "drawer", label: "Caixa gaveta" },
 ];
 
 /**

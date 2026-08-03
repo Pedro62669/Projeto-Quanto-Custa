@@ -409,6 +409,80 @@ class PricingEngineTest extends TestCase
         }
     }
 
+    /* ── Caixa gaveta ──────────────────────────────────────────────────── */
+
+    #[Test]
+    public function a_gaveta_soma_as_duas_pecas(): void
+    {
+        // Gaveta 300×200×150, espessura 0:
+        //   gaveta = (300 + 2×200) × (150 + 2×200) = 700 × 550 = 385.000
+        //   luva   = 2×((300+2) + (200+2)) + 35 = 1.043 de perímetro
+        //            × 150 de profundidade                    = 156.450
+        //   total  = 541.450 mm² = 0,54145 m²
+        $result = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Drawer,
+        ]));
+
+        $this->assertEqualsWithDelta(0.54145, $result->areaM2PerUnit, 0.000001);
+    }
+
+    #[Test]
+    public function em_proporcoes_tipicas_a_gaveta_consome_mais_que_um_rsc(): void
+    {
+        // Sanidade para uma caixa de proporções comuns (300×200×150).
+        //
+        // NÃO é invariante geral, e o qualificador no nome é intencional: num
+        // formato largo e raso as abas do RSC valem meia profundidade cada e
+        // dominam o blank, a ponto de o RSC gastar MAIS que a gaveta. Afirmar
+        // "duas peças sempre custam mais" seria falso.
+        $gaveta = $this->engine->calculate($this->input(['boxModel' => BoxModel::Drawer]));
+        $rsc = $this->engine->calculate($this->input(['boxModel' => BoxModel::Rsc]));
+
+        $this->assertGreaterThan($rsc->areaM2PerUnit, $gaveta->areaM2PerUnit);
+    }
+
+    #[Test]
+    public function numa_caixa_larga_e_rasa_o_rsc_pode_consumir_mais(): void
+    {
+        // O contra-exemplo, documentado como teste para que ninguém "conserte"
+        // a fórmula da gaveta achando que ela está barata demais.
+        $dims = ['widthMm' => 800, 'heightMm' => 200, 'depthMm' => 800];
+
+        $gaveta = $this->engine->calculate($this->input([...$dims, 'boxModel' => BoxModel::Drawer]));
+        $rsc = $this->engine->calculate($this->input([...$dims, 'boxModel' => BoxModel::Rsc]));
+
+        $this->assertGreaterThan($gaveta->areaM2PerUnit, $rsc->areaM2PerUnit);
+    }
+
+    #[Test]
+    public function a_luva_da_gaveta_cresce_com_a_espessura(): void
+    {
+        // A luva envolve a gaveta JÁ MONTADA: material mais grosso engorda a
+        // gaveta e obriga a luva a ser maior. Ignorar isso produziria uma
+        // gaveta que não entra na própria luva.
+        $fina = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Drawer,
+            'material' => $this->material(['thickness_mm' => 0.0]),
+        ]));
+
+        $grossa = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Drawer,
+            'material' => $this->material(['thickness_mm' => 7.0]),
+        ]));
+
+        $this->assertGreaterThan($fina->areaM2PerUnit, $grossa->areaM2PerUnit);
+    }
+
+    #[Test]
+    public function a_gaveta_nao_tem_tampa_separada(): void
+    {
+        // A luva É a peça externa; não existe tampa além dela.
+        $result = $this->engine->calculate($this->input(['boxModel' => BoxModel::Drawer]));
+
+        $this->assertNull($result->lidWidthMm);
+        $this->assertNull($result->lidHeightMm);
+    }
+
     /* ── Embalagem cilíndrica ──────────────────────────────────────────── */
 
     #[Test]

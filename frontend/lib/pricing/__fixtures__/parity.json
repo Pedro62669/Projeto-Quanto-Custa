@@ -1,6 +1,6 @@
 {
     "engine_version": "1.0.0",
-    "generated_at": "2026-07-31T18:07:41+00:00",
+    "generated_at": "2026-08-03T10:11:17+00:00",
     "cases": [
         {
             "name": "rsc-padrao",
@@ -1403,6 +1403,206 @@
             }
         },
         {
+            "name": "gaveta-padrao",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "drawer",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.54145,
+                "area_m2_total": 59.5595,
+                "blank_width_mm": 1043,
+                "blank_height_mm": 519.13,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.9059,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.2351,
+                "unit_price": 6.8056,
+                "total_cost": 523.51,
+                "total_price": 680.56,
+                "profit_amount": 157.05,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "gaveta-espessa",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 7
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "drawer",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.567546,
+                "area_m2_total": 62.43006,
+                "blank_width_mm": 1099,
+                "blank_height_mm": 516.42,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.9978,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.3269,
+                "unit_price": 6.925,
+                "total_cost": 532.69,
+                "total_price": 692.5,
+                "profit_amount": 159.81,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "gaveta-fracionada",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "drawer",
+                "width_mm": 87.3,
+                "height_mm": 41.9,
+                "depth_mm": 132.6,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.076992,
+                "area_m2_total": 8.469085,
+                "blank_width_mm": 301.4,
+                "blank_height_mm": 255.45,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 0.271,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.6002,
+                "unit_price": 4.6802,
+                "total_cost": 360.02,
+                "total_price": 468.02,
+                "profit_amount": 108,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "gaveta-rasa",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "drawer",
+                "width_mm": 400,
+                "height_mm": 20,
+                "depth_mm": 300,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.4145,
+                "area_m2_total": 45.595,
+                "blank_width_mm": 883,
+                "blank_height_mm": 469.42,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.459,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.7882,
+                "unit_price": 6.2247,
+                "total_cost": 478.82,
+                "total_price": 622.47,
+                "profit_amount": 143.65,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
             "name": "tudo-combinado",
             "material": {
                 "cost_per_m2": 4.32,
@@ -1948,6 +2148,106 @@
                 "total_cost": 492.99,
                 "total_price": 640.89,
                 "profit_amount": 147.9,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-drawer",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "drawer",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.54145,
+                "area_m2_total": 59.5595,
+                "blank_width_mm": 1043,
+                "blank_height_mm": 519.13,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.9059,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.2351,
+                "unit_price": 6.8056,
+                "total_cost": 523.51,
+                "total_price": 680.56,
+                "profit_amount": 157.05,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-drawer-espesso",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 3
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "drawer",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.552586,
+                "area_m2_total": 60.78446,
+                "blank_width_mm": 1067,
+                "blank_height_mm": 517.89,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.9451,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.2743,
+                "unit_price": 6.8566,
+                "total_cost": 527.43,
+                "total_price": 685.66,
+                "profit_amount": 158.23,
                 "tax_amount": 0,
                 "effective_margin_percent": 23.08
             }

@@ -216,6 +216,48 @@ check(
   `Ø${diametroAtual} → Ø${diametroAtual * 2}: ${precoTubo?.trim()} → ${precoTuboLargo?.trim()}`,
 );
 
+// ── Caixa gaveta ─────────────────────────────────────────────────────────
+//
+// Troca o modelo ANTES de medir: o passo anterior deixou o tubo selecionado,
+// e no cilindro o campo de profundidade nem existe.
+await page.click("#box-model");
+await page.click('[role="option"]:has-text("Caixa gaveta")');
+await page.waitForTimeout(2500);
+
+// Dimensões explícitas: os passos anteriores deixaram a caixa larga e funda,
+// e nessa proporção as abas do RSC (meia profundidade cada) dominam o blank a
+// ponto de o RSC gastar MAIS que a gaveta. "Duas peças custam mais" só vale
+// em proporções típicas — a comparação abaixo precisa de terreno conhecido.
+await page.fill("#width", "200");
+await page.fill("#height", "100");
+await page.fill("#depth", "150");
+await page.waitForTimeout(2500);
+
+// Duas peças: precisa consumir mais material que um RSC das mesmas medidas.
+const areaGaveta = await page.evaluate(() => {
+  const alvo = [...document.querySelectorAll("div")].find((e) =>
+    e.textContent?.startsWith("Área por unidade"),
+  );
+  return parseFloat(alvo?.textContent?.match(/[\d.]+(?= m²)/)?.[0] ?? "0");
+});
+
+await page.click("#box-model");
+await page.click('[role="option"]:has-text("Caixa americana")');
+await page.waitForTimeout(2500);
+
+const areaRsc = await page.evaluate(() => {
+  const alvo = [...document.querySelectorAll("div")].find((e) =>
+    e.textContent?.startsWith("Área por unidade"),
+  );
+  return parseFloat(alvo?.textContent?.match(/[\d.]+(?= m²)/)?.[0] ?? "0");
+});
+
+check(
+  "a gaveta (luva + gaveta) consome mais que um RSC",
+  areaGaveta > areaRsc && areaRsc > 0,
+  `gaveta ${areaGaveta} m² > rsc ${areaRsc} m²`,
+);
+
 // Volta ao RSC para o restante do fluxo.
 await page.click("#box-model");
 await page.click('[role="option"]:has-text("Caixa americana")');

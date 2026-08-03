@@ -78,10 +78,22 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
   // O tubo é desenhado por revolução (ver TuboMesh), não por painéis; a
   // entrada existe só para o mapa continuar exaustivo sobre BoxModel.
   tube: { topo: true, fundo: false },
+  // Gaveta e tubo são desenhados por componentes próprios (GavetaMesh,
+  // TuboMesh); as entradas existem para o mapa continuar exaustivo.
+  drawer: { topo: true, fundo: false },
 };
 
 /** Segmentos da revolução: acima disso o ganho visual não paga o custo. */
 const TUBO_SEGMENTOS = 64;
+
+/**
+ * Quanto a gaveta aparece para fora da luva, em fração da profundidade.
+ *
+ * Desenhar a gaveta fechada mostraria só uma cinta retangular — o usuário não
+ * teria como saber que escolheu uma caixa de duas peças. Puxada, a imagem
+ * explica o modelo sozinha.
+ */
+const SLIDE_RATIO = 0.45;
 
 /**
  * Converte milímetros em unidades de cena mantendo a PROPORÇÃO real entre
@@ -237,6 +249,95 @@ const Painel = ({
     {showEdges && <Edges threshold={15} color="#00000030" />}
   </mesh>
 );
+
+/**
+ * Caixa gaveta: luva externa + gaveta deslizando para fora.
+ *
+ * Componente próprio, como o TuboMesh, porque são DUAS peças com posições
+ * relativas — não cabe no arranjo de painéis de uma caixa única.
+ *
+ * As medidas informadas são as internas da gaveta; a luva é derivada delas,
+ * vencendo as paredes da gaveta e a folga de deslize, exatamente como no
+ * cálculo de material.
+ */
+function GavetaMesh({
+  widthMm,
+  heightMm,
+  depthMm,
+  espessuraMm,
+  material,
+  showEdges,
+}: {
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+  espessuraMm: number;
+  material: ReactNode;
+  showEdges: boolean;
+}) {
+  // A gaveta puxada estende a peça no eixo da profundidade; incluir isso na
+  // normalização evita que o conjunto saia do quadro.
+  const profundidadeVisivel = depthMm * (1 + SLIDE_RATIO);
+  const fator =
+    SCENE_MAX_UNITS / Math.max(widthMm, heightMm, profundidadeVisivel, 1);
+
+  const w = widthMm * fator;
+  const h = heightMm * fator;
+  const d = depthMm * fator;
+
+  // Espessura visível limitada a um terço da menor dimensão, senão em caixas
+  // pequenas as paredes se atravessam.
+  const t = Math.min(
+    Math.max(espessuraMm * fator, MIN_WALL_UNITS),
+    w / 3,
+    h / 3,
+  );
+
+  // Folga de deslize: a mesma ideia do cálculo, em proporção visível.
+  const folga = t * 0.6;
+
+  // Gaveta montada (fundo + paredes) e seção interna da luva em volta dela.
+  const gavetaW = w + 2 * t;
+  const gavetaH = h + t;
+  const secaoW = gavetaW + folga;
+  const secaoH = gavetaH + folga;
+
+  const deslize = d * SLIDE_RATIO;
+
+  const painel = (
+    sx: number,
+    sy: number,
+    sz: number,
+    px: number,
+    py: number,
+    pz: number,
+    key: string,
+  ) => (
+    <mesh key={key} scale={[sx, sy, sz]} position={[px, py, pz]} castShadow receiveShadow>
+      <boxGeometry args={[1, 1, 1]} />
+      {material}
+      {showEdges && <Edges threshold={15} color="#00000030" />}
+    </mesh>
+  );
+
+  return (
+    // Eleva o conjunto para que a base da luva encoste no chão.
+    <group position={[0, t, 0]}>
+      {/* ── Luva: cinta fechada, aberta nas duas pontas ─────────────────── */}
+      {painel(secaoW + 2 * t, t, d, 0, -t / 2, 0, "luva-fundo")}
+      {painel(secaoW + 2 * t, t, d, 0, secaoH + t / 2, 0, "luva-topo")}
+      {painel(t, secaoH, d, -(secaoW + t) / 2, secaoH / 2, 0, "luva-esq")}
+      {painel(t, secaoH, d, (secaoW + t) / 2, secaoH / 2, 0, "luva-dir")}
+
+      {/* ── Gaveta: bandeja puxada para fora ─────────────────────────────── */}
+      {painel(gavetaW, t, d, 0, t / 2, deslize, "gav-fundo")}
+      {painel(t, gavetaH, d, -(gavetaW - t) / 2, gavetaH / 2, deslize, "gav-esq")}
+      {painel(t, gavetaH, d, (gavetaW - t) / 2, gavetaH / 2, deslize, "gav-dir")}
+      {painel(gavetaW - 2 * t, gavetaH, t, 0, gavetaH / 2, deslize + (d - t) / 2, "gav-frente")}
+      {painel(gavetaW - 2 * t, gavetaH, t, 0, gavetaH / 2, deslize - (d - t) / 2, "gav-tras")}
+    </group>
+  );
+}
 
 /**
  * Perfil de um copo aberto em cima, para revolução.
@@ -553,6 +654,19 @@ export function BoxMesh({
    * chamador (BoxViewer) não precise saber que existem duas famílias de
    * geometria — ele só pede "desenhe a embalagem".
    */
+  if (boxModel === "drawer") {
+    return (
+      <GavetaMesh
+        widthMm={widthMm}
+        heightMm={heightMm}
+        depthMm={depthMm}
+        espessuraMm={thicknessMm ?? 0}
+        material={material}
+        showEdges={showEdges}
+      />
+    );
+  }
+
   if (isCylindrical(boxModel)) {
     return (
       <TuboMesh

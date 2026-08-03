@@ -37,6 +37,15 @@ enum BoxModel: string
      */
     case Tube = 'tube';
 
+    /**
+     * Caixa gaveta (tipo fósforo): luva externa + gaveta que desliza dentro.
+     *
+     * São duas peças independentes. As dimensões informadas são as INTERNAS
+     * da gaveta — o espaço útil —, e a luva é dimensionada em volta dela,
+     * vencendo a espessura das paredes e a folga de deslize.
+     */
+    case Drawer = 'drawer';
+
     public function label(): string
     {
         return match ($this) {
@@ -45,6 +54,7 @@ enum BoxModel: string
             self::Sleeve => 'Luva / cinta',
             self::Pouch => 'Saco / envelope',
             self::Tube => 'Tubo / lata cilíndrica',
+            self::Drawer => 'Caixa gaveta',
         };
     }
 
@@ -77,6 +87,8 @@ enum BoxModel: string
             self::Sleeve => 1.2,
             self::Pouch => 1.0,
             self::Tube => 3.0,
+            // Duas peças montadas separadamente: leva mais tempo que um RSC.
+            self::Drawer => 4.5,
         };
     }
 }

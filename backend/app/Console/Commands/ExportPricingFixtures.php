@@ -189,6 +189,21 @@ class ExportPricingFixtures extends Command
                 'boxModel' => BoxModel::Tube, 'widthMm' => 10.0, 'heightMm' => 10.0, 'quantity' => 1,
             ]),
 
+            // Caixa gaveta: luva + gaveta, duas peças.
+            'gaveta-padrao' => $base(['boxModel' => BoxModel::Drawer]),
+            'gaveta-espessa' => $base([
+                'boxModel' => BoxModel::Drawer,
+                'material' => ['thickness_mm' => 7.0],
+            ]),
+            'gaveta-fracionada' => $base([
+                'boxModel' => BoxModel::Drawer,
+                'widthMm' => 87.3, 'heightMm' => 41.9, 'depthMm' => 132.6,
+            ]),
+            'gaveta-rasa' => $base([
+                'boxModel' => BoxModel::Drawer,
+                'widthMm' => 400.0, 'heightMm' => 20.0, 'depthMm' => 300.0,
+            ]),
+
             'tudo-combinado' => $base([
                 'material' => ['cost_unit' => MaterialUnit::Kilogram, 'cost_per_unit' => 24.0, 'grammage_kg_per_m2' => 0.18, 'thickness_mm' => 0.6],
                 'settings' => ['overhead_percent' => 12.0, 'tax_percent' => 8.0],
