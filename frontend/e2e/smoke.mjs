@@ -216,6 +216,15 @@ check(
   `Ø${diametroAtual} → Ø${diametroAtual * 2}: ${precoTubo?.trim()} → ${precoTuboLargo?.trim()}`,
 );
 
+/** Lê a "Área por unidade" do painel de resultados, em m². */
+const areaPorUnidade = () =>
+  page.evaluate(() => {
+    const alvo = [...document.querySelectorAll("div")].find((e) =>
+      e.textContent?.startsWith("Área por unidade"),
+    );
+    return parseFloat(alvo?.textContent?.match(/[\d.]+(?= m²)/)?.[0] ?? "0");
+  });
+
 // ── Caixa gaveta ─────────────────────────────────────────────────────────
 //
 // Troca o modelo ANTES de medir: o passo anterior deixou o tubo selecionado,
@@ -234,28 +243,36 @@ await page.fill("#depth", "150");
 await page.waitForTimeout(2500);
 
 // Duas peças: precisa consumir mais material que um RSC das mesmas medidas.
-const areaGaveta = await page.evaluate(() => {
-  const alvo = [...document.querySelectorAll("div")].find((e) =>
-    e.textContent?.startsWith("Área por unidade"),
-  );
-  return parseFloat(alvo?.textContent?.match(/[\d.]+(?= m²)/)?.[0] ?? "0");
-});
+const areaGaveta = await areaPorUnidade();
 
 await page.click("#box-model");
 await page.click('[role="option"]:has-text("Caixa americana")');
 await page.waitForTimeout(2500);
 
-const areaRsc = await page.evaluate(() => {
-  const alvo = [...document.querySelectorAll("div")].find((e) =>
-    e.textContent?.startsWith("Área por unidade"),
-  );
-  return parseFloat(alvo?.textContent?.match(/[\d.]+(?= m²)/)?.[0] ?? "0");
-});
+const areaRsc = await areaPorUnidade();
 
 check(
   "a gaveta (luva + gaveta) consome mais que um RSC",
   areaGaveta > areaRsc && areaRsc > 0,
   `gaveta ${areaGaveta} m² > rsc ${areaRsc} m²`,
+);
+
+// ── Mailer box (RETT) ────────────────────────────────────────────────────
+//
+// Mesmas medidas do RSC lido acima (200×100×150), então a comparação é direta.
+// A mailer tem parede lateral DUPLA (a aba rolada sobe e desce), tampa inteira
+// e lingueta: tem que gastar mais chapa que um RSC do mesmo tamanho. Se um dia
+// isto inverter, é sinal de que o rolo deixou de ser contado dobrado.
+await page.click("#box-model");
+await page.click('[role="option"]:has-text("Mailer box")');
+await page.waitForTimeout(2500);
+
+const areaMailer = await areaPorUnidade();
+
+check(
+  "a mailer (laterais roladas) consome mais que um RSC",
+  areaMailer > areaRsc && areaRsc > 0,
+  `mailer ${areaMailer} m² > rsc ${areaRsc} m²`,
 );
 
 // Volta ao RSC para o restante do fluxo.

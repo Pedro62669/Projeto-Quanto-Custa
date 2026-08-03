@@ -31,7 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
          * comunica corretamente: a requisição foi entendida, mas os dados não
          * produzem um resultado válido.
          */
-        $exceptions->render(function (\DomainException $e, Request $request) {
+        $exceptions->render(function (DomainException $e, Request $request) {
             if (! $request->is('api/*')) {
                 return null;
             }

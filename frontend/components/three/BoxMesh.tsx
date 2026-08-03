@@ -78,9 +78,11 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
   // O tubo é desenhado por revolução (ver TuboMesh), não por painéis; a
   // entrada existe só para o mapa continuar exaustivo sobre BoxModel.
   tube: { topo: true, fundo: false },
-  // Gaveta e tubo são desenhados por componentes próprios (GavetaMesh,
-  // TuboMesh); as entradas existem para o mapa continuar exaustivo.
+  // Gaveta, tubo e mailer são desenhados por componentes próprios
+  // (GavetaMesh, TuboMesh, MailerMesh); as entradas existem para o mapa
+  // continuar exaustivo sobre BoxModel.
   drawer: { topo: true, fundo: false },
+  mailer: { topo: true, fundo: false },
 };
 
 /** Segmentos da revolução: acima disso o ganho visual não paga o custo. */
@@ -94,6 +96,22 @@ const TUBO_SEGMENTOS = 64;
  * explica o modelo sozinha.
  */
 const SLIDE_RATIO = 0.45;
+
+/**
+ * Abertura da tampa articulada da mailer, em radianos (~52°).
+ *
+ * Mesma razão do SLIDE_RATIO: fechada, a mailer seria indistinguível de um
+ * RSC na tela. Aberta, a dobradiça na parede traseira e a lingueta pendurada
+ * identificam o modelo sem precisar de legenda.
+ *
+ * Exportada porque a normalização da cena e o alvo da câmera precisam saber
+ * quanto a tampa aberta cresce em altura — cravar o ângulo em dois lugares
+ * faria a caixa sair do quadro assim que um deles mudasse.
+ */
+export const MAILER_LID_ANGLE = 0.9;
+
+/** Dobra da lingueta frontal em relação ao plano da tampa (~69°). */
+const MAILER_TUCK_ANGLE = 1.2;
 
 /**
  * Converte milímetros em unidades de cena mantendo a PROPORÇÃO real entre
@@ -134,6 +152,15 @@ function toSceneScale(
  */
 export function assemblyHeightMm(props: BoxMeshProps): number {
   const modelo = props.boxModel ?? "rsc";
+
+  /*
+   * A mailer não tem tampa separada, mas a tampa ABERTA sobe quase uma
+   * profundidade inteira acima da caixa. Devolver só a altura da caixa
+   * miraria a câmera baixo demais e cortaria a peça no topo do quadro.
+   */
+  if (modelo === "mailer") {
+    return props.heightMm + props.depthMm * Math.sin(MAILER_LID_ANGLE);
+  }
 
   const tampa = resolveLidDimensions(
     modelo,
@@ -335,6 +362,88 @@ function GavetaMesh({
       {painel(t, gavetaH, d, (gavetaW - t) / 2, gavetaH / 2, deslize, "gav-dir")}
       {painel(gavetaW - 2 * t, gavetaH, t, 0, gavetaH / 2, deslize + (d - t) / 2, "gav-frente")}
       {painel(gavetaW - 2 * t, gavetaH, t, 0, gavetaH / 2, deslize - (d - t) / 2, "gav-tras")}
+    </group>
+  );
+}
+
+/**
+ * Mailer box (RETT): peça única com tampa articulada e laterais roladas.
+ *
+ * Componente próprio, como GavetaMesh e TuboMesh, porque a tampa gira em
+ * torno de uma dobradiça e a lingueta gira em torno da tampa — dois pivôs
+ * aninhados que não cabem no arranjo de painéis independentes da caixa comum.
+ *
+ * Desenhada ABERTA de propósito: fechada, a mailer é visualmente idêntica a
+ * um RSC, e o usuário não teria como confirmar que escolheu o modelo certo.
+ */
+function MailerMesh({
+  widthMm,
+  heightMm,
+  depthMm,
+  espessuraMm,
+  material,
+  showEdges,
+}: {
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+  espessuraMm: number;
+  material: ReactNode;
+  showEdges: boolean;
+}) {
+  // A tampa aberta sobe quase uma profundidade: normalizar só pela caixa
+  // fecharia o enquadramento em cima dela.
+  const alturaVisivel = heightMm + depthMm * Math.sin(MAILER_LID_ANGLE);
+  const fator = SCENE_MAX_UNITS / Math.max(widthMm, alturaVisivel, depthMm, 1);
+
+  const w = widthMm * fator;
+  const h = heightMm * fator;
+  const d = depthMm * fator;
+
+  // A lateral rolada é DUPLA (2t), então o teto da espessura visível é w/6 e
+  // não w/3: senão as duas paredes se encontrariam no meio da caixa.
+  const t = Math.min(Math.max(espessuraMm * fator, MIN_WALL_UNITS), w / 6, h / 3);
+
+  // Vão livre entre as duas laterais roladas.
+  const larguraInterna = Math.max(w - 4 * t, 0.001);
+
+  const painel = (
+    sx: number,
+    sy: number,
+    sz: number,
+    px: number,
+    py: number,
+    pz: number,
+    key: string,
+  ) => (
+    <mesh key={key} scale={[sx, sy, sz]} position={[px, py, pz]} castShadow receiveShadow>
+      <boxGeometry args={[1, 1, 1]} />
+      {material}
+      {showEdges && <Edges threshold={15} color="#00000030" />}
+    </mesh>
+  );
+
+  return (
+    <group>
+      {painel(w, t, d, 0, t / 2, 0, "fundo")}
+
+      {/* Laterais ROLADAS: parede dupla — a assinatura estrutural do modelo. */}
+      {painel(2 * t, h, d, -(w - 2 * t) / 2, t + h / 2, 0, "lateral-esq")}
+      {painel(2 * t, h, d, (w - 2 * t) / 2, t + h / 2, 0, "lateral-dir")}
+
+      {/* Paredes frontal e traseira, encaixadas entre as laterais. */}
+      {painel(larguraInterna, h, t, 0, t + h / 2, (d - t) / 2, "frente")}
+      {painel(larguraInterna, h, t, 0, t + h / 2, -(d - t) / 2, "tras")}
+
+      {/* Tampa articulada: o pivô É a dobradiça, no topo da parede traseira. */}
+      <group position={[0, t + h, -d / 2]} rotation={[-MAILER_LID_ANGLE, 0, 0]}>
+        {painel(w, t, d, 0, t / 2, d / 2, "tampa")}
+
+        {/* Lingueta: dobra na ponta da tampa e entra por dentro da frente. */}
+        <group position={[0, 0, d]} rotation={[MAILER_TUCK_ANGLE, 0, 0]}>
+          {painel(larguraInterna, t, h, 0, t / 2, h / 2, "lingueta")}
+        </group>
+      </group>
     </group>
   );
 }
@@ -654,6 +763,19 @@ export function BoxMesh({
    * chamador (BoxViewer) não precise saber que existem duas famílias de
    * geometria — ele só pede "desenhe a embalagem".
    */
+  if (boxModel === "mailer") {
+    return (
+      <MailerMesh
+        widthMm={widthMm}
+        heightMm={heightMm}
+        depthMm={depthMm}
+        espessuraMm={thicknessMm ?? 0}
+        material={material}
+        showEdges={showEdges}
+      />
+    );
+  }
+
   if (boxModel === "drawer") {
     return (
       <GavetaMesh

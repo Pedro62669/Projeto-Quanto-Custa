@@ -6,7 +6,14 @@
  * camada de tradução — e a classe de bug que vem junto com ela.
  */
 
-export type BoxModel = "rsc" | "tray" | "sleeve" | "pouch" | "tube" | "drawer";
+export type BoxModel =
+  | "rsc"
+  | "tray"
+  | "sleeve"
+  | "pouch"
+  | "tube"
+  | "drawer"
+  | "mailer";
 export type PricingMode = "markup" | "margin";
 export type MaterialUnit = "m2" | "kg";
 
