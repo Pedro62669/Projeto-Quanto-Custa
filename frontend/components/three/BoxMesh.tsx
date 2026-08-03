@@ -157,7 +157,15 @@ export function assemblyHeightUnits(props: BoxMeshProps): number {
  * suspende, e um hook não pode ser chamado condicionalmente — separar permite
  * envolvê-lo em <Suspense> sem violar as regras dos hooks.
  */
-function TexturedMaterial({ url, colorHex }: { url: string; colorHex: string }) {
+function TexturedMaterial({
+  url,
+  colorHex,
+  side = THREE.FrontSide,
+}: {
+  url: string;
+  colorHex: string;
+  side?: THREE.Side;
+}) {
   /**
    * A configuração da textura vai no callback do useTexture, e não no corpo do
    * componente. Mutar durante o render é efeito colateral: o React Compiler
@@ -176,10 +184,24 @@ function TexturedMaterial({ url, colorHex }: { url: string; colorHex: string }) 
     }
   });
 
-  return <meshStandardMaterial map={texture} color={colorHex} roughness={0.85} metalness={0.02} />;
+  return (
+    <meshStandardMaterial
+      map={texture}
+      color={colorHex}
+      roughness={0.85}
+      metalness={0.02}
+      side={side}
+    />
+  );
 }
 
-function FlatMaterial({ colorHex }: { colorHex: string }) {
+function FlatMaterial({
+  colorHex,
+  side = THREE.FrontSide,
+}: {
+  colorHex: string;
+  side?: THREE.Side;
+}) {
   return (
     <meshStandardMaterial
       color={colorHex}
@@ -187,6 +209,7 @@ function FlatMaterial({ colorHex }: { colorHex: string }) {
       // peça parecer plástico e distorceria a leitura do material escolhido.
       roughness={0.9}
       metalness={0.0}
+      side={side}
     />
   );
 }
@@ -262,16 +285,40 @@ function TuboMesh({
   alturaMm,
   espessuraMm,
   tampaMm,
-  material,
+  colorHex,
+  textureUrl,
   showEdges,
 }: {
   diametroMm: number;
   alturaMm: number;
   espessuraMm: number;
   tampaMm: { widthMm: number; heightMm: number } | null;
-  material: ReactNode;
+  colorHex: string;
+  textureUrl?: string | null;
   showEdges: boolean;
 }) {
+  /*
+   * DoubleSide, e não o FrontSide dos painéis.
+   *
+   * O LatheGeometry gera os triângulos com orientação oposta à das normais
+   * que ele mesmo calcula. Com backface culling, a parede voltada para a
+   * câmera é descartada e o que aparece é a superfície de trás — o tubo
+   * parecia translúcido e com as cores invertidas.
+   *
+   * Desenhar as duas faces também é o correto para um recipiente ABERTO:
+   * o interior da peça é superfície visível de verdade, não um artefato.
+   * O shader inverte a normal nas faces de trás, então a iluminação sai
+   * certa dos dois lados.
+   */
+  const material = (
+    <Suspense fallback={<FlatMaterial colorHex={colorHex} side={THREE.DoubleSide} />}>
+      {textureUrl ? (
+        <TexturedMaterial url={textureUrl} colorHex={colorHex} side={THREE.DoubleSide} />
+      ) : (
+        <FlatMaterial colorHex={colorHex} side={THREE.DoubleSide} />
+      )}
+    </Suspense>
+  );
   const alturaConjunto = tampaMm
     ? alturaMm * (1 + LID_GAP_RATIO) + tampaMm.heightMm
     : alturaMm;
@@ -513,7 +560,8 @@ export function BoxMesh({
         alturaMm={heightMm}
         espessuraMm={thicknessMm ?? 0}
         tampaMm={tampaMm}
-        material={material}
+        colorHex={colorHex}
+        textureUrl={textureUrl}
         showEdges={showEdges}
       />
     );
