@@ -131,17 +131,23 @@ const SLIDE_RATIO = 0.45;
  */
 export const MAILER_LID_ANGLE = 1.3;
 
-/** Dobra da lingueta em relação ao plano da tampa, com a caixa aberta (~69°). */
-const MAILER_TUCK_ANGLE = 1.2;
-
 /**
- * Dobra da lingueta com a caixa FECHADA: exatamente 90° em relação à tampa.
+ * Dobra das abas da tampa: 90°, FIXO, em relação ao plano dela.
  *
- * Com a tampa deitada, 90° deixa a lingueta apontando para baixo — e como ela
- * tem o comprimento da altura da caixa, encosta no fundo, encaixada por dentro
- * da parede frontal. É literalmente como a mailer fecha.
+ * Não interpola com a abertura, e isso é o ponto: o vinco existe na chapa. A
+ * aba frontal está a 90° da tampa aberta ou fechada — o que muda é só a
+ * tampa. Animar esse ângulo (como já esteve aqui) fazia a aba ir deitando até
+ * ficar quase no plano da tampa, e ela sumia como um risco fino em vez de
+ * formar friso.
+ *
+ * Com as três abas a 90°, a tampa é uma BANDEJA INVERTIDA — friso contínuo
+ * nas laterais e na frente, cantos chanfrados entre eles. É a silhueta da
+ * mailer, e é o que a torna reconhecível com a caixa aberta.
+ *
+ * Fechada, a mesma dobra deixa a aba frontal apontando para baixo, entrando
+ * por dentro da parede da frente: é literalmente como a caixa trava.
  */
-const MAILER_TUCK_CLOSED = Math.PI / 2;
+const MAILER_FLAP_FOLD = Math.PI / 2;
 
 /** Recuo trapezoidal das abas da tampa, em fração da dimensão livre. */
 const FLAP_TAPER_RATIO = 0.3;
@@ -641,28 +647,21 @@ function MailerMesh({
   );
 
   /*
-   * Os dois pivôs da mailer, animados por ref.
+   * A dobradiça é o ÚNICO pivô animado da mailer.
    *
-   * A rotação inicial no JSX vem da abertura ALVO para que o primeiro quadro
-   * já saia correto; a partir daí quem manda é o useFrame.
+   * As três abas são filhas da tampa e estão a 90° fixos dela, então giram
+   * junto sem lógica própria — o movimento certo sai da hierarquia. A rotação
+   * inicial no JSX vem da abertura ALVO para que o primeiro quadro já saia
+   * correto; a partir daí quem manda é o useFrame.
    */
   const tampaRef = useRef<THREE.Group>(null);
-  const linguetaRef = useRef<THREE.Group>(null);
   const suave = useAberturaSuave(abertura);
 
   const anguloTampa = MAILER_LID_ANGLE * abertura;
-  const anguloLingueta =
-    MAILER_TUCK_CLOSED + (MAILER_TUCK_ANGLE - MAILER_TUCK_CLOSED) * abertura;
 
   useFrame(() => {
-    const a = suave.current;
-
     if (tampaRef.current) {
-      tampaRef.current.rotation.x = -MAILER_LID_ANGLE * a;
-    }
-    if (linguetaRef.current) {
-      linguetaRef.current.rotation.x =
-        MAILER_TUCK_CLOSED + (MAILER_TUCK_ANGLE - MAILER_TUCK_CLOSED) * a;
+      tampaRef.current.rotation.x = -MAILER_LID_ANGLE * suave.current;
     }
   });
 
@@ -724,20 +723,18 @@ function MailerMesh({
         )}
 
         {/*
-         * Lingueta: dobra na ponta da tampa e entra por dentro da frente.
+         * Aba frontal: fecha o friso da tampa e, com a caixa fechada, entra
+         * por dentro da parede da frente travando tudo.
          *
-         * O ângulo dela acompanha a abertura em sentido CONTRÁRIO ao da tampa.
-         * Fechando, ela endireita para 90° e desce por dentro da parede
-         * frontal; abrindo, relaxa para fora. Mantê-lo fixo faria a lingueta
-         * girar junto com a tampa e apontar para o céu com a caixa fechada.
-         *
-         * O pivô recua duas espessuras da borda para que, fechada, ela caia
-         * DENTRO da parede frontal e não encostada por fora.
+         * Mesma dobra de 90° das laterais — junto com elas, é o que faz a
+         * tampa ler como bandeja invertida. O pivô recua duas espessuras da
+         * borda para que, fechada, ela caia DENTRO da parede frontal e não
+         * encostada por fora.
          */}
-        <group ref={linguetaRef} position={[0, 0, d - 2 * t]} rotation={[anguloLingueta, 0, 0]}>
+        <group position={[0, 0, d - 2 * t]} rotation={[MAILER_FLAP_FOLD, 0, 0]}>
           {/* Rotação em X leva o comprimento do contorno para o eixo Z (para
               fora do vinco) e a extrusão para Y (a espessura da chapa). */}
-          {pecaRecortada(formaLingueta, [0, t / 2, 0], [Math.PI / 2, 0, 0], "lingueta")}
+          {pecaRecortada(formaLingueta, [0, t / 2, 0], [Math.PI / 2, 0, 0], "aba-frontal")}
         </group>
       </group>
     </group>
