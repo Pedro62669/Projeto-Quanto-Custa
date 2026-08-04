@@ -46,20 +46,6 @@ enum BoxModel: string
      */
     case Drawer = 'drawer';
 
-    /**
-     * Mailer box (RETT — roll end tuck top): a caixa de e-commerce.
-     *
-     * Peça única, sem cola: o fundo, as paredes e a tampa saem da mesma chapa
-     * die-cut. A tampa é ARTICULADA na parede traseira (não é peça separada) e
-     * fecha por uma lingueta que entra por dentro da parede frontal.
-     *
-     * A assinatura do modelo são as laterais "roladas": uma aba presa ao fundo
-     * sobe, dobra 180° no topo e desce por dentro, formando parede DUPLA com o
-     * canto superior liso. É por isso que a mailer consome bem mais material
-     * que um RSC do mesmo tamanho.
-     */
-    case Mailer = 'mailer';
-
     public function label(): string
     {
         return match ($this) {
@@ -69,7 +55,6 @@ enum BoxModel: string
             self::Pouch => 'Saco / envelope',
             self::Tube => 'Tubo / lata cilíndrica',
             self::Drawer => 'Caixa gaveta',
-            self::Mailer => 'Mailer box (e-commerce)',
         };
     }
 
@@ -104,9 +89,6 @@ enum BoxModel: string
             self::Tube => 3.0,
             // Duas peças montadas separadamente: leva mais tempo que um RSC.
             self::Drawer => 4.5,
-            // Die-cut sem cola: dobra e trava. Mais rápida que um RSC, que
-            // ainda precisa ser fitado.
-            self::Mailer => 2.0,
         };
     }
 }

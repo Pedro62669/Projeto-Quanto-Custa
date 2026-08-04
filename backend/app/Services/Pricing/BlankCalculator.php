@@ -33,15 +33,6 @@ final class BlankCalculator
     /** Margem de selagem de sacos/envelopes, em mm. */
     private const SEAL_MM = 10.0;
 
-    /**
-     * Aba que trava a lateral rolada da mailer no fundo, em mm.
-     *
-     * É uma aba de TRAVA, não de colagem: por isso é bem menor que a
-     * GLUE_FLAP_MM e não escala com a caixa — quem segura a parede é o
-     * rolo, ela só impede que ele se desenrole.
-     */
-    private const ROLL_TAB_MM = 20.0;
-
     private const MM2_PER_M2 = 1_000_000.0;
 
     /**
@@ -127,9 +118,6 @@ final class BlankCalculator
 
             // Caixa gaveta: luva externa + gaveta interna, duas peças.
             BoxModel::Drawer => $this->drawerBlank($widthMm, $heightMm, $depthMm, $t),
-
-            // Mailer box: peça única die-cut, tampa articulada e laterais roladas.
-            BoxModel::Mailer => $this->mailerBlank($widthMm, $heightMm, $depthMm, $t),
 
             // Tubo cilíndrico: a largura é o DIÂMETRO; a profundidade é ignorada.
             BoxModel::Tube => $this->tubeBlank(
@@ -247,71 +235,6 @@ final class BlankCalculator
         return [
             'width' => $width,
             'height' => $totalArea / $width,
-        ];
-    }
-
-    /**
-     * Mailer box (RETT) = peça única die-cut, sem cola.
-     *
-     * A planificação, a partir do fundo:
-     *  - no eixo da profundidade: parede frontal, fundo, parede traseira,
-     *    tampa articulada e lingueta de fechamento — cinco painéis em linha;
-     *  - no eixo da largura: as abas ROLADAS presas ao fundo, que sobem (h),
-     *    dobram 180° no topo, descem por dentro (h) e travam com uma aba
-     *    curta sobre o fundo.
-     *
-     * Duas decisões que mudam o número:
-     *
-     * 1. A lateral custa DOBRADO. O rolo é o que dá a rigidez e o canto liso
-     *    da mailer, e cobrar uma parede simples (como num RSC) subestimaria a
-     *    peça justamente onde ela gasta mais. É a razão de uma mailer sair
-     *    ~20% acima de um RSC de mesma medida — e essa diferença é real.
-     *
-     * 2. Somamos a ÁREA LÍQUIDA dos painéis, não o retângulo que os envolve.
-     *    Contrário do que fazemos com os discos do tubo: um círculo dentro de
-     *    um quadrado é perda irredutível, mas os recortes entre a tampa e as
-     *    abas roladas são encaixáveis — blanks de mailer aninham bem no
-     *    layout de corte. Cobrar o retângulo envolvente somaria ~35% que o
-     *    percentual de desperdício já cobre, contando a mesma perda duas vezes.
-     *
-     * @return array{width: float, height: float}
-     */
-    private function mailerBlank(float $w, float $h, float $d, float $t): array
-    {
-        // Comprimento da aba lateral rolada: sobe, volta por dentro e trava.
-        // A dobra de 180° no topo consome mais que um vinco comum — daí 4t.
-        $rolo = 2 * $h + self::ROLL_TAB_MM + 4 * $t;
-
-        // Orelhas das paredes frontal/traseira, presas ENTRE as duas camadas
-        // do rolo (é o que trava a caixa sem cola). Nunca mais fundas que a
-        // própria caixa, senão colidiriam com a parede oposta.
-        $orelha = min($h, $d);
-
-        $area =
-            // Espinha: fundo + tampa articulada (dois painéis w × d)…
-            2 * ($w * $d)
-            // …+ paredes frontal e traseira + lingueta de fechamento.
-            + 3 * ($w * $h)
-            // Laterais roladas, uma de cada lado, correndo ao longo da caixa.
-            + 2 * ($rolo * $d)
-            // Quatro orelhas quadradas nas pontas das paredes frontal/traseira.
-            + 4 * ($orelha ** 2)
-            // Abas laterais da tampa, que descem por dentro ao fechar.
-            //
-            // Cobradas como RETÂNGULO embora a faca as corte em trapézio com
-            // cantos arredondados (é assim que o 3D as desenha). Não é
-            // divergência: o trapézio sai de dentro do retângulo e as aparas
-            // dos cantos são descarte, não material aproveitado. Mesmo
-            // raciocínio dos discos do tubo. Trocar por área do trapézio
-            // faria a caixa parecer mais barata do que a chapa que ela come.
-            + 2 * ($h * $d);
-
-        // Largura real da chapa: a caixa mais as duas abas roladas abertas.
-        $width = $w + 2 * $rolo;
-
-        return [
-            'width' => $width,
-            'height' => $area / $width,
         ];
     }
 

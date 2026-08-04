@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, Suspense, type ReactNode } from "react";
+import { useRef, Suspense, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Edges, useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -87,11 +87,9 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
   // O tubo é desenhado por revolução (ver TuboMesh), não por painéis; a
   // entrada existe só para o mapa continuar exaustivo sobre BoxModel.
   tube: { topo: true, fundo: false },
-  // Gaveta, tubo e mailer são desenhados por componentes próprios
-  // (GavetaMesh, TuboMesh, MailerMesh); as entradas existem para o mapa
-  // continuar exaustivo sobre BoxModel.
+  // A gaveta é desenhada por componente próprio (GavetaMesh); a entrada
+  // existe para o mapa continuar exaustivo sobre BoxModel.
   drawer: { topo: true, fundo: false },
-  mailer: { topo: true, fundo: false },
 };
 
 /**
@@ -103,7 +101,7 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
  * controle que mente sobre o que faz.
  */
 export function hasAperture(model: BoxModel): boolean {
-  return hasSeparateLid(model) || model === "drawer" || model === "mailer";
+  return hasSeparateLid(model) || model === "drawer";
 }
 
 /** Segmentos da revolução: acima disso o ganho visual não paga o custo. */
@@ -117,134 +115,6 @@ const TUBO_SEGMENTOS = 64;
  * explica o modelo sozinha.
  */
 const SLIDE_RATIO = 0.45;
-
-/**
- * Abertura da tampa articulada da mailer, em radianos (~75°).
- *
- * Mesma razão do SLIDE_RATIO: fechada, a mailer seria indistinguível de um
- * RSC na tela. Aberta, a dobradiça na parede traseira e a lingueta pendurada
- * identificam o modelo sem precisar de legenda.
- *
- * Exportada porque a normalização da cena e o alvo da câmera precisam saber
- * quanto a tampa aberta cresce em altura — cravar o ângulo em dois lugares
- * faria a caixa sair do quadro assim que um deles mudasse.
- */
-export const MAILER_LID_ANGLE = 1.3;
-
-/**
- * Dobra das abas da tampa: 90°, FIXO, em relação ao plano dela.
- *
- * Não interpola com a abertura, e isso é o ponto: o vinco existe na chapa. A
- * aba frontal está a 90° da tampa aberta ou fechada — o que muda é só a
- * tampa. Animar esse ângulo (como já esteve aqui) fazia a aba ir deitando até
- * ficar quase no plano da tampa, e ela sumia como um risco fino em vez de
- * formar friso.
- *
- * Com as três abas a 90°, a tampa é uma BANDEJA INVERTIDA — friso contínuo
- * nas laterais e na frente, cantos chanfrados entre eles. É a silhueta da
- * mailer, e é o que a torna reconhecível com a caixa aberta.
- *
- * Fechada, a mesma dobra deixa a aba frontal apontando para baixo, entrando
- * por dentro da parede da frente: é literalmente como a caixa trava.
- */
-const MAILER_FLAP_FOLD = Math.PI / 2;
-
-/*
- * Chanfro e raio das abas — proporcionais à MENOR dimensão da própria aba.
- *
- * Já estiveram amarrados à altura da caixa, e isso quebrava feio: numa caixa
- * alta e rasa (300×200×150) o raio dava 60mm numa aba de 148mm, quase metade
- * da peça, e o canto de faca virava uma bolha. A referência de um corte é o
- * tamanho do que está sendo cortado, não o tamanho da caixa.
- */
-const FLAP_TAPER_RATIO = 0.2;
-const FLAP_CORNER_RATIO = 0.08;
-
-/*
- * Profundidade das abas da tampa, em fração da altura da caixa.
- *
- * Elas NÃO vão até o fundo. A aba lateral só precisa agarrar a parede, e a
- * frontal só precisa entrar o bastante para travar — é assim na peça real, e
- * dá para conferir na foto de referência: os frisos da tampa são visivelmente
- * mais rasos que a parede da base.
- *
- * Já estiveram em 0,94 da altura, e o efeito colateral aparecia em qualquer
- * caixa mais alta do que funda (a 300×200×150 do formulário, por exemplo):
- * a aba ficava mais comprida que a própria tampa e, com a tampa aberta em pé,
- * saía voando para fora da peça. A frontal é um pouco mais funda que as
- * laterais porque é ela quem trava a caixa.
- */
-const SIDE_FLAP_RATIO = 0.62;
-const FRONT_FLAP_RATIO = 0.72;
-
-/** Segmentos de cada canto arredondado — 6 já lê como curva nessa escala. */
-const CORNER_SEGMENTS = 6;
-
-/**
- * Contorno de corte a partir de vértices, com cantos arredondados por vértice.
- *
- * Existe porque uma mailer não é feita de retângulos: a faca corta as abas em
- * trapézio e arredonda os cantos livres, e isso não é decoração — o canto
- * arredondado é o que deixa a aba deslizar para dentro da parede em vez de
- * enganchar, e o trapézio é o que dá a folga para ela entrar. Desenhar tudo
- * retangular mostraria uma peça que, cortada assim, não fecharia.
- *
- * `r = 0` num vértice mantém o canto vivo — é o caso dos vértices que ficam
- * sobre o vinco, onde a aba continua na peça e não há corte nenhum.
- *
- * @param vertices Polígono em sentido anti-horário, com o raio de cada canto.
- */
-function contornoDeCorte(
-  vertices: Array<{ x: number; y: number; r: number }>,
-): THREE.Shape {
-  const n = vertices.length;
-
-  // Para cada vértice, onde a curva entra e onde sai. O raio é limitado a
-  // metade da menor aresta vizinha, senão cantos consecutivos se comeriam.
-  const cantos = vertices.map((v, i) => {
-    const anterior = vertices[(i - 1 + n) % n];
-    const proximo = vertices[(i + 1) % n];
-
-    const entradaX = v.x - anterior.x;
-    const entradaY = v.y - anterior.y;
-    const saidaX = proximo.x - v.x;
-    const saidaY = proximo.y - v.y;
-
-    const compEntrada = Math.hypot(entradaX, entradaY) || 1;
-    const compSaida = Math.hypot(saidaX, saidaY) || 1;
-    const r = Math.min(v.r, compEntrada / 2, compSaida / 2);
-
-    return {
-      v,
-      entrada: {
-        x: v.x - (entradaX / compEntrada) * r,
-        y: v.y - (entradaY / compEntrada) * r,
-      },
-      saida: {
-        x: v.x + (saidaX / compSaida) * r,
-        y: v.y + (saidaY / compSaida) * r,
-      },
-    };
-  });
-
-  const shape = new THREE.Shape();
-  shape.moveTo(cantos[0].saida.x, cantos[0].saida.y);
-
-  // Fecha o laço voltando ao vértice 0 (daí o <= n).
-  for (let i = 1; i <= n; i++) {
-    const canto = cantos[i % n];
-
-    shape.lineTo(canto.entrada.x, canto.entrada.y);
-    shape.quadraticCurveTo(
-      canto.v.x,
-      canto.v.y,
-      canto.saida.x,
-      canto.saida.y,
-    );
-  }
-
-  return shape;
-}
 
 /**
  * Suaviza a abertura ao longo do tempo e devolve o valor corrente por ref.
@@ -314,15 +184,6 @@ function toSceneScale(
  */
 export function assemblyHeightMm(props: BoxMeshProps): number {
   const modelo = props.boxModel ?? "rsc";
-
-  /*
-   * A mailer não tem tampa separada, mas a tampa ABERTA sobe quase uma
-   * profundidade inteira acima da caixa. Devolver só a altura da caixa
-   * miraria a câmera baixo demais e cortaria a peça no topo do quadro.
-   */
-  if (modelo === "mailer") {
-    return props.heightMm + props.depthMm * Math.sin(MAILER_LID_ANGLE);
-  }
 
   const tampa = resolveLidDimensions(
     modelo,
@@ -543,225 +404,6 @@ function GavetaMesh({
         {painel(t, gavetaH, d, (gavetaW - t) / 2, gavetaH / 2, 0, "gav-dir")}
         {painel(gavetaW - 2 * t, gavetaH, t, 0, gavetaH / 2, (d - t) / 2, "gav-frente")}
         {painel(gavetaW - 2 * t, gavetaH, t, 0, gavetaH / 2, -(d - t) / 2, "gav-tras")}
-      </group>
-    </group>
-  );
-}
-
-/**
- * Mailer box (RETT): peça única com tampa articulada e laterais roladas.
- *
- * Componente próprio, como GavetaMesh e TuboMesh, porque a tampa gira em
- * torno de uma dobradiça e a lingueta gira em torno da tampa — dois pivôs
- * aninhados que não cabem no arranjo de painéis independentes da caixa comum.
- *
- * Desenhada ABERTA de propósito: fechada, a mailer é visualmente idêntica a
- * um RSC, e o usuário não teria como confirmar que escolheu o modelo certo.
- */
-function MailerMesh({
-  widthMm,
-  heightMm,
-  depthMm,
-  espessuraMm,
-  abertura,
-  material,
-  showEdges,
-}: {
-  widthMm: number;
-  heightMm: number;
-  depthMm: number;
-  espessuraMm: number;
-  abertura: number;
-  material: ReactNode;
-  showEdges: boolean;
-}) {
-  // Normaliza pela abertura MÁXIMA, não pela atual: assim a caixa não muda de
-  // tamanho enquanto o usuário arrasta o slider.
-  const alturaVisivel = heightMm + depthMm * Math.sin(MAILER_LID_ANGLE);
-  const fator = SCENE_MAX_UNITS / Math.max(widthMm, alturaVisivel, depthMm, 1);
-
-  const w = widthMm * fator;
-  const h = heightMm * fator;
-  const d = depthMm * fator;
-
-  // A lateral rolada é DUPLA (2t), então o teto da espessura visível é w/6 e
-  // não w/3: senão as duas paredes se encontrariam no meio da caixa.
-  // Teto em w/8 (e não w/6 como nas outras caixas) porque a mailer empilha
-  // três camadas de cada lado: a lateral rolada (2t) mais a aba da tampa por
-  // dentro dela. Com o teto mais folgado, material grosso faria as abas dos
-  // dois lados se encontrarem no meio da caixa.
-  const t = Math.min(Math.max(espessuraMm * fator, MIN_WALL_UNITS), w / 8, h / 3);
-
-  // Vão livre entre as duas laterais roladas.
-  const larguraInterna = Math.max(w - 4 * t, 0.001);
-
-  /*
-   * Abas laterais da tampa: descem por DENTRO das paredes ao fechar e são o
-   * que impede a tampa de abrir sozinha. Já entravam no consumo de material
-   * (o termo 2 × altura × profundidade do blank) — faltava desenhá-las, e o
-   * preview mostrava menos peça do que o orçamento cobrava.
-   */
-  const abaX = w / 2 - 3 * t; // encaixada logo dentro da lateral rolada
-  const abaProfundidade = Math.max(d - 2 * t, 0.001); // cabe entre frente e trás
-
-  // A lingueta passa ENTRE as duas abas, então é mais estreita que o vão das
-  // paredes. Usar larguraInterna aqui faria as três peças se atravessarem
-  // justamente na posição fechada.
-  const larguraEntreAbas = Math.max(w - 8 * t, 0.001);
-
-  /*
-   * ── Contornos de faca ───────────────────────────────────────────────────
-   *
-   * Memorizados pelas MEDIDAS, e não pela abertura: sem isso cada quadro do
-   * arrasto do slider reconstruiria as três geometrias extrudadas.
-   */
-  const formaLingueta = useMemo(() => {
-    const meia = larguraEntreAbas / 2;
-    const comprimento = h * FRONT_FLAP_RATIO;
-
-    // Chanfro e raio escalam pela MENOR dimensão desta aba — nunca pela caixa.
-    const menor = Math.min(comprimento, larguraEntreAbas);
-    const recuo = menor * FLAP_TAPER_RATIO;
-    const raio = menor * FLAP_CORNER_RATIO;
-
-    // Trapézio: largura cheia no vinco, estreitando até a borda livre. Os dois
-    // cantos livres são arredondados; os do vinco ficam vivos porque ali não
-    // há corte — a chapa continua na tampa.
-    return contornoDeCorte([
-      { x: -meia, y: 0, r: 0 },
-      { x: meia, y: 0, r: 0 },
-      { x: meia - recuo, y: comprimento, r: raio },
-      { x: -meia + recuo, y: comprimento, r: raio },
-    ]);
-  }, [larguraEntreAbas, h]);
-
-  const formaAbaLateral = useMemo(() => {
-    // Já desenhada na posição DEPOIS de dobrada: x corre pela profundidade
-    // (x = 0 é a ponta frontal), y desce da tampa para o fundo da caixa.
-    const alturaAba = h * SIDE_FLAP_RATIO;
-
-    const menor = Math.min(alturaAba, abaProfundidade);
-    const recuo = menor * FLAP_TAPER_RATIO;
-    const raio = menor * FLAP_CORNER_RATIO;
-
-    return contornoDeCorte([
-      { x: 0, y: 0, r: 0 }, // ponta frontal, sobre o vinco
-      { x: abaProfundidade, y: 0, r: 0 }, // extremo da dobradiça, sobre o vinco
-      { x: abaProfundidade, y: -alturaAba, r: raio * 0.5 },
-      { x: recuo, y: -alturaAba, r: raio },
-    ]);
-  }, [abaProfundidade, h]);
-
-  // Opções de extrusão memorizadas junto: o R3F compara `args` elemento a
-  // elemento, então referências estáveis evitam recriar a geometria por quadro.
-  const extrusao = useMemo(
-    () => ({ depth: t, bevelEnabled: false, curveSegments: CORNER_SEGMENTS }),
-    [t],
-  );
-
-  const pecaRecortada = (
-    shape: THREE.Shape,
-    position: [number, number, number],
-    rotation: [number, number, number],
-    key: string,
-  ) => (
-    <mesh key={key} position={position} rotation={rotation} castShadow receiveShadow>
-      <extrudeGeometry args={[shape, extrusao]} />
-      {material}
-      {showEdges && <Edges threshold={15} color="#00000030" />}
-    </mesh>
-  );
-
-  /*
-   * A dobradiça é o ÚNICO pivô animado da mailer.
-   *
-   * As três abas são filhas da tampa e estão a 90° fixos dela, então giram
-   * junto sem lógica própria — o movimento certo sai da hierarquia. A rotação
-   * inicial no JSX vem da abertura ALVO para que o primeiro quadro já saia
-   * correto; a partir daí quem manda é o useFrame.
-   */
-  const tampaRef = useRef<THREE.Group>(null);
-  const suave = useAberturaSuave(abertura);
-
-  const anguloTampa = MAILER_LID_ANGLE * abertura;
-
-  useFrame(() => {
-    if (tampaRef.current) {
-      tampaRef.current.rotation.x = -MAILER_LID_ANGLE * suave.current;
-    }
-  });
-
-  const painel = (
-    sx: number,
-    sy: number,
-    sz: number,
-    px: number,
-    py: number,
-    pz: number,
-    key: string,
-  ) => (
-    <mesh key={key} scale={[sx, sy, sz]} position={[px, py, pz]} castShadow receiveShadow>
-      <boxGeometry args={[1, 1, 1]} />
-      {material}
-      {showEdges && <Edges threshold={15} color="#00000030" />}
-    </mesh>
-  );
-
-  return (
-    <group>
-      {painel(w, t, d, 0, t / 2, 0, "fundo")}
-
-      {/* Laterais ROLADAS: parede dupla — a assinatura estrutural do modelo. */}
-      {painel(2 * t, h, d, -(w - 2 * t) / 2, t + h / 2, 0, "lateral-esq")}
-      {painel(2 * t, h, d, (w - 2 * t) / 2, t + h / 2, 0, "lateral-dir")}
-
-      {/* Paredes frontal e traseira, encaixadas entre as laterais. */}
-      {painel(larguraInterna, h, t, 0, t + h / 2, (d - t) / 2, "frente")}
-      {painel(larguraInterna, h, t, 0, t + h / 2, -(d - t) / 2, "tras")}
-
-      {/* Tampa articulada: o pivô É a dobradiça, no topo da parede traseira. */}
-      <group ref={tampaRef} position={[0, t + h, -d / 2]} rotation={[-anguloTampa, 0, 0]}>
-        {painel(w, t, d, 0, t / 2, d / 2, "tampa")}
-
-        {/*
-         * As duas abas laterais, vincadas a 90° da tampa.
-         *
-         * O ângulo é FIXO e não acompanha o slider: o vinco existe na chapa,
-         * então a aba é perpendicular à tampa o tempo todo. Como são filhas do
-         * grupo da tampa, giram junto com ela — abertas apontam para fora,
-         * fechadas descem retas para dentro da caixa. É exatamente o movimento
-         * da peça real, e sai de graça da hierarquia.
-         */}
-        {[-1, 1].map((lado) =>
-          /*
-           * A rotação em Y põe a extrusão (a espessura da chapa) no eixo X, e
-           * o contorno passa a ocupar o plano vertical da lateral. Como a
-           * forma já foi desenhada dobrada, os dois lados usam a MESMA
-           * geometria — só mudam de posição, sem espelhamento que inverteria
-           * as normais.
-           */
-          pecaRecortada(
-            formaAbaLateral,
-            [lado * abaX - t / 2, 0, d - t],
-            [0, Math.PI / 2, 0],
-            `aba-${lado}`,
-          ),
-        )}
-
-        {/*
-         * Aba frontal: fecha o friso da tampa e, com a caixa fechada, entra
-         * por dentro da parede da frente travando tudo.
-         *
-         * Mesma dobra de 90° das laterais — junto com elas, é o que faz a
-         * tampa ler como bandeja invertida. O pivô recua duas espessuras da
-         * borda para que, fechada, ela caia DENTRO da parede frontal e não
-         * encostada por fora.
-         */}
-        <group position={[0, 0, d - 2 * t]} rotation={[MAILER_FLAP_FOLD, 0, 0]}>
-          {/* Rotação em X leva o comprimento do contorno para o eixo Z (para
-              fora do vinco) e a extrusão para Y (a espessura da chapa). */}
-          {pecaRecortada(formaLingueta, [0, t / 2, 0], [Math.PI / 2, 0, 0], "aba-frontal")}
-        </group>
       </group>
     </group>
   );
@@ -1123,20 +765,6 @@ export function BoxMesh({
    * chamador (BoxViewer) não precise saber que existem duas famílias de
    * geometria — ele só pede "desenhe a embalagem".
    */
-  if (boxModel === "mailer") {
-    return (
-      <MailerMesh
-        widthMm={widthMm}
-        heightMm={heightMm}
-        depthMm={depthMm}
-        espessuraMm={thicknessMm ?? 0}
-        abertura={abertura}
-        material={material}
-        showEdges={showEdges}
-      />
-    );
-  }
-
   if (boxModel === "drawer") {
     return (
       <GavetaMesh

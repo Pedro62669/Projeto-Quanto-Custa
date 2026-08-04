@@ -35,7 +35,6 @@ const GLUE_FLAP_MM = 35;
 const LID_CLEARANCE_MM = 2;
 const LID_HEIGHT_RATIO = 0.35;
 const SEAL_MM = 10;
-const ROLL_TAB_MM = 20;
 
 export interface BlankDimensions {
   width: number;
@@ -203,39 +202,6 @@ export function blankDimensions(
       const width = Math.max(gavetaW, luvaW);
 
       return { width, height: totalArea / width };
-    }
-
-    case "mailer": {
-      // Mailer box (RETT): peça única die-cut, tampa articulada, sem cola.
-      //
-      // A lateral custa DOBRADO: a aba presa ao fundo sobe, dobra 180° no topo
-      // e desce por dentro, formando parede dupla. É o que dá rigidez à mailer
-      // e o que a faz consumir bem mais material que um RSC de mesma medida.
-      // A dobra de 180° consome mais que um vinco comum — daí 4t.
-      const rolo = 2 * heightMm + ROLL_TAB_MM + 4 * t;
-
-      // Orelhas das paredes frontal/traseira, presas ENTRE as camadas do rolo
-      // (é o que trava a caixa). Nunca mais fundas que a própria caixa.
-      const orelha = Math.min(heightMm, depthMm);
-
-      // Área LÍQUIDA dos painéis, não o retângulo envolvente: os recortes
-      // entre a tampa e as abas roladas são encaixáveis no layout de corte, e
-      // cobrar o retângulo contaria a mesma perda que o desperdício já cobre.
-      const area =
-        2 * (widthMm * depthMm) + // fundo + tampa articulada
-        3 * (widthMm * heightMm) + // paredes frontal e traseira + lingueta
-        2 * (rolo * depthMm) + // laterais roladas
-        4 * orelha ** 2 + // orelhas das paredes frontal/traseira
-        // Abas laterais da tampa, cobradas como RETÂNGULO embora a faca as
-        // corte em trapézio com cantos arredondados (ver MailerMesh). O
-        // trapézio sai de dentro do retângulo e as aparas são descarte —
-        // mesmo raciocínio dos discos do tubo.
-        2 * (heightMm * depthMm);
-
-      // Largura real da chapa: a caixa mais as duas abas roladas abertas.
-      const width = widthMm + 2 * rolo;
-
-      return { width, height: area / width };
     }
 
     case "tube": {

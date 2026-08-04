@@ -30,7 +30,7 @@ backend/
     Policies/QuotePolicy.php
   config/cors.php              origens permitidas via FRONTEND_URL
   database/migrations/ seeders/ factories/
-  tests/                       77 testes
+  tests/                       72 testes
 
 frontend/
   lib/pricing/
@@ -61,7 +61,7 @@ especificação —, então não há caminho pelo qual o navegador defina o pre�
 (coberto por teste: `o_preco_enviado_pelo_cliente_e_ignorado`).
 
 O risco da duplicação é os dois divergirem em silêncio. Fechado por
-`npm run test:parity`: 52 cenários gerados pelo PHP, 988 campos comparados com
+`npm run test:parity`: 45 cenários gerados pelo PHP, 855 campos comparados com
 **tolerância zero**. Alterou uma fórmula? Rode
 `php artisan pricing:export-fixtures` e o teste acusa qualquer divergência.
 
@@ -70,8 +70,8 @@ colagem e de fechamento que se sobrepõem. `BlankCalculator` usa a planificaçã
 real de cada modelo. Somar as 6 faces subestima o consumo num RSC em 15–30% —
 o suficiente para o orçamento sair no prejuízo.
 
-**Sete modelos, sete planificações.** Caixa americana (RSC), caixa com tampa,
-luva, saco, tubo cilíndrico, caixa gaveta e mailer box — cada um com sua
+**Seis modelos, seis planificações.** Caixa americana (RSC), caixa com tampa,
+luva, saco, tubo cilíndrico e caixa gaveta — cada um com sua
 fórmula de blank em `BlankCalculator`. O tubo reaproveita `width_mm` como
 diâmetro e ignora a profundidade: num cilindro as duas SÃO a mesma medida,
 então a caixa envolvente continua verdadeira e nenhuma coluna nova é
@@ -81,10 +81,7 @@ caminho maior que a interna.
 
 A **gaveta** são duas peças: a luva envolve a gaveta JÁ MONTADA, vencendo as
 paredes dela e a folga de deslize — dimensioná-la pela caixa "por fora"
-produziria uma gaveta que não entra na própria luva. A **mailer box** (RETT) é
-peça única die-cut com tampa articulada, e sua lateral custa DOBRADO: a aba
-presa ao fundo sobe, dobra 180° no topo e desce por dentro. É por isso que ela
-consome mais chapa que um RSC do mesmo tamanho, e a diferença é real.
+produziria uma gaveta que não entra na própria luva.
 
 Cuidado com invariantes fáceis: "duas peças custam mais que uma" é **falso**.
 Numa caixa larga e rasa as abas do RSC valem meia profundidade cada, dominam o
@@ -100,8 +97,7 @@ tampa informada entra no **plano de corte**, não só no desenho: caso contrári
 uma tampa mais alta sairia de graça.
 
 **Abrir a caixa é câmera, não especificação.** O slider de abertura anima a
-peça móvel de cada modelo (tampa articulada da mailer, gaveta, tampa
-telescópica da bandeja e do tubo). O estado mora no `BoxViewer`, não na store
+peça móvel de cada modelo (gaveta e a tampa telescópica da bandeja e do tubo). O estado mora no `BoxViewer`, não na store
 do orçamento: é da mesma família do ângulo de órbita e do zoom — não descreve
 a embalagem, não altera o preço e não é gravado. Na store, cada arrasto
 sujaria a especificação e dispararia um recálculo por quadro. Coberto por e2e
@@ -132,7 +128,7 @@ projetos, com um `package.json` que serve só de atalho:
 
 ```bash
 npm run dev          # sobe API (:8000) e frontend (:3000) juntos
-npm test             # 77 testes PHP + tipos, lint, paridade e build do front
+npm test             # 72 testes PHP + tipos, lint, paridade e build do front
 npm run test:e2e     # navegador real (exige os servidores no ar)
                      # credenciais: E2E_EMAIL / E2E_PASSWORD
 npm run lint         # Pint
@@ -203,7 +199,7 @@ npm run dev     # → http://localhost:3000
 ## Verificação
 
 ```bash
-# Backend — 77 testes
+# Backend — 72 testes
 cd backend
 php artisan test
 ./vendor/bin/pint --test app/ database/ routes/ tests/ config/

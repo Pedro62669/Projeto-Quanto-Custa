@@ -34,7 +34,6 @@ const BOX_MODELS: Array<{ value: BoxModel; label: string }> = [
   { value: "pouch", label: "Saco / envelope" },
   { value: "tube", label: "Tubo / lata cilíndrica" },
   { value: "drawer", label: "Caixa gaveta" },
-  { value: "mailer", label: "Mailer box (e-commerce)" },
 ];
 
 /**

@@ -203,28 +203,6 @@ class ExportPricingFixtures extends Command
                 'boxModel' => BoxModel::Drawer,
                 'widthMm' => 400.0, 'heightMm' => 20.0, 'depthMm' => 300.0,
             ]),
-
-            // Mailer box: peça única, laterais roladas, tampa articulada.
-            'mailer-padrao' => $base(['boxModel' => BoxModel::Mailer]),
-            'mailer-espessa' => $base([
-                'boxModel' => BoxModel::Mailer,
-                'material' => ['thickness_mm' => 7.0],
-            ]),
-            'mailer-fracionada' => $base([
-                'boxModel' => BoxModel::Mailer,
-                'widthMm' => 287.3, 'heightMm' => 61.9, 'depthMm' => 192.6,
-            ]),
-            // Os dois lados do min(h, d) da orelha — o único ramo condicional
-            // da fórmula: aqui manda a profundidade, na 'mailer-rasa' a altura.
-            'mailer-alta-e-estreita' => $base([
-                'boxModel' => BoxModel::Mailer,
-                'widthMm' => 200.0, 'heightMm' => 300.0, 'depthMm' => 120.0,
-            ]),
-            'mailer-rasa' => $base([
-                'boxModel' => BoxModel::Mailer,
-                'widthMm' => 400.0, 'heightMm' => 20.0, 'depthMm' => 300.0,
-            ]),
-
             'tudo-combinado' => $base([
                 'material' => ['cost_unit' => MaterialUnit::Kilogram, 'cost_per_unit' => 24.0, 'grammage_kg_per_m2' => 0.18, 'thickness_mm' => 0.6],
                 'settings' => ['overhead_percent' => 12.0, 'tax_percent' => 8.0],

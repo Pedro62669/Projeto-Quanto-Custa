@@ -257,28 +257,17 @@ check(
   `gaveta ${areaGaveta} m² > rsc ${areaRsc} m²`,
 );
 
-// ── Mailer box (RETT) ────────────────────────────────────────────────────
+// ── Slider de abertura ───────────────────────────────────────────────────
 //
-// Mesmas medidas do RSC lido acima (200×100×150), então a comparação é direta.
-// A mailer tem parede lateral DUPLA (a aba rolada sobe e desce), tampa inteira
-// e lingueta: tem que gastar mais chapa que um RSC do mesmo tamanho. Se um dia
-// isto inverter, é sinal de que o rolo deixou de ser contado dobrado.
+// Volta para a gaveta: o RSC não tem peça móvel, e é justamente a ausência
+// dele que o último check deste bloco verifica.
 await page.click("#box-model");
-await page.click('[role="option"]:has-text("Mailer box")');
+await page.click('[role="option"]:has-text("Caixa gaveta")');
 await page.waitForTimeout(2500);
 
-const areaMailer = await areaPorUnidade();
-
-check(
-  "a mailer (laterais roladas) consome mais que um RSC",
-  areaMailer > areaRsc && areaRsc > 0,
-  `mailer ${areaMailer} m² > rsc ${areaRsc} m²`,
-);
-
-// ── Slider de abertura ───────────────────────────────────────────────────
 const slider = page.locator('[role="group"][aria-label^="Abertura"] [role="slider"]');
 
-check("a mailer expõe o controle de abertura", (await slider.count()) === 1);
+check("a gaveta expõe o controle de abertura", (await slider.count()) === 1);
 
 /*
  * O check que importa: mover o slider não pode falar com o servidor.

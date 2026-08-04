@@ -12,8 +12,7 @@ export type BoxModel =
   | "sleeve"
   | "pouch"
   | "tube"
-  | "drawer"
-  | "mailer";
+  | "drawer";
 export type PricingMode = "markup" | "margin";
 export type MaterialUnit = "m2" | "kg";
 
