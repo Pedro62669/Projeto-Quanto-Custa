@@ -149,11 +149,33 @@ export const MAILER_LID_ANGLE = 1.3;
  */
 const MAILER_FLAP_FOLD = Math.PI / 2;
 
-/** Recuo trapezoidal das abas da tampa, em fração da dimensão livre. */
-const FLAP_TAPER_RATIO = 0.3;
+/*
+ * Chanfro e raio das abas — proporcionais à MENOR dimensão da própria aba.
+ *
+ * Já estiveram amarrados à altura da caixa, e isso quebrava feio: numa caixa
+ * alta e rasa (300×200×150) o raio dava 60mm numa aba de 148mm, quase metade
+ * da peça, e o canto de faca virava uma bolha. A referência de um corte é o
+ * tamanho do que está sendo cortado, não o tamanho da caixa.
+ */
+const FLAP_TAPER_RATIO = 0.2;
+const FLAP_CORNER_RATIO = 0.08;
 
-/** Raio do canto arredondado do corte de faca, em fração da altura da caixa. */
-const FLAP_CORNER_RATIO = 0.3;
+/*
+ * Profundidade das abas da tampa, em fração da altura da caixa.
+ *
+ * Elas NÃO vão até o fundo. A aba lateral só precisa agarrar a parede, e a
+ * frontal só precisa entrar o bastante para travar — é assim na peça real, e
+ * dá para conferir na foto de referência: os frisos da tampa são visivelmente
+ * mais rasos que a parede da base.
+ *
+ * Já estiveram em 0,94 da altura, e o efeito colateral aparecia em qualquer
+ * caixa mais alta do que funda (a 300×200×150 do formulário, por exemplo):
+ * a aba ficava mais comprida que a própria tampa e, com a tampa aberta em pé,
+ * saía voando para fora da peça. A frontal é um pouco mais funda que as
+ * laterais porque é ela quem trava a caixa.
+ */
+const SIDE_FLAP_RATIO = 0.62;
+const FRONT_FLAP_RATIO = 0.72;
 
 /** Segmentos de cada canto arredondado — 6 já lê como curva nessa escala. */
 const CORNER_SEGMENTS = 6;
@@ -593,13 +615,14 @@ function MailerMesh({
    * Memorizados pelas MEDIDAS, e não pela abertura: sem isso cada quadro do
    * arrasto do slider reconstruiria as três geometrias extrudadas.
    */
-  const raioCanto = h * FLAP_CORNER_RATIO;
-
   const formaLingueta = useMemo(() => {
     const meia = larguraEntreAbas / 2;
-    // Um pouco menor que a altura: a lingueta tem de entrar sem bater no fundo.
-    const comprimento = h * 0.92;
-    const recuo = larguraEntreAbas * FLAP_TAPER_RATIO * 0.5;
+    const comprimento = h * FRONT_FLAP_RATIO;
+
+    // Chanfro e raio escalam pela MENOR dimensão desta aba — nunca pela caixa.
+    const menor = Math.min(comprimento, larguraEntreAbas);
+    const recuo = menor * FLAP_TAPER_RATIO;
+    const raio = menor * FLAP_CORNER_RATIO;
 
     // Trapézio: largura cheia no vinco, estreitando até a borda livre. Os dois
     // cantos livres são arredondados; os do vinco ficam vivos porque ali não
@@ -607,24 +630,27 @@ function MailerMesh({
     return contornoDeCorte([
       { x: -meia, y: 0, r: 0 },
       { x: meia, y: 0, r: 0 },
-      { x: meia - recuo, y: comprimento, r: raioCanto },
-      { x: -meia + recuo, y: comprimento, r: raioCanto },
+      { x: meia - recuo, y: comprimento, r: raio },
+      { x: -meia + recuo, y: comprimento, r: raio },
     ]);
-  }, [larguraEntreAbas, h, raioCanto]);
+  }, [larguraEntreAbas, h]);
 
   const formaAbaLateral = useMemo(() => {
     // Já desenhada na posição DEPOIS de dobrada: x corre pela profundidade
     // (x = 0 é a ponta frontal), y desce da tampa para o fundo da caixa.
-    const alturaAba = h * 0.94;
-    const recuo = abaProfundidade * FLAP_TAPER_RATIO;
+    const alturaAba = h * SIDE_FLAP_RATIO;
+
+    const menor = Math.min(alturaAba, abaProfundidade);
+    const recuo = menor * FLAP_TAPER_RATIO;
+    const raio = menor * FLAP_CORNER_RATIO;
 
     return contornoDeCorte([
       { x: 0, y: 0, r: 0 }, // ponta frontal, sobre o vinco
       { x: abaProfundidade, y: 0, r: 0 }, // extremo da dobradiça, sobre o vinco
-      { x: abaProfundidade, y: -alturaAba, r: raioCanto * 0.5 },
-      { x: recuo, y: -alturaAba, r: raioCanto },
+      { x: abaProfundidade, y: -alturaAba, r: raio * 0.5 },
+      { x: recuo, y: -alturaAba, r: raio },
     ]);
-  }, [abaProfundidade, h, raioCanto]);
+  }, [abaProfundidade, h]);
 
   // Opções de extrusão memorizadas junto: o R3F compara `args` elemento a
   // elemento, então referências estáveis evitam recriar a geometria por quadro.
