@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, Suspense, type ReactNode } from "react";
+import { useRef, useMemo, Suspense, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Edges, useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -119,7 +119,7 @@ const TUBO_SEGMENTOS = 64;
 const SLIDE_RATIO = 0.45;
 
 /**
- * Abertura da tampa articulada da mailer, em radianos (~52°).
+ * Abertura da tampa articulada da mailer, em radianos (~75°).
  *
  * Mesma razão do SLIDE_RATIO: fechada, a mailer seria indistinguível de um
  * RSC na tela. Aberta, a dobradiça na parede traseira e a lingueta pendurada
@@ -129,7 +129,7 @@ const SLIDE_RATIO = 0.45;
  * quanto a tampa aberta cresce em altura — cravar o ângulo em dois lugares
  * faria a caixa sair do quadro assim que um deles mudasse.
  */
-export const MAILER_LID_ANGLE = 0.9;
+export const MAILER_LID_ANGLE = 1.3;
 
 /** Dobra da lingueta em relação ao plano da tampa, com a caixa aberta (~69°). */
 const MAILER_TUCK_ANGLE = 1.2;
@@ -142,6 +142,81 @@ const MAILER_TUCK_ANGLE = 1.2;
  * da parede frontal. É literalmente como a mailer fecha.
  */
 const MAILER_TUCK_CLOSED = Math.PI / 2;
+
+/** Recuo trapezoidal das abas da tampa, em fração da dimensão livre. */
+const FLAP_TAPER_RATIO = 0.3;
+
+/** Raio do canto arredondado do corte de faca, em fração da altura da caixa. */
+const FLAP_CORNER_RATIO = 0.3;
+
+/** Segmentos de cada canto arredondado — 6 já lê como curva nessa escala. */
+const CORNER_SEGMENTS = 6;
+
+/**
+ * Contorno de corte a partir de vértices, com cantos arredondados por vértice.
+ *
+ * Existe porque uma mailer não é feita de retângulos: a faca corta as abas em
+ * trapézio e arredonda os cantos livres, e isso não é decoração — o canto
+ * arredondado é o que deixa a aba deslizar para dentro da parede em vez de
+ * enganchar, e o trapézio é o que dá a folga para ela entrar. Desenhar tudo
+ * retangular mostraria uma peça que, cortada assim, não fecharia.
+ *
+ * `r = 0` num vértice mantém o canto vivo — é o caso dos vértices que ficam
+ * sobre o vinco, onde a aba continua na peça e não há corte nenhum.
+ *
+ * @param vertices Polígono em sentido anti-horário, com o raio de cada canto.
+ */
+function contornoDeCorte(
+  vertices: Array<{ x: number; y: number; r: number }>,
+): THREE.Shape {
+  const n = vertices.length;
+
+  // Para cada vértice, onde a curva entra e onde sai. O raio é limitado a
+  // metade da menor aresta vizinha, senão cantos consecutivos se comeriam.
+  const cantos = vertices.map((v, i) => {
+    const anterior = vertices[(i - 1 + n) % n];
+    const proximo = vertices[(i + 1) % n];
+
+    const entradaX = v.x - anterior.x;
+    const entradaY = v.y - anterior.y;
+    const saidaX = proximo.x - v.x;
+    const saidaY = proximo.y - v.y;
+
+    const compEntrada = Math.hypot(entradaX, entradaY) || 1;
+    const compSaida = Math.hypot(saidaX, saidaY) || 1;
+    const r = Math.min(v.r, compEntrada / 2, compSaida / 2);
+
+    return {
+      v,
+      entrada: {
+        x: v.x - (entradaX / compEntrada) * r,
+        y: v.y - (entradaY / compEntrada) * r,
+      },
+      saida: {
+        x: v.x + (saidaX / compSaida) * r,
+        y: v.y + (saidaY / compSaida) * r,
+      },
+    };
+  });
+
+  const shape = new THREE.Shape();
+  shape.moveTo(cantos[0].saida.x, cantos[0].saida.y);
+
+  // Fecha o laço voltando ao vértice 0 (daí o <= n).
+  for (let i = 1; i <= n; i++) {
+    const canto = cantos[i % n];
+
+    shape.lineTo(canto.entrada.x, canto.entrada.y);
+    shape.quadraticCurveTo(
+      canto.v.x,
+      canto.v.y,
+      canto.saida.x,
+      canto.saida.y,
+    );
+  }
+
+  return shape;
+}
 
 /**
  * Suaviza a abertura ao longo do tempo e devolve o valor corrente por ref.
@@ -507,6 +582,65 @@ function MailerMesh({
   const larguraEntreAbas = Math.max(w - 8 * t, 0.001);
 
   /*
+   * ── Contornos de faca ───────────────────────────────────────────────────
+   *
+   * Memorizados pelas MEDIDAS, e não pela abertura: sem isso cada quadro do
+   * arrasto do slider reconstruiria as três geometrias extrudadas.
+   */
+  const raioCanto = h * FLAP_CORNER_RATIO;
+
+  const formaLingueta = useMemo(() => {
+    const meia = larguraEntreAbas / 2;
+    // Um pouco menor que a altura: a lingueta tem de entrar sem bater no fundo.
+    const comprimento = h * 0.92;
+    const recuo = larguraEntreAbas * FLAP_TAPER_RATIO * 0.5;
+
+    // Trapézio: largura cheia no vinco, estreitando até a borda livre. Os dois
+    // cantos livres são arredondados; os do vinco ficam vivos porque ali não
+    // há corte — a chapa continua na tampa.
+    return contornoDeCorte([
+      { x: -meia, y: 0, r: 0 },
+      { x: meia, y: 0, r: 0 },
+      { x: meia - recuo, y: comprimento, r: raioCanto },
+      { x: -meia + recuo, y: comprimento, r: raioCanto },
+    ]);
+  }, [larguraEntreAbas, h, raioCanto]);
+
+  const formaAbaLateral = useMemo(() => {
+    // Já desenhada na posição DEPOIS de dobrada: x corre pela profundidade
+    // (x = 0 é a ponta frontal), y desce da tampa para o fundo da caixa.
+    const alturaAba = h * 0.94;
+    const recuo = abaProfundidade * FLAP_TAPER_RATIO;
+
+    return contornoDeCorte([
+      { x: 0, y: 0, r: 0 }, // ponta frontal, sobre o vinco
+      { x: abaProfundidade, y: 0, r: 0 }, // extremo da dobradiça, sobre o vinco
+      { x: abaProfundidade, y: -alturaAba, r: raioCanto * 0.5 },
+      { x: recuo, y: -alturaAba, r: raioCanto },
+    ]);
+  }, [abaProfundidade, h, raioCanto]);
+
+  // Opções de extrusão memorizadas junto: o R3F compara `args` elemento a
+  // elemento, então referências estáveis evitam recriar a geometria por quadro.
+  const extrusao = useMemo(
+    () => ({ depth: t, bevelEnabled: false, curveSegments: CORNER_SEGMENTS }),
+    [t],
+  );
+
+  const pecaRecortada = (
+    shape: THREE.Shape,
+    position: [number, number, number],
+    rotation: [number, number, number],
+    key: string,
+  ) => (
+    <mesh key={key} position={position} rotation={rotation} castShadow receiveShadow>
+      <extrudeGeometry args={[shape, extrusao]} />
+      {material}
+      {showEdges && <Edges threshold={15} color="#00000030" />}
+    </mesh>
+  );
+
+  /*
    * Os dois pivôs da mailer, animados por ref.
    *
    * A rotação inicial no JSX vem da abertura ALVO para que o primeiro quadro
@@ -573,17 +707,21 @@ function MailerMesh({
          * fechadas descem retas para dentro da caixa. É exatamente o movimento
          * da peça real, e sai de graça da hierarquia.
          */}
-        {[-1, 1].map((lado) => (
-          <group
-            key={`aba-${lado}`}
-            position={[lado * abaX, 0, d / 2]}
-            // Sinal invertido em relação ao lado: as duas dobram para BAIXO,
-            // e usar o mesmo ângulo nos dois jogaria uma delas para cima.
-            rotation={[0, 0, (-lado * Math.PI) / 2]}
-          >
-            {painel(h, t, abaProfundidade, (lado * h) / 2, 0, 0, `aba-p-${lado}`)}
-          </group>
-        ))}
+        {[-1, 1].map((lado) =>
+          /*
+           * A rotação em Y põe a extrusão (a espessura da chapa) no eixo X, e
+           * o contorno passa a ocupar o plano vertical da lateral. Como a
+           * forma já foi desenhada dobrada, os dois lados usam a MESMA
+           * geometria — só mudam de posição, sem espelhamento que inverteria
+           * as normais.
+           */
+          pecaRecortada(
+            formaAbaLateral,
+            [lado * abaX - t / 2, 0, d - t],
+            [0, Math.PI / 2, 0],
+            `aba-${lado}`,
+          ),
+        )}
 
         {/*
          * Lingueta: dobra na ponta da tampa e entra por dentro da frente.
@@ -597,7 +735,9 @@ function MailerMesh({
          * DENTRO da parede frontal e não encostada por fora.
          */}
         <group ref={linguetaRef} position={[0, 0, d - 2 * t]} rotation={[anguloLingueta, 0, 0]}>
-          {painel(larguraEntreAbas, t, h, 0, t / 2, h / 2, "lingueta")}
+          {/* Rotação em X leva o comprimento do contorno para o eixo Z (para
+              fora do vinco) e a extrusão para Y (a espessura da chapa). */}
+          {pecaRecortada(formaLingueta, [0, t / 2, 0], [Math.PI / 2, 0, 0], "lingueta")}
         </group>
       </group>
     </group>

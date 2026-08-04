@@ -297,6 +297,13 @@ final class BlankCalculator
             // Quatro orelhas quadradas nas pontas das paredes frontal/traseira.
             + 4 * ($orelha ** 2)
             // Abas laterais da tampa, que descem por dentro ao fechar.
+            //
+            // Cobradas como RETÂNGULO embora a faca as corte em trapézio com
+            // cantos arredondados (é assim que o 3D as desenha). Não é
+            // divergência: o trapézio sai de dentro do retângulo e as aparas
+            // dos cantos são descarte, não material aproveitado. Mesmo
+            // raciocínio dos discos do tubo. Trocar por área do trapézio
+            // faria a caixa parecer mais barata do que a chapa que ela come.
             + 2 * ($h * $d);
 
         // Largura real da chapa: a caixa mais as duas abas roladas abertas.
