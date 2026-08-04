@@ -99,6 +99,15 @@ e é persistido como tal para que reabrir o orçamento reproduza a mesma peça. 
 tampa informada entra no **plano de corte**, não só no desenho: caso contrário
 uma tampa mais alta sairia de graça.
 
+**Abrir a caixa é câmera, não especificação.** O slider de abertura anima a
+peça móvel de cada modelo (tampa articulada da mailer, gaveta, tampa
+telescópica da bandeja e do tubo). O estado mora no `BoxViewer`, não na store
+do orçamento: é da mesma família do ângulo de órbita e do zoom — não descreve
+a embalagem, não altera o preço e não é gravado. Na store, cada arrasto
+sujaria a especificação e dispararia um recálculo por quadro. Coberto por e2e
+(`fechar a caixa não dispara recálculo no servidor`) com controle positivo ao
+lado, para que o check não passe por nunca contar nada.
+
 **Orçamento é documento, não consulta.** Os valores são colunas materializadas
 e `pricing_snapshot` guarda os parâmetros vigentes na emissão. Reajustar o
 papelão amanhã não reescreve o que o cliente recebeu hoje.

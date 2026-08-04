@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { Edges, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import type { BoxModel } from "@/lib/pricing/types";
-import { resolveLidDimensions, isCylindrical } from "@/lib/pricing/engine";
+import { resolveLidDimensions, isCylindrical, hasSeparateLid } from "@/lib/pricing/engine";
 
 /**
  * Escala da cena: a MAIOR aresta da embalagem sempre ocupa este número de
@@ -56,6 +56,15 @@ export interface BoxMeshProps extends BoxDimensions {
   /** Destaca os vincos/dobras da planificação. */
   showEdges?: boolean;
 
+  /**
+   * Abertura da peça móvel, de 0 (fechada) a 1 (totalmente aberta).
+   *
+   * É estado de VISUALIZAÇÃO: não entra na especificação do orçamento, não
+   * altera o consumo de material e não é persistido. Abrir a caixa na tela
+   * não pode mudar o preço.
+   */
+  aperture?: number;
+
   /** Medidas da tampa informadas pelo usuário; null em um eixo = automático. */
   lidWidthMm?: number | null;
   lidDepthMm?: number | null;
@@ -85,6 +94,18 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
   mailer: { topo: true, fundo: false },
 };
 
+/**
+ * Modelos que têm peça móvel — e portanto uma abertura para animar.
+ *
+ * Vive aqui, e não no motor de precificação, de propósito: é uma pergunta
+ * sobre o DESENHO ("esta peça se move?"), não sobre o custo. O RSC, a luva e o
+ * saco não têm o que abrir; oferecer um slider inerte para eles seria um
+ * controle que mente sobre o que faz.
+ */
+export function hasAperture(model: BoxModel): boolean {
+  return hasSeparateLid(model) || model === "drawer" || model === "mailer";
+}
+
 /** Segmentos da revolução: acima disso o ganho visual não paga o custo. */
 const TUBO_SEGMENTOS = 64;
 
@@ -110,8 +131,40 @@ const SLIDE_RATIO = 0.45;
  */
 export const MAILER_LID_ANGLE = 0.9;
 
-/** Dobra da lingueta frontal em relação ao plano da tampa (~69°). */
+/** Dobra da lingueta em relação ao plano da tampa, com a caixa aberta (~69°). */
 const MAILER_TUCK_ANGLE = 1.2;
+
+/**
+ * Dobra da lingueta com a caixa FECHADA: exatamente 90° em relação à tampa.
+ *
+ * Com a tampa deitada, 90° deixa a lingueta apontando para baixo — e como ela
+ * tem o comprimento da altura da caixa, encosta no fundo, encaixada por dentro
+ * da parede frontal. É literalmente como a mailer fecha.
+ */
+const MAILER_TUCK_CLOSED = Math.PI / 2;
+
+/**
+ * Suaviza a abertura ao longo do tempo e devolve o valor corrente por ref.
+ *
+ * Arrastar o slider já é contínuo, mas clicar na trilha ou usar as setas do
+ * teclado salta o valor — e um salto ao lado das dimensões, que interpolam,
+ * pareceria defeito. Interpolar aqui dá o mesmo movimento aos três caminhos.
+ *
+ * Devolve ref e não estado porque quem consome são transformações de objetos
+ * three: atualizá-las por setState custaria um render do React por quadro,
+ * exatamente o que o resto deste arquivo evita.
+ */
+function useAberturaSuave(alvo: number) {
+  const atual = useRef(alvo);
+
+  useFrame((_, delta) => {
+    // Fator dependente do delta: a suavidade não muda com o FPS da máquina.
+    const alpha = 1 - Math.exp(-LERP_SPEED * delta);
+    atual.current += (alvo - atual.current) * alpha;
+  });
+
+  return atual;
+}
 
 /**
  * Converte milímetros em unidades de cena mantendo a PROPORÇÃO real entre
@@ -149,6 +202,12 @@ function toSceneScale(
  * Exportada porque o BoxViewer precisa dela para mirar a câmera no centro do
  * que está desenhado — cravar um alvo fixo descentraliza assim que a tampa
  * muda de tamanho.
+ *
+ * NÃO recebe a abertura de propósito: mede sempre o conjunto TOTALMENTE
+ * ABERTO. Se a normalização acompanhasse o slider, a caixa cresceria enquanto
+ * o usuário a fecha — o quadro sobraria e a peça seria reescalada —, dando a
+ * impressão de que as medidas mudaram. Fixar na abertura máxima mantém o
+ * tamanho estável durante o arrasto e garante que nada saia do quadro.
  */
 export function assemblyHeightMm(props: BoxMeshProps): number {
   const modelo = props.boxModel ?? "rsc";
@@ -292,6 +351,7 @@ function GavetaMesh({
   heightMm,
   depthMm,
   espessuraMm,
+  abertura,
   material,
   showEdges,
 }: {
@@ -299,11 +359,12 @@ function GavetaMesh({
   heightMm: number;
   depthMm: number;
   espessuraMm: number;
+  abertura: number;
   material: ReactNode;
   showEdges: boolean;
 }) {
-  // A gaveta puxada estende a peça no eixo da profundidade; incluir isso na
-  // normalização evita que o conjunto saia do quadro.
+  // Usa o deslize MÁXIMO, não o atual: normalizar pela posição corrente faria
+  // a peça inchar conforme o usuário fecha a gaveta.
   const profundidadeVisivel = depthMm * (1 + SLIDE_RATIO);
   const fator =
     SCENE_MAX_UNITS / Math.max(widthMm, heightMm, profundidadeVisivel, 1);
@@ -329,7 +390,17 @@ function GavetaMesh({
   const secaoW = gavetaW + folga;
   const secaoH = gavetaH + folga;
 
-  const deslize = d * SLIDE_RATIO;
+  const deslizeMaximo = d * SLIDE_RATIO;
+  const deslize = deslizeMaximo * abertura;
+
+  const gavetaRef = useRef<THREE.Group>(null);
+  const suave = useAberturaSuave(abertura);
+
+  useFrame(() => {
+    if (gavetaRef.current) {
+      gavetaRef.current.position.z = deslizeMaximo * suave.current;
+    }
+  });
 
   const painel = (
     sx: number,
@@ -356,12 +427,20 @@ function GavetaMesh({
       {painel(t, secaoH, d, -(secaoW + t) / 2, secaoH / 2, 0, "luva-esq")}
       {painel(t, secaoH, d, (secaoW + t) / 2, secaoH / 2, 0, "luva-dir")}
 
-      {/* ── Gaveta: bandeja puxada para fora ─────────────────────────────── */}
-      {painel(gavetaW, t, d, 0, t / 2, deslize, "gav-fundo")}
-      {painel(t, gavetaH, d, -(gavetaW - t) / 2, gavetaH / 2, deslize, "gav-esq")}
-      {painel(t, gavetaH, d, (gavetaW - t) / 2, gavetaH / 2, deslize, "gav-dir")}
-      {painel(gavetaW - 2 * t, gavetaH, t, 0, gavetaH / 2, deslize + (d - t) / 2, "gav-frente")}
-      {painel(gavetaW - 2 * t, gavetaH, t, 0, gavetaH / 2, deslize - (d - t) / 2, "gav-tras")}
+      {/*
+       * ── Gaveta: bandeja que desliza ───────────────────────────────────
+       *
+       * As cinco peças vivem num grupo próprio para que o deslize seja UMA
+       * transformação animada, e não cinco posições recalculadas em paralelo
+       * — que poderiam sair de sincronia entre si durante o movimento.
+       */}
+      <group ref={gavetaRef} position={[0, 0, deslize]}>
+        {painel(gavetaW, t, d, 0, t / 2, 0, "gav-fundo")}
+        {painel(t, gavetaH, d, -(gavetaW - t) / 2, gavetaH / 2, 0, "gav-esq")}
+        {painel(t, gavetaH, d, (gavetaW - t) / 2, gavetaH / 2, 0, "gav-dir")}
+        {painel(gavetaW - 2 * t, gavetaH, t, 0, gavetaH / 2, (d - t) / 2, "gav-frente")}
+        {painel(gavetaW - 2 * t, gavetaH, t, 0, gavetaH / 2, -(d - t) / 2, "gav-tras")}
+      </group>
     </group>
   );
 }
@@ -381,6 +460,7 @@ function MailerMesh({
   heightMm,
   depthMm,
   espessuraMm,
+  abertura,
   material,
   showEdges,
 }: {
@@ -388,11 +468,12 @@ function MailerMesh({
   heightMm: number;
   depthMm: number;
   espessuraMm: number;
+  abertura: number;
   material: ReactNode;
   showEdges: boolean;
 }) {
-  // A tampa aberta sobe quase uma profundidade: normalizar só pela caixa
-  // fecharia o enquadramento em cima dela.
+  // Normaliza pela abertura MÁXIMA, não pela atual: assim a caixa não muda de
+  // tamanho enquanto o usuário arrasta o slider.
   const alturaVisivel = heightMm + depthMm * Math.sin(MAILER_LID_ANGLE);
   const fator = SCENE_MAX_UNITS / Math.max(widthMm, alturaVisivel, depthMm, 1);
 
@@ -402,10 +483,54 @@ function MailerMesh({
 
   // A lateral rolada é DUPLA (2t), então o teto da espessura visível é w/6 e
   // não w/3: senão as duas paredes se encontrariam no meio da caixa.
-  const t = Math.min(Math.max(espessuraMm * fator, MIN_WALL_UNITS), w / 6, h / 3);
+  // Teto em w/8 (e não w/6 como nas outras caixas) porque a mailer empilha
+  // três camadas de cada lado: a lateral rolada (2t) mais a aba da tampa por
+  // dentro dela. Com o teto mais folgado, material grosso faria as abas dos
+  // dois lados se encontrarem no meio da caixa.
+  const t = Math.min(Math.max(espessuraMm * fator, MIN_WALL_UNITS), w / 8, h / 3);
 
   // Vão livre entre as duas laterais roladas.
   const larguraInterna = Math.max(w - 4 * t, 0.001);
+
+  /*
+   * Abas laterais da tampa: descem por DENTRO das paredes ao fechar e são o
+   * que impede a tampa de abrir sozinha. Já entravam no consumo de material
+   * (o termo 2 × altura × profundidade do blank) — faltava desenhá-las, e o
+   * preview mostrava menos peça do que o orçamento cobrava.
+   */
+  const abaX = w / 2 - 3 * t; // encaixada logo dentro da lateral rolada
+  const abaProfundidade = Math.max(d - 2 * t, 0.001); // cabe entre frente e trás
+
+  // A lingueta passa ENTRE as duas abas, então é mais estreita que o vão das
+  // paredes. Usar larguraInterna aqui faria as três peças se atravessarem
+  // justamente na posição fechada.
+  const larguraEntreAbas = Math.max(w - 8 * t, 0.001);
+
+  /*
+   * Os dois pivôs da mailer, animados por ref.
+   *
+   * A rotação inicial no JSX vem da abertura ALVO para que o primeiro quadro
+   * já saia correto; a partir daí quem manda é o useFrame.
+   */
+  const tampaRef = useRef<THREE.Group>(null);
+  const linguetaRef = useRef<THREE.Group>(null);
+  const suave = useAberturaSuave(abertura);
+
+  const anguloTampa = MAILER_LID_ANGLE * abertura;
+  const anguloLingueta =
+    MAILER_TUCK_CLOSED + (MAILER_TUCK_ANGLE - MAILER_TUCK_CLOSED) * abertura;
+
+  useFrame(() => {
+    const a = suave.current;
+
+    if (tampaRef.current) {
+      tampaRef.current.rotation.x = -MAILER_LID_ANGLE * a;
+    }
+    if (linguetaRef.current) {
+      linguetaRef.current.rotation.x =
+        MAILER_TUCK_CLOSED + (MAILER_TUCK_ANGLE - MAILER_TUCK_CLOSED) * a;
+    }
+  });
 
   const painel = (
     sx: number,
@@ -436,12 +561,43 @@ function MailerMesh({
       {painel(larguraInterna, h, t, 0, t + h / 2, -(d - t) / 2, "tras")}
 
       {/* Tampa articulada: o pivô É a dobradiça, no topo da parede traseira. */}
-      <group position={[0, t + h, -d / 2]} rotation={[-MAILER_LID_ANGLE, 0, 0]}>
+      <group ref={tampaRef} position={[0, t + h, -d / 2]} rotation={[-anguloTampa, 0, 0]}>
         {painel(w, t, d, 0, t / 2, d / 2, "tampa")}
 
-        {/* Lingueta: dobra na ponta da tampa e entra por dentro da frente. */}
-        <group position={[0, 0, d]} rotation={[MAILER_TUCK_ANGLE, 0, 0]}>
-          {painel(larguraInterna, t, h, 0, t / 2, h / 2, "lingueta")}
+        {/*
+         * As duas abas laterais, vincadas a 90° da tampa.
+         *
+         * O ângulo é FIXO e não acompanha o slider: o vinco existe na chapa,
+         * então a aba é perpendicular à tampa o tempo todo. Como são filhas do
+         * grupo da tampa, giram junto com ela — abertas apontam para fora,
+         * fechadas descem retas para dentro da caixa. É exatamente o movimento
+         * da peça real, e sai de graça da hierarquia.
+         */}
+        {[-1, 1].map((lado) => (
+          <group
+            key={`aba-${lado}`}
+            position={[lado * abaX, 0, d / 2]}
+            // Sinal invertido em relação ao lado: as duas dobram para BAIXO,
+            // e usar o mesmo ângulo nos dois jogaria uma delas para cima.
+            rotation={[0, 0, (-lado * Math.PI) / 2]}
+          >
+            {painel(h, t, abaProfundidade, (lado * h) / 2, 0, 0, `aba-p-${lado}`)}
+          </group>
+        ))}
+
+        {/*
+         * Lingueta: dobra na ponta da tampa e entra por dentro da frente.
+         *
+         * O ângulo dela acompanha a abertura em sentido CONTRÁRIO ao da tampa.
+         * Fechando, ela endireita para 90° e desce por dentro da parede
+         * frontal; abrindo, relaxa para fora. Mantê-lo fixo faria a lingueta
+         * girar junto com a tampa e apontar para o céu com a caixa fechada.
+         *
+         * O pivô recua duas espessuras da borda para que, fechada, ela caia
+         * DENTRO da parede frontal e não encostada por fora.
+         */}
+        <group ref={linguetaRef} position={[0, 0, d - 2 * t]} rotation={[anguloLingueta, 0, 0]}>
+          {painel(larguraEntreAbas, t, h, 0, t / 2, h / 2, "lingueta")}
         </group>
       </group>
     </group>
@@ -495,6 +651,7 @@ function TuboMesh({
   alturaMm,
   espessuraMm,
   tampaMm,
+  abertura,
   colorHex,
   textureUrl,
   showEdges,
@@ -503,6 +660,7 @@ function TuboMesh({
   alturaMm: number;
   espessuraMm: number;
   tampaMm: { widthMm: number; heightMm: number } | null;
+  abertura: number;
   colorHex: string;
   textureUrl?: string | null;
   showEdges: boolean;
@@ -544,6 +702,20 @@ function TuboMesh({
 
   const corpo = perfilCopo(raio, raio + t, altura, t);
 
+  const alturaTampa = (tampaMm?.heightMm ?? 0) * fator;
+
+  /*
+   * Fechada, a saia da tampa CAPA o topo do corpo e o tampo pousa no bordo —
+   * por isso a base dela desce uma altura de tampa. Apenas zerar o vão a
+   * deixaria pousada em cima com a saia apontando para fora do corpo, que é o
+   * oposto de uma tampa fechada.
+   *
+   * O piso em zero cobre a tampa mais alta que o próprio tubo: nesse caso ela
+   * capa o corpo inteiro e a saia encosta no chão, em vez de afundar.
+   */
+  const tampaFechadaY = Math.max(altura - alturaTampa, 0);
+  const tampaAbertaY = altura + altura * LID_GAP_RATIO;
+
   const tampa = tampaMm
     ? {
         // lid.widthMm é o diâmetro INTERNO da tampa: ela desliza por fora do
@@ -551,12 +723,22 @@ function TuboMesh({
         perfil: perfilTampa(
           (tampaMm.widthMm / 2) * fator,
           (tampaMm.widthMm / 2) * fator + t,
-          tampaMm.heightMm * fator,
+          alturaTampa,
           t,
         ),
-        y: altura + altura * LID_GAP_RATIO,
+        y: tampaFechadaY + (tampaAbertaY - tampaFechadaY) * abertura,
       }
     : null;
+
+  const tampaRef = useRef<THREE.Mesh>(null);
+  const suave = useAberturaSuave(abertura);
+
+  useFrame(() => {
+    if (tampaRef.current) {
+      tampaRef.current.position.y =
+        tampaFechadaY + (tampaAbertaY - tampaFechadaY) * suave.current;
+    }
+  });
 
   return (
     <group>
@@ -567,7 +749,7 @@ function TuboMesh({
       </mesh>
 
       {tampa && (
-        <mesh position={[0, tampa.y, 0]} castShadow receiveShadow>
+        <mesh ref={tampaRef} position={[0, tampa.y, 0]} castShadow receiveShadow>
           <latheGeometry args={[tampa.perfil, TUBO_SEGMENTOS]} />
           {material}
           {showEdges && <Edges threshold={30} color="#00000030" />}
@@ -598,10 +780,15 @@ export function BoxMesh({
   colorHex = "#C8A06A",
   textureUrl,
   showEdges = true,
+  aperture = 1,
   lidWidthMm = null,
   lidDepthMm = null,
   lidHeightMm = null,
 }: BoxMeshProps) {
+  // Blindagem contra valor fora da faixa: o slider entrega 0–1, mas o
+  // componente é público e uma abertura negativa inverteria a dobradiça.
+  const abertura = Math.min(Math.max(aperture, 0), 1);
+  const aberturaSuave = useAberturaSuave(abertura);
   const grupo = useRef<THREE.Group>(null);
 
   const fundo = useRef<THREE.Mesh>(null);
@@ -731,8 +918,18 @@ export function BoxMesh({
     const td = tampaMm.depthMm * fator;
     const th = tampaMm.heightMm * fator;
 
-    // Altura da base já animada + o vão da vista explodida.
-    const base = h + h * LID_GAP_RATIO;
+    /*
+     * Posição vertical da tampa, entre fechada e aberta.
+     *
+     * Fechada, a saia telescópica CAPA a parte de cima da base e o tampo pousa
+     * no bordo — daí descer uma altura de tampa. Zerar só o vão a deixaria
+     * flutuando acima da caixa com a saia para fora, que não é uma tampa
+     * fechada. O piso em zero cobre a tampa mais alta que a própria base.
+     */
+    const baseFechada = Math.max(h - th, 0);
+    const baseAberta = h + h * LID_GAP_RATIO;
+    const base = baseFechada + (baseAberta - baseFechada) * aberturaSuave.current;
+
     const twInterna = Math.max(tw - 2 * t, 0.001);
 
     // Topo da tampa.
@@ -770,6 +967,7 @@ export function BoxMesh({
         heightMm={heightMm}
         depthMm={depthMm}
         espessuraMm={thicknessMm ?? 0}
+        abertura={abertura}
         material={material}
         showEdges={showEdges}
       />
@@ -783,6 +981,7 @@ export function BoxMesh({
         heightMm={heightMm}
         depthMm={depthMm}
         espessuraMm={thicknessMm ?? 0}
+        abertura={abertura}
         material={material}
         showEdges={showEdges}
       />
@@ -796,6 +995,7 @@ export function BoxMesh({
         alturaMm={heightMm}
         espessuraMm={thicknessMm ?? 0}
         tampaMm={tampaMm}
+        abertura={abertura}
         colorHex={colorHex}
         textureUrl={textureUrl}
         showEdges={showEdges}

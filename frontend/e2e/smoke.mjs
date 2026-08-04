@@ -275,10 +275,72 @@ check(
   `mailer ${areaMailer} m² > rsc ${areaRsc} m²`,
 );
 
+// ── Slider de abertura ───────────────────────────────────────────────────
+const slider = page.locator('[role="group"][aria-label^="Abertura"] [role="slider"]');
+
+check("a mailer expõe o controle de abertura", (await slider.count()) === 1);
+
+/*
+ * O check que importa: mover o slider não pode falar com o servidor.
+ *
+ * A abertura é estado de câmera, não de especificação. Comparar só o preço
+ * seria um teste fraco — ela não entra em fórmula nenhuma, então o número
+ * ficaria igual mesmo que ela vazasse para a store do orçamento. O que
+ * denuncia o vazamento é a chamada de simulação: com a abertura na store,
+ * cada arrasto sujaria a especificação e dispararia um recálculo por quadro.
+ */
+let simulacoes = 0;
+const contarSimulacoes = (req) => {
+  if (req.url().includes("/quotes/simulate")) simulacoes++;
+};
+page.on("request", contarSimulacoes);
+
+const precoAberta = await page.textContent(".font-mono.text-4xl");
+await slider.focus();
+await page.keyboard.press("Home"); // vai direto para 0% (fechada)
+await page.waitForTimeout(2000);
+const precoFechada = await page.textContent(".font-mono.text-4xl");
+
+page.off("request", contarSimulacoes);
+
+check(
+  "fechar a caixa não dispara recálculo no servidor",
+  simulacoes === 0,
+  `${simulacoes} chamada(s) a /quotes/simulate`,
+);
+
+check(
+  "abrir e fechar a caixa não altera o preço",
+  precoAberta?.trim() === precoFechada?.trim() && num(precoAberta) > 0,
+  `${precoAberta?.trim()} = ${precoFechada?.trim()}`,
+);
+
+/*
+ * Controle positivo do instrumento acima.
+ *
+ * Sem ele, um seletor de URL errado faria o check anterior passar por nunca
+ * contar nada — um teste que não pode falhar não protege nada. Uma mudança de
+ * ESPECIFICAÇÃO, ao contrário da abertura, tem que falar com o servidor.
+ */
+simulacoes = 0;
+page.on("request", contarSimulacoes);
+await page.fill("#height", "130");
+await page.waitForTimeout(2500);
+page.off("request", contarSimulacoes);
+
+check(
+  "mudar uma medida, essa sim, recalcula no servidor",
+  simulacoes > 0,
+  `${simulacoes} chamada(s) a /quotes/simulate`,
+);
+
 // Volta ao RSC para o restante do fluxo.
 await page.click("#box-model");
 await page.click('[role="option"]:has-text("Caixa americana")');
 await page.waitForTimeout(2000);
+
+// Um RSC não tem peça móvel: oferecer o controle seria mentir sobre o que ele faz.
+check("modelo sem peça móvel esconde o controle", (await slider.count()) === 0);
 
 // ── 9. Salvar orçamento ──────────────────────────────────────────────────
 await page.click('button:has-text("Salvar orçamento")');

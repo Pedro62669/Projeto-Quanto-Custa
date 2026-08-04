@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   OrbitControls,
@@ -9,8 +9,10 @@ import {
   Grid,
   Html,
 } from "@react-three/drei";
-import { BoxMesh, assemblyHeightUnits, type BoxMeshProps } from "./BoxMesh";
+import { BoxMesh, assemblyHeightUnits, hasAperture, type BoxMeshProps } from "./BoxMesh";
+import { Slider } from "@/components/ui/slider";
 import { isCylindrical } from "@/lib/pricing/engine";
+import type { BoxModel } from "@/lib/pricing/types";
 
 export interface BoxViewerProps extends BoxMeshProps {
   /** Rótulo exibido no canto (ex.: nome do material selecionado). */
@@ -31,6 +33,19 @@ export function BoxViewer({
   className = "",
   ...boxProps
 }: BoxViewerProps) {
+  /*
+   * A abertura mora AQUI, e não na store do orçamento, de propósito.
+   *
+   * É estado de câmera, da mesma família do ângulo de órbita e do zoom: não
+   * descreve a embalagem, não altera o preço e não deve ser gravado. Colocá-la
+   * na store faria cada arrasto sujar a especificação e disparar a
+   * sincronização com o servidor — recalculando um preço que não mudou.
+   */
+  const [abertura, setAbertura] = useState(1);
+
+  const modelo = boxProps.boxModel ?? "rsc";
+  const temAbertura = hasAperture(modelo);
+
   return (
     <div className={`relative h-full w-full ${className}`}>
       <Canvas
@@ -63,7 +78,8 @@ export function BoxViewer({
           <Environment preset="city" />
 
           {/* ── Cena ───────────────────────────────────────────────────── */}
-          <BoxMesh {...boxProps} />
+          {/* Modelo sem peça móvel ignora a abertura e fica sempre montado. */}
+          <BoxMesh {...boxProps} aperture={temAbertura ? abertura : 1} />
 
           {/* Sombra de contato: âncora visual que impede a peça de parecer
               flutuando no vazio. */}
@@ -120,17 +136,81 @@ export function BoxViewer({
       {/* ── HUD (DOM sobre o Canvas) ─────────────────────────────────────
           Renderizado em HTML comum, não em <Text> do three: é texto puro,
           e o DOM entrega tipografia nítida e acessível de graça. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between p-4">
-        <DimensionBadge {...boxProps} />
-        {materialLabel && (
-          <span className="rounded-md bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
-            {materialLabel}
-          </span>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-3 p-4">
+        {temAbertura && (
+          <ApertureControl model={modelo} value={abertura} onChange={setAbertura} />
         )}
+
+        <div className="flex items-end justify-between">
+          <DimensionBadge {...boxProps} />
+          {materialLabel && (
+            <span className="rounded-md bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
+              {materialLabel}
+            </span>
+          )}
+        </div>
       </div>
 
       <span className="pointer-events-none absolute right-4 top-4 text-[11px] text-muted-foreground">
         Arraste para girar · Scroll para zoom
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Nome da peça que se move, por modelo.
+ *
+ * Rotular tudo como "Abertura" seria genérico demais: numa gaveta o que se
+ * move não é uma tampa, e chamar pelo nome certo dispensa o usuário de
+ * descobrir o que o controle faz arrastando.
+ */
+const PECA_MOVEL: Partial<Record<BoxModel, string>> = {
+  tray: "Tampa",
+  tube: "Tampa",
+  mailer: "Tampa",
+  drawer: "Gaveta",
+};
+
+/**
+ * Slider de abertura, sobreposto ao Canvas.
+ *
+ * `pointer-events-auto` aparece SÓ aqui: o resto do HUD precisa deixar o
+ * gesto atravessar até o OrbitControls, mas este controle tem que capturá-lo
+ * — senão arrastar o slider giraria a câmera junto.
+ */
+function ApertureControl({
+  model,
+  value,
+  onChange,
+}: {
+  model: BoxModel;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const peca = PECA_MOVEL[model] ?? "Abertura";
+  const percentual = Math.round(value * 100);
+
+  return (
+    <div
+      role="group"
+      aria-label={`Abertura: ${peca}`}
+      className="pointer-events-auto mx-auto flex w-full max-w-xs items-center gap-3 rounded-lg bg-background/80 px-3 py-2 shadow-sm backdrop-blur"
+    >
+      <span className="text-xs font-medium text-muted-foreground">{peca}</span>
+
+      <Slider
+        value={[percentual]}
+        onValueChange={([v]) => onChange(v / 100)}
+        min={0}
+        max={100}
+        step={1}
+        className="flex-1"
+      />
+
+      {/* tabular-nums: sem isso o número dança de largura durante o arrasto. */}
+      <span className="w-9 text-right font-mono text-xs tabular-nums text-muted-foreground">
+        {percentual}%
       </span>
     </div>
   );
