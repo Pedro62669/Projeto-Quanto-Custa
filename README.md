@@ -71,16 +71,19 @@ real de cada modelo. Somar as 6 faces subestima o consumo num RSC em 15–30% �
 o suficiente para o orçamento sair no prejuízo.
 
 **Seis modelos, seis planificações.** Caixa americana (RSC), caixa com tampa,
-luva, saco, tubo cilíndrico e caixa gaveta — cada um com sua
-fórmula de blank em `BlankCalculator`. O tubo reaproveita `width_mm` como
-diâmetro e ignora a profundidade: num cilindro as duas SÃO a mesma medida,
-então a caixa envolvente continua verdadeira e nenhuma coluna nova é
-necessária. Seu corpo é planificado pela circunferência da linha média
-(π×(D+espessura)), porque enrolar uma chapa faz a face externa percorrer
-caminho maior que a interna.
+luva, saco, tubo cilíndrico e caixa gaveta — cada um com sua fórmula de blank
+em `BlankCalculator`.
+
+O **tubo** reaproveita `width_mm` como diâmetro e ignora a profundidade: num
+cilindro as duas SÃO a mesma medida, então a caixa envolvente continua
+verdadeira e nenhuma coluna nova é necessária. Seu corpo é planificado pela
+circunferência da linha média (π×(D+espessura)), porque enrolar uma chapa faz
+a face externa percorrer caminho maior que a interna. Os discos de fundo e
+tampa são cobrados pelo QUADRADO que os circunscreve — recortar um disco
+descarta os cantos, e esse descarte é consumo real de matéria-prima.
 
 A **gaveta** são duas peças: a luva envolve a gaveta JÁ MONTADA, vencendo as
-paredes dela e a folga de deslize — dimensioná-la pela caixa "por fora"
+paredes dela e a folga de deslize. Dimensioná-la pela caixa "por fora"
 produziria uma gaveta que não entra na própria luva.
 
 Cuidado com invariantes fáceis: "duas peças custam mais que uma" é **falso**.
@@ -97,12 +100,21 @@ tampa informada entra no **plano de corte**, não só no desenho: caso contrári
 uma tampa mais alta sairia de graça.
 
 **Abrir a caixa é câmera, não especificação.** O slider de abertura anima a
-peça móvel de cada modelo (gaveta e a tampa telescópica da bandeja e do tubo). O estado mora no `BoxViewer`, não na store
-do orçamento: é da mesma família do ângulo de órbita e do zoom — não descreve
-a embalagem, não altera o preço e não é gravado. Na store, cada arrasto
-sujaria a especificação e dispararia um recálculo por quadro. Coberto por e2e
-(`fechar a caixa não dispara recálculo no servidor`) com controle positivo ao
-lado, para que o check não passe por nunca contar nada.
+peça móvel do modelo: a gaveta deslizando e a tampa telescópica da bandeja e
+do tubo. Modelos sem peça móvel (RSC, luva, saco) não recebem o controle —
+um slider inerte mentiria sobre o que faz.
+
+O estado mora no `BoxViewer`, não na store do orçamento: é da mesma família
+do ângulo de órbita e do zoom. Não descreve a embalagem, não altera o preço e
+não é gravado. Na store, cada arrasto sujaria a especificação e dispararia um
+recálculo por quadro.
+
+O e2e conta as chamadas a `/quotes/simulate` durante o arrasto (zero) e traz
+um **controle positivo** ao lado — mudar uma medida gera uma chamada. Sem ele,
+um seletor errado faria o check passar por nunca contar nada.
+
+A normalização da cena fica fixa na abertura MÁXIMA. Se acompanhasse o slider,
+a peça seria reescalada durante o arrasto e pareceria mudar de medida.
 
 **Orçamento é documento, não consulta.** Os valores são colunas materializadas
 e `pricing_snapshot` guarda os parâmetros vigentes na emissão. Reajustar o
@@ -208,7 +220,7 @@ php artisan test
 cd frontend
 npm run verify
 
-# Navegador real (exige os dois servidores no ar)
+# Navegador real — 26 checks (exige os dois servidores no ar)
 npm run test:e2e
 ```
 
@@ -216,6 +228,16 @@ O que a suíte cobre além do caminho feliz: adulteração de preço no payload,
 IDOR entre usuários, barreira de admin, enumeração de usuários no login,
 throttle de força bruta, revogação de token por dispositivo, imutabilidade do
 orçamento emitido e o ciclo de serialização do cache.
+
+> `npm run lint` roda o Pint sobre `app/ database/ routes/ tests/ config/`.
+> `bootstrap/` está fora desse escopo, então um `pint --test` sem argumentos
+> cobre mais que a tarefa de lint — hoje os dois passam, mas se divergirem, a
+> diferença é de escopo, não de regra.
+
+O e2e usa o Chrome do sistema com rasterização por software
+(`--use-angle=swiftshader`), sem a qual não há WebGL em headless, e espera por
+`domcontentloaded` em vez de `networkidle`: em modo dev o Next mantém o socket
+do HMR aberto e a rede nunca fica ociosa.
 
 ---
 
@@ -225,6 +247,7 @@ orçamento emitido e o ciclo de serialização do cache.
 |---|---|---|---|
 | `POST` | `/api/login` | público | Token Bearer (7 dias), throttle por e-mail+IP |
 | `POST` | `/api/logout` | autenticado | Revoga apenas o token atual |
+| `GET` | `/api/me` | autenticado | Usuário da sessão (usado pelo guard) |
 | `GET` | `/api/materials` | usuário | Materiais ativos (sem preço de compra) |
 | `GET` | `/api/pricing/parameters` | usuário | Defaults do formulário |
 | `POST` | `/api/quotes/simulate` | usuário | Cálculo sem persistir |
@@ -233,6 +256,7 @@ orçamento emitido e o ciclo de serialização do cache.
 | `GET/PATCH/DELETE` | `/api/quotes/{id}` | dono/admin | Protegido por `QuotePolicy` |
 | `GET/POST/PUT/DELETE` | `/api/admin/materials` | admin | CRUD de matérias-primas |
 | `GET/POST` | `/api/admin/cost-settings` | admin | Custos fixos (versionados) |
+| `GET` | `/api/admin/cost-settings/current` | admin | A configuração vigente |
 | `GET/POST/PUT/DELETE` | `/api/admin/users` | admin | Gestão de usuários |
 
 ---
@@ -245,9 +269,17 @@ orçamento emitido e o ciclo de serialização do cache.
    por XSS. Mitigado por expiração de 7 dias e revogação no logout; para dados
    mais sensíveis, migrar para cookie httpOnly + Sanctum stateful (exige
    frontend e API sob o mesmo domínio).
-3. **`npm audit` acusa 9 issues** na cadeia do ESLint. São dev-only e a
-   correção quebra o lint — ver a nota `//overrides` no `package.json`.
-   **Nunca rode `npm audit fix --force`**: ele rebaixa o Next 16 para 9.3.3.
+3. **`npm audit` acusa 2 issues**, ambas transitivas do pacote `shadcn`:
+   `fast-uri` (high) e `hono` (moderate). O `shadcn` é a CLI de scaffold de
+   componentes — nunca entra no bundle do navegador —, mas está declarado em
+   `dependencies` em vez de `devDependencies`, e devia mudar de lado. As duas
+   se resolvem com `npm audit fix` simples, sem `--force`.
+
+   > A nota `//overrides` no `frontend/package.json` **está desatualizada**:
+   > descreve 9 issues do `brace-expansion` na cadeia do ESLint que já não
+   > aparecem, e avisa que `npm audit fix --force` rebaixaria o Next 16 para
+   > 9.3.3 — hoje o `--dry-run` do `--force` mantém o Next em 16.2.12. Os
+   > `overrides` de `postcss` e `sharp` continuam válidos.
 4. **Multi-tenant.** Custos fixos e materiais são globais; um SaaS real precisa
    de `tenant_id` em `materials`, `cost_settings` e `quotes`.
 5. **PDF do orçamento** a partir do `pricing_snapshot`.
