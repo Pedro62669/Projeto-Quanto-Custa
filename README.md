@@ -30,7 +30,7 @@ backend/
     Policies/QuotePolicy.php
   config/cors.php              origens permitidas via FRONTEND_URL
   database/migrations/ seeders/ factories/
-  tests/                       72 testes
+  tests/                       77 testes
 
 frontend/
   lib/pricing/
@@ -61,7 +61,7 @@ especificação —, então não há caminho pelo qual o navegador defina o pre�
 (coberto por teste: `o_preco_enviado_pelo_cliente_e_ignorado`).
 
 O risco da duplicação é os dois divergirem em silêncio. Fechado por
-`npm run test:parity`: 45 cenários gerados pelo PHP, 855 campos comparados com
+`npm run test:parity`: 54 cenários gerados pelo PHP, 1.026 campos comparados com
 **tolerância zero**. Alterou uma fórmula? Rode
 `php artisan pricing:export-fixtures` e o teste acusa qualquer divergência.
 
@@ -70,9 +70,9 @@ colagem e de fechamento que se sobrepõem. `BlankCalculator` usa a planificaçã
 real de cada modelo. Somar as 6 faces subestima o consumo num RSC em 15–30% —
 o suficiente para o orçamento sair no prejuízo.
 
-**Seis modelos, seis planificações.** Caixa americana (RSC), caixa com tampa,
-luva, saco, tubo cilíndrico e caixa gaveta — cada um com sua fórmula de blank
-em `BlankCalculator`.
+**Sete modelos, sete planificações.** Caixa americana (RSC), caixa com tampa,
+luva, saco, tubo cilíndrico, caixa gaveta e mailer box — cada um com sua
+fórmula de blank em `BlankCalculator`.
 
 O **tubo** reaproveita `width_mm` como diâmetro e ignora a profundidade: num
 cilindro as duas SÃO a mesma medida, então a caixa envolvente continua
@@ -85,6 +85,57 @@ descarta os cantos, e esse descarte é consumo real de matéria-prima.
 A **gaveta** são duas peças: a luva envolve a gaveta JÁ MONTADA, vencendo as
 paredes dela e a folga de deslize. Dimensioná-la pela caixa "por fora"
 produziria uma gaveta que não entra na própria luva.
+
+A **mailer box** (RETT) é uma chapa só, cortada em faca e dobrada sem cola, e é
+o único modelo que o preview **não desenha**: ele CARREGA a peça que o cliente
+modelou no Blender.
+
+`mailer/box-mailer.blend` é o modelo; `mailer/export_gltf.py` o converte em
+glTF (Blender headless, comando no cabeçalho do script) e o resultado vai para
+`frontend/public/models/mailer.glb`, ~165 KB. Vem tudo junto: hierarquia de
+vincos, espessura já aplicada pelo SOLIDIFY e a animação de dobra quadro a
+quadro. O slider de abertura não gira painel nenhum — ele posiciona o mixer da
+animação entre dois instantes da timeline (220 e 312, a 24 fps), que é o trecho
+do FECHO: tampa desce, barbatanas dobram, língua entra.
+
+**Existiu uma versão procedural, e a lição de por que ela caiu vale mais que o
+código dela.** O `MailerMesh` reconstruía a peça a partir das razões da faca,
+portadas de `mailer/mailer.py` — e ficou fiel ao script, painel a painel. Só
+que o script no disco é uma versão ANTERIOR do modelo: no `.blend` a língua tem
+84,5 onde ele tem 70, a barbatana 31,8×38,8 onde ele tem 20×28, a aba da tampa
+204 onde ele tem 225. O desenho estava certo em relação à fonte errada, e
+nenhuma verificação pegaria isso — só o olho de quem modelou. **Quem for
+conferir a mailer, meça o `.blend` (ou o `.glb`), nunca o `.py`.**
+
+**O preço soma os painéis MEDIDOS no modelo.** As razões em `mailerLayout()`
+saíram do glTF, painel a painel, e a soma fecha a 1,3% da área do modelo. A
+diferença é toda das duas convenções de recorte interno, ambas deliberadas: as
+quatro fendas do fundo e a curva da barbatana não são descontadas, porque a
+chapa precisou existir inteira e a apara já está no percentual de desperdício.
+
+Desenho e preço continuam de acordo por CONSTRUÇÃO — as duas medidas vêm do
+mesmo modelo —, e não por compartilharem código. Mexeu no `.blend`, remeça: a
+paridade automática compara PHP com TS, nunca o preço com a figura.
+
+As medidas digitadas são as INTERNAS. A conversão para os planos de dobra soma
+a folga que cada camada rouba do vão livre (5t na largura, t na profundidade,
+t/2 na altura). Somar, e não subtrair, é o que mantém a mailer coerente com o
+resto do motor, onde papelão mais grosso sempre pede blank maior — tratando o
+digitado como externo, a caixa encolhia por dentro e o preço caía junto.
+
+**O que carregar um modelo assado custa.** Ele tem uma medida só, então
+redimensionar é escalar por eixo. Fechada, todo painel está alinhado aos eixos
+e a escala é exata. Aberta, a tampa está girada, e esticar um eixo mais que o
+outro a CISALHA: numa caixa muito mais alta que o modelo (300 de altura contra
+80) ela sobe bem além do que subiria de verdade. Por isso o enquadramento MEDE
+a peça montada em vez de estimá-la — a conta analítica valia para a versão
+procedural, onde a tampa girava rígida.
+
+Duas armadilhas de ordem, as duas já pagas: as ações da animação precisam tocar
+ANTES da medição (senão ela mede a chapa plana, quase o triplo do comprimento
+da caixa, e a peça sai minúscula), e o fator de ajuste é o máximo do PRODUTO
+eixo a eixo, não o produto dos máximos.
+
 
 Cuidado com invariantes fáceis: "duas peças custam mais que uma" é **falso**.
 Numa caixa larga e rasa as abas do RSC valem meia profundidade cada, dominam o
@@ -100,9 +151,9 @@ tampa informada entra no **plano de corte**, não só no desenho: caso contrári
 uma tampa mais alta sairia de graça.
 
 **Abrir a caixa é câmera, não especificação.** O slider de abertura anima a
-peça móvel do modelo: a gaveta deslizando e a tampa telescópica da bandeja e
-do tubo. Modelos sem peça móvel (RSC, luva, saco) não recebem o controle —
-um slider inerte mentiria sobre o que faz.
+peça móvel do modelo: a gaveta deslizando, a tampa telescópica da bandeja e do
+tubo, e a tampa articulada da mailer. Modelos sem peça móvel (RSC, luva, saco)
+não recebem o controle — um slider inerte mentiria sobre o que faz.
 
 O estado mora no `BoxViewer`, não na store do orçamento: é da mesma família
 do ângulo de órbita e do zoom. Não descreve a embalagem, não altera o preço e
@@ -140,7 +191,7 @@ projetos, com um `package.json` que serve só de atalho:
 
 ```bash
 npm run dev          # sobe API (:8000) e frontend (:3000) juntos
-npm test             # 72 testes PHP + tipos, lint, paridade e build do front
+npm test             # 77 testes PHP + tipos, lint, paridade e build do front
 npm run test:e2e     # navegador real (exige os servidores no ar)
                      # credenciais: E2E_EMAIL / E2E_PASSWORD
 npm run lint         # Pint
@@ -211,7 +262,7 @@ npm run dev     # → http://localhost:3000
 ## Verificação
 
 ```bash
-# Backend — 72 testes
+# Backend — 77 testes
 cd backend
 php artisan test
 ./vendor/bin/pint --test app/ database/ routes/ tests/ config/
@@ -220,7 +271,7 @@ php artisan test
 cd frontend
 npm run verify
 
-# Navegador real — 26 checks (exige os dois servidores no ar)
+# Navegador real — 28 checks (exige os dois servidores no ar)
 npm run test:e2e
 ```
 
