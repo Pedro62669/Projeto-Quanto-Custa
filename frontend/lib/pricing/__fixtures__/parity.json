@@ -1,6 +1,6 @@
 {
     "engine_version": "1.0.0",
-    "generated_at": "2026-08-04T13:54:48+00:00",
+    "generated_at": "2026-08-07T10:51:28+00:00",
     "cases": [
         {
             "name": "rsc-padrao",
@@ -1603,6 +1603,456 @@
             }
         },
         {
+            "name": "mailer-padrao",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.447624,
+                "area_m2_total": 49.238624,
+                "blank_width_mm": 1136,
+                "blank_height_mm": 394.04,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.5756,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.9048,
+                "unit_price": 6.3762,
+                "total_cost": 490.48,
+                "total_price": 637.62,
+                "profit_amount": 147.14,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "mailer-espessa",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 7
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.47782,
+                "area_m2_total": 52.560201,
+                "blank_width_mm": 1217.2,
+                "blank_height_mm": 392.56,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.6819,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.0111,
+                "unit_price": 6.5144,
+                "total_cost": 501.11,
+                "total_price": 651.44,
+                "profit_amount": 150.33,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "mailer-rasa",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 320,
+                "height_mm": 90,
+                "depth_mm": 300,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.457411,
+                "area_m2_total": 50.315263,
+                "blank_width_mm": 718.4,
+                "blank_height_mm": 636.71,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.6101,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.9393,
+                "unit_price": 6.421,
+                "total_cost": 493.93,
+                "total_price": 642.1,
+                "profit_amount": 148.17,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "mailer-alta-e-rasa",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 300,
+                "height_mm": 400,
+                "depth_mm": 80,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.506021,
+                "area_m2_total": 55.662257,
+                "blank_width_mm": 1936,
+                "blank_height_mm": 261.37,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.7812,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.1104,
+                "unit_price": 6.6435,
+                "total_cost": 511.04,
+                "total_price": 664.35,
+                "profit_amount": 153.31,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "mailer-larga-e-rasa",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 400,
+                "height_mm": 40,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.207829,
+                "area_m2_total": 22.861231,
+                "blank_width_mm": 577.6,
+                "blank_height_mm": 359.82,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 0.7316,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.0607,
+                "unit_price": 5.2789,
+                "total_cost": 406.07,
+                "total_price": 527.89,
+                "profit_amount": 121.82,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "mailer-funda",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 300,
+                "height_mm": 100,
+                "depth_mm": 400,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.594167,
+                "area_m2_total": 65.358405,
+                "blank_width_mm": 736,
+                "blank_height_mm": 807.29,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 2.0915,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.4206,
+                "unit_price": 7.0468,
+                "total_cost": 542.06,
+                "total_price": 704.68,
+                "profit_amount": 162.62,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "mailer-grossa-e-pequena",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 7
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 120,
+                "height_mm": 45,
+                "depth_mm": 90,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.078288,
+                "area_m2_total": 8.611734,
+                "blank_width_mm": 395.6,
+                "blank_height_mm": 197.9,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 0.2756,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.6047,
+                "unit_price": 4.6862,
+                "total_cost": 360.47,
+                "total_price": 468.62,
+                "profit_amount": 108.15,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "mailer-fracionada",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 287.3,
+                "height_mm": 141.9,
+                "depth_mm": 232.6,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.47141,
+                "area_m2_total": 51.855145,
+                "blank_width_mm": 889.38,
+                "blank_height_mm": 530.05,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.6594,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.9885,
+                "unit_price": 6.4851,
+                "total_cost": 498.85,
+                "total_price": 648.51,
+                "profit_amount": 149.66,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "mailer-tampa-ignorada",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": 999,
+                "lid_depth_mm": null,
+                "lid_height_mm": 999
+            },
+            "expected": {
+                "area_m2_per_unit": 0.447624,
+                "area_m2_total": 49.238624,
+                "blank_width_mm": 1136,
+                "blank_height_mm": 394.04,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.5756,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.9048,
+                "unit_price": 6.3762,
+                "total_cost": 490.48,
+                "total_price": 637.62,
+                "profit_amount": 147.14,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
             "name": "tudo-combinado",
             "material": {
                 "cost_per_m2": 4.32,
@@ -2248,6 +2698,106 @@
                 "total_cost": 527.43,
                 "total_price": 685.66,
                 "profit_amount": 158.23,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-mailer",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.447624,
+                "area_m2_total": 49.238624,
+                "blank_width_mm": 1136,
+                "blank_height_mm": 394.04,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.5756,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.9048,
+                "unit_price": 6.3762,
+                "total_cost": 490.48,
+                "total_price": 637.62,
+                "profit_amount": 147.14,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "modelo-mailer-espesso",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 3
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0
+            },
+            "spec": {
+                "box_model": "mailer",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null
+            },
+            "expected": {
+                "area_m2_per_unit": 0.460454,
+                "area_m2_total": 50.649973,
+                "blank_width_mm": 1170.8,
+                "blank_height_mm": 393.28,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 1.6208,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.95,
+                "unit_price": 6.435,
+                "total_cost": 495,
+                "total_price": 643.5,
+                "profit_amount": 148.5,
                 "tax_amount": 0,
                 "effective_margin_percent": 23.08
             }

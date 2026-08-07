@@ -33,6 +33,82 @@ final class BlankCalculator
     /** Margem de selagem de sacos/envelopes, em mm. */
     private const SEAL_MM = 10.0;
 
+    /*
+     * As razões da faca da mailer.
+     *
+     * ⚠️  Espelham as constantes MAILER_* de frontend/lib/pricing/engine.ts, de
+     * onde o renderizador 3D também as lê. Uma mailer não tem medidas de tampa
+     * no formulário: estas frações SÃO o modelo. Alterar aqui sem alterar lá
+     * faz o preview desenhar uma peça e o orçamento cobrar outra.
+     *
+     * Todas saem de mailer/box-mailer.blend, a peça que o cliente modelou — as
+     * medidas foram tiradas do glTF exportado, painel a painel, e NÃO do
+     * mailer.py ao lado dele. A distinção custou caro para aparecer: o script
+     * no disco é uma versão anterior do modelo, e nele a língua tem 70 onde a
+     * peça real tem 84,5 e a barbatana 20×28 onde a real tem 31,8×38,8. Quem
+     * for conferir, meça o .blend (ou o .glb), nunca o .py.
+     *
+     * Lá as medidas são fixas, porque o modelo é UMA caixa (300×250, parede
+     * 81,5, papelão 3); aqui viram razões, senão a caixa não redimensiona —
+     * numa 100×300×100 as abas de 60mm se atravessam no meio do fundo.
+     */
+
+    /** Avanço das abas laterais das paredes, em fração da profundidade (60/250). */
+    private const MAILER_TAB_RATIO = 0.24;
+
+    /**
+     * Abas laterais da tampa, em fração da altura de parede (70/81,5).
+     *
+     * Descem por DENTRO, encostando na parede interna do rolo, e por isso param
+     * antes do piso. A língua não usa esta razão: ela desce por fora e é
+     * medida à parte (parede inteira mais uma espessura).
+     */
+    private const MAILER_LID_FLAP_RATIO = 0.86;
+
+    /**
+     * Trecho da tampa que a aba lateral ocupa, em fração do comprimento dela.
+     *
+     * Medido no modelo: a aba vai de 5 a 209 numa tampa de 253. Começa depois
+     * da parede traseira e PARA ANTES da barbatana — as duas descem no mesmo
+     * plano, e sobrepô-las é o que impede a trava de fechar.
+     */
+    private const MAILER_LID_FLAP_START_RATIO = 0.02;
+
+    private const MAILER_LID_FLAP_END_RATIO = 0.826;
+
+    /**
+     * Lingueta que prende o rolo ao fundo, em fração da altura e da largura.
+     *
+     * Vale o MENOR dos dois: precisa caber na fenda (que fica a uma lingueta da
+     * borda do fundo) e não pode passar do alcance da parede interna. Na caixa
+     * do script as duas dão 18.
+     */
+    private const MAILER_LOCK_HEIGHT_RATIO = 0.22;
+
+    private const MAILER_LOCK_WIDTH_RATIO = 0.06;
+
+    /** Fendas do fundo: centro e comprimento, em fração da profundidade. */
+    private const MAILER_SLOT_CENTER_RATIO = 0.29;
+
+    private const MAILER_SLOT_LENGTH_RATIO = 0.22;
+
+    /**
+     * Avanço da barbatana, em fração do avanço da aba da parede (31,8/60).
+     *
+     * É a profundidade que ela entra no BOLSO — o vão entre a aba da parede
+     * frontal e a parede interna do rolo. Quem limita é a aba: passar dela é
+     * sair pelo outro lado do bolso, e a trava deixa de existir.
+     */
+    private const MAILER_FIN_OUT_RATIO = 0.53;
+
+    /** Faixa que a barbatana ocupa ao longo da língua (38,8/84,5). */
+    private const MAILER_FIN_BAND_RATIO = 0.459;
+
+    /** Chanfro da ponta dianteira da aba da tampa, em fração da queda DELA (18 e 25 de 70). */
+    private const MAILER_LID_FLAP_CHAMFER_X = 0.26;
+
+    private const MAILER_LID_FLAP_CHAMFER_Y = 0.36;
+
     private const MM2_PER_M2 = 1_000_000.0;
 
     /**
@@ -118,6 +194,9 @@ final class BlankCalculator
 
             // Caixa gaveta: luva externa + gaveta interna, duas peças.
             BoxModel::Drawer => $this->drawerBlank($widthMm, $heightMm, $depthMm, $t),
+
+            // Mailer box: peça única die-cut, tampa articulada, sem cola.
+            BoxModel::Mailer => $this->mailerBlank($widthMm, $heightMm, $depthMm, $t),
 
             // Tubo cilíndrico: a largura é o DIÂMETRO; a profundidade é ignorada.
             BoxModel::Tube => $this->tubeBlank(
@@ -235,6 +314,162 @@ final class BlankCalculator
         return [
             'width' => $width,
             'height' => $totalArea / $width,
+        ];
+    }
+
+    /**
+     * Mailer box (RETT) = uma chapa só, cortada em faca e dobrada sem cola.
+     *
+     * A soma abaixo percorre painel a painel a MESMA decomposição que o
+     * renderizador 3D desenha (MailerMesh). Esse é o critério escolhido para
+     * este modelo: o que aparece na tela é o que entra na conta. Um painel
+     * que exista no preço e não no desenho — ou o contrário — é uma
+     * divergência que nenhum teste deste projeto enxerga, porque a paridade
+     * só compara PHP com TS, nunca o preço com a figura.
+     *
+     * A decisão que domina o custo é o ROLO. A lateral sobe, dobra 180° no
+     * topo (a ponte) e desce por dentro até o piso, onde linguetas prendem em
+     * fendas do fundo: são TRÊS painéis de altura por lateral, contra um do
+     * RSC. É o que torna a mailer cara em caixas altas, e há teste fixando
+     * essa assinatura.
+     *
+     * Recortes internos — fendas, entalhe de dedo, chanfros — não são
+     * descontados da área: são aparas já cobertas pelo percentual de
+     * desperdício.
+     *
+     * @return array{width: float, height: float}
+     */
+    private function mailerBlank(float $w, float $h, float $d, float $t): array
+    {
+        $l = $this->mailerLayout($w, $h, $d, $t);
+
+        $area =
+            // Fundo, com as quatro fendas como recorte interno.
+            $l['w'] * $l['d']
+            // Paredes frontal e traseira. A frontal é mais estreita: ela recua
+            // para dar passagem à barbatana, que desce no plano da tampa.
+            + 2 * $l['xWallFront'] * $l['hw']
+            + 2 * $l['xTabHinge'] * $l['hw']
+            // Abas laterais das duas paredes, alojadas no bolso do rolo.
+            + 4 * ($l['tab'] * $l['hw'])
+            // Painel da tampa, do vinco traseiro até além da parede frontal.
+            + 2 * $l['xLid'] * $l['lid']
+            // Abas laterais da tampa, com a ponta da frente chanfrada para
+            // liberar o bolso onde a barbatana entra.
+            + 2 * (($l['lidFlapEnd'] - $l['lidFlapStart']) * $l['lidFlap']
+                - ($l['chamferX'] * $l['chamferY']) / 2)
+            // Língua frontal, que desce por FORA da parede.
+            + 2 * $l['xLid'] * $l['frontFlap']
+            // As duas barbatanas, contadas pelo retângulo que as envolve: o
+            // contorno é bézier, e a área exata exigiria o mesmo shoelace nos
+            // dois motores para a paridade fechar. A apara da curva está dentro
+            // do retângulo que a faca precisa liberar de qualquer jeito.
+            + 2 * ($l['finOut'] * $l['finBand'])
+            // O rolo: externa, ponte e interna.
+            + 2 * ($l['d'] * $l['hw'])
+            + 2 * ($l['d'] * $l['bridge'])
+            + 2 * (2 * $l['yInner'] * $l['hw'])
+            // As quatro linguetas que prendem o rolo ao fundo.
+            + 4 * (($l['slotEnd'] - $l['slotStart']) * $l['lock']);
+
+        // Largura real da chapa, direto do faca_mm do script: metade da caixa
+        // mais a coluna inteira do rolo (externa + ponte + interna + lingueta).
+        $width = $l['w'] + 2 * ($l['hw'] + $l['bridge'] + $l['hw'] + $l['lock']);
+
+        return [
+            'width' => $width,
+            'height' => $area / $width,
+        ];
+    }
+
+    /**
+     * Layout da faca da mailer, em mm — planos, painéis e abas.
+     *
+     * ⚠️  Espelha mailerLayout() em frontend/lib/pricing/engine.ts, de onde o
+     * renderizador 3D lê os MESMOS números para montar a peça. Não são só "as
+     * abas": é o desenho inteiro, porque qualquer plano que o desenho
+     * recalculasse por conta própria seria uma segunda decomposição, e a
+     * paridade automática compara PHP com TS, nunca o preço com a figura.
+     *
+     * As medidas digitadas são as INTERNAS, e o script trabalha em planos de
+     * dobra: a conversão soma a folga que cada camada rouba do vão livre.
+     *
+     *   largura: 5t — as duas paredes internas do rolo, duas espessuras e meia
+     *            de cada lado (a ponte mais a própria camada)
+     *   profundidade: t — meia espessura da parede frontal e meia da traseira
+     *   altura: t/2 — meia espessura do piso, já que a tampa pousa por cima
+     *
+     * Somar em vez de subtrair não é detalhe de sinal: é o que mantém a mailer
+     * coerente com o resto do motor, onde papelão mais grosso SEMPRE pede blank
+     * maior (o RSC soma 4t, a bandeja 2t). Tratando o digitado como externo, a
+     * caixa encolhia por dentro e o preço caía junto — papelão grosso saindo
+     * mais barato que fino, o que nenhum convertedor aceitaria ver na tela.
+     *
+     * @return array<string, float>
+     */
+    private function mailerLayout(float $w, float $h, float $d, float $t): array
+    {
+        $ww = $w + 5 * $t;
+        $dd = $d + $t;
+        $hw = $h + $t / 2;
+
+        $bridge = 2 * $t;
+
+        // Os quatro planos verticais, cada um recuado do anterior por uma
+        // espessura: aba da parede traseira, parede interna do rolo, tampa,
+        // parede frontal. Esse escalonamento é o que faz cada peça caber
+        // DENTRO da anterior ao fechar.
+        $xTabHinge = max($ww / 2 - $t, 0.0);
+        $xInner = max($ww / 2 - $bridge, 0.0);
+        $xLid = max($ww / 2 - $bridge - $t, 0.0);
+        $xWallFront = max($xLid - $t, 0.0);
+
+        $tab = min(self::MAILER_TAB_RATIO * $dd, max($dd / 2 - $t, 0.0));
+        $lidFlap = min(self::MAILER_LID_FLAP_RATIO * $hw, max($hw - $t, 0.0));
+        $finOut = min(self::MAILER_FIN_OUT_RATIO * $tab, max($tab - $t, 0.0));
+
+        // A língua cobre a parede inteira MAIS uma espessura — ela desce por
+        // fora e precisa passar da borda do fundo. O teto é a própria tampa.
+        $frontFlap = min($hw + $t, $dd);
+
+        // A tampa vai do vinco traseiro até uma espessura além da parede
+        // frontal — é o que põe a língua do lado de FORA dela.
+        $lid = $dd + $t;
+
+        $slotHalf = (self::MAILER_SLOT_LENGTH_RATIO * $dd) / 2;
+        $slotCenter = min(
+            self::MAILER_SLOT_CENTER_RATIO * $dd,
+            max($dd / 2 - $t - $slotHalf, 0.0),
+        );
+
+        return [
+            't' => $t,
+            'w' => $ww,
+            'd' => $dd,
+            'hw' => $hw,
+            'bridge' => $bridge,
+            'xTabHinge' => $xTabHinge,
+            'xInner' => $xInner,
+            'xLid' => $xLid,
+            'xWallFront' => $xWallFront,
+            'yInner' => max($dd / 2 - $t / 2, 0.0),
+            'lid' => $lid,
+            'tab' => $tab,
+            'frontFlap' => $frontFlap,
+            'lidFlap' => $lidFlap,
+            'lidFlapStart' => self::MAILER_LID_FLAP_START_RATIO * $lid,
+            'lidFlapEnd' => self::MAILER_LID_FLAP_END_RATIO * $lid,
+            'chamferX' => self::MAILER_LID_FLAP_CHAMFER_X * $lidFlap,
+            'chamferY' => self::MAILER_LID_FLAP_CHAMFER_Y * $lidFlap,
+            'lock' => min(
+                self::MAILER_LOCK_HEIGHT_RATIO * $hw,
+                self::MAILER_LOCK_WIDTH_RATIO * $ww,
+                $xInner,
+            ),
+            'slotStart' => max($slotCenter - $slotHalf, 0.0),
+            'slotEnd' => $slotCenter + $slotHalf,
+            'finOut' => $finOut,
+            'finBand' => min(self::MAILER_FIN_BAND_RATIO * $frontFlap, max($frontFlap - $t, 0.0)),
         ];
     }
 

@@ -203,6 +203,57 @@ class ExportPricingFixtures extends Command
                 'boxModel' => BoxModel::Drawer,
                 'widthMm' => 400.0, 'heightMm' => 20.0, 'depthMm' => 300.0,
             ]),
+            // Mailer box: peça única die-cut, portada de mailer/mailer.py. Os
+            // casos abaixo cobrem os dois lados de cada teto do layout — a aba
+            // da parede (meia profundidade), a língua (altura da parede) e a
+            // lingueta (largura da caixa) —, que é onde PHP e TS teriam como
+            // divergir em silêncio.
+            'mailer-padrao' => $base(['boxModel' => BoxModel::Mailer]),
+            'mailer-espessa' => $base([
+                'boxModel' => BoxModel::Mailer,
+                'material' => ['thickness_mm' => 7.0],
+            ]),
+            // Proporção real de e-commerce: rasa e larga, nenhum teto pega.
+            'mailer-rasa' => $base([
+                'boxModel' => BoxModel::Mailer,
+                'widthMm' => 320.0, 'heightMm' => 90.0, 'depthMm' => 300.0,
+            ]),
+            // Alta e estreita: a lingueta bate no teto da largura.
+            'mailer-alta-e-rasa' => $base([
+                'boxModel' => BoxModel::Mailer,
+                'widthMm' => 300.0, 'heightMm' => 400.0, 'depthMm' => 80.0,
+            ]),
+            // Larga e rasa: quem governa a lingueta passa a ser a altura.
+            'mailer-larga-e-rasa' => $base([
+                'boxModel' => BoxModel::Mailer,
+                'widthMm' => 400.0, 'heightMm' => 40.0, 'depthMm' => 150.0,
+            ]),
+            // Funda: abas e língua cabem inteiras, nenhum teto pega.
+            'mailer-funda' => $base([
+                'boxModel' => BoxModel::Mailer,
+                'widthMm' => 300.0, 'heightMm' => 100.0, 'depthMm' => 400.0,
+            ]),
+            /*
+             * Material grosso numa caixa pequena: é onde os tetos geométricos
+             * do layout entram em ação (a língua para em hw − t, a barbatana
+             * em tab − t). Sem um caso assim, um dos motores poderia clampar e
+             * o outro não, e a divergência só apareceria num orçamento real.
+             */
+            'mailer-grossa-e-pequena' => $base([
+                'boxModel' => BoxModel::Mailer,
+                'material' => ['thickness_mm' => 7.0],
+                'widthMm' => 120.0, 'heightMm' => 45.0, 'depthMm' => 90.0,
+            ]),
+            'mailer-fracionada' => $base([
+                'boxModel' => BoxModel::Mailer,
+                'widthMm' => 287.3, 'heightMm' => 141.9, 'depthMm' => 232.6,
+            ]),
+            // Medidas de tampa num modelo de tampa articulada: ignoradas.
+            'mailer-tampa-ignorada' => $base([
+                'boxModel' => BoxModel::Mailer,
+                'lidWidthMm' => 999.0, 'lidHeightMm' => 999.0,
+            ]),
+
             'tudo-combinado' => $base([
                 'material' => ['cost_unit' => MaterialUnit::Kilogram, 'cost_per_unit' => 24.0, 'grammage_kg_per_m2' => 0.18, 'thickness_mm' => 0.6],
                 'settings' => ['overhead_percent' => 12.0, 'tax_percent' => 8.0],

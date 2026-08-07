@@ -598,6 +598,179 @@ class PricingEngineTest extends TestCase
         $this->assertLessThan($caixa->areaM2PerUnit, $tubo->areaM2PerUnit);
     }
 
+    /* ── Mailer box ────────────────────────────────────────────────────── */
+
+    #[Test]
+    public function a_mailer_soma_os_paineis_da_faca(): void
+    {
+        /*
+         * Mailer 300×200×150, espessura 0 — painel a painel, na ordem em que
+         * mailer/box-mailer.blend os corta. Com t = 0 os planos coincidem com
+         * as medidas pedidas, o que deixa a conta conferível a olho.
+         *
+         *   aba da parede = 0,24×150                   =  36
+         *   aba da tampa  = 0,86×200                   = 172
+         *   língua = parede + espessura                = 150 (t = 0)
+         *   lingueta = min(0,22×200; 0,06×300)         =  18
+         *   barbatana = 0,53×36 por 0,459×150          =  19,08 × 68,85
+         *   fendas em 0,29×150 ± 0,11×150              =  27 … 60
+         *
+         *   fundo            = 300 × 150               =  45.000
+         *   parede frontal   = 300 × 200               =  60.000
+         *   parede traseira  = 300 × 200               =  60.000
+         *   4 abas de parede = 4 × (36 × 200)          =  28.800
+         *   tampa            = 300 × 150               =  45.000
+         *   2 abas da tampa  = 2 × (120,9 × 172 − chanfro 2.769,05)
+         *                                              =  38.820,54
+         *   língua           = 300 × 150               =  45.000
+         *   2 barbatanas     = 2 × (19,08 × 68,85)     =   2.627,32
+         *   2 rolos externos = 2 × (150 × 200)         =  60.000
+         *   2 pontes         = 2 × (150 × 0)           =       0
+         *   2 rolos internos = 2 × (150 × 200)         =  60.000
+         *   4 linguetas      = 4 × (33 × 18)           =   2.376
+         *   total                                      = 447.623,85 mm²
+         */
+        $result = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Mailer,
+        ]));
+
+        $this->assertEqualsWithDelta(0.44762385, $result->areaM2PerUnit, 0.000001);
+    }
+
+    #[Test]
+    public function na_mailer_cada_milimetro_de_altura_pesa_mais_que_o_dobro_do_rsc(): void
+    {
+        /*
+         * A ASSINATURA do modelo, e a razão de ele existir separado do RSC.
+         *
+         * A lateral rolada sobe, dobra e desce: cada milímetro de altura entra
+         * duas vezes no blank, contra uma no RSC. Somado à parede frontal, que
+         * também rola, e às abas da tampa (que também crescem com a altura), a
+         * mailer fica mais de duas vezes mais sensível à altura.
+         *
+         * Se alguém "simplificar" o rolo para parede simples, esta razão cai
+         * para perto de 1 e o teste quebra — que é exatamente o ponto.
+         */
+        /*
+         * Caixa FUNDA (400 de profundidade) de propósito: numa caixa rasa o
+         * teto das abas pega e trava justamente os termos que crescem com a
+         * altura, mascarando a assinatura que este teste existe para fixar.
+         */
+        $delta = function (BoxModel $model): float {
+            $baixa = $this->engine->calculate($this->input([
+                'boxModel' => $model, 'heightMm' => 100, 'depthMm' => 400,
+            ]));
+            $alta = $this->engine->calculate($this->input([
+                'boxModel' => $model, 'heightMm' => 200, 'depthMm' => 400,
+            ]));
+
+            return $alta->areaM2PerUnit - $baixa->areaM2PerUnit;
+        };
+
+        $this->assertGreaterThan(2.0, $delta(BoxModel::Mailer) / $delta(BoxModel::Rsc));
+    }
+
+    #[Test]
+    public function a_lingueta_da_mailer_para_na_largura_da_caixa(): void
+    {
+        /*
+         * A lingueta prende o rolo ao fundo entrando numa fenda que fica a uma
+         * lingueta da borda. Ela acompanha a ALTURA, mas numa caixa alta e
+         * estreita 0,22 da altura passaria da largura disponível: a fenda
+         * cairia fora do fundo e a caixa seria cobrada por uma trava que não
+         * existe. Daí o segundo teto, em fração da largura.
+         *
+         * 300×400×80 (alta e rasa): lingueta = min(0,22×400 = 88; 0,06×300) = 18.
+         *   aba de parede = 0,24×80 = 19,2   aba da tampa = 0,86×400 = 344
+         *   língua = parede, mas o teto é a tampa: min(400; 80) = 80
+         *   fundo            = 300 × 80                =  24.000
+         *   paredes          = 2 × (300 × 400)         = 240.000
+         *   4 abas de parede = 4 × (19,2 × 400)        =  30.720
+         *   tampa            = 300 × 80                =  24.000
+         *   2 abas da tampa  = 2 × (64,48 × 344 − chanfro 5.535,17)
+         *                                              =  33.285,99
+         *   língua           = 300 × 80                =  24.000
+         *   2 barbatanas     = 2 × (10,176 × 36,72)    =     747,33
+         *   rolos + pontes   = 2 × (80 × 400) × 2      = 128.000
+         *   4 linguetas      = 4 × (17,6 × 18)         =   1.267,20
+         *   total                                      = 506.020,52 mm²
+         */
+        $alta = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Mailer,
+            'widthMm' => 300, 'heightMm' => 400, 'depthMm' => 80,
+        ]));
+
+        $this->assertEqualsWithDelta(0.50602052, $alta->areaM2PerUnit, 0.000001);
+
+        /*
+         * O outro lado do ramo: caixa larga e rasa, onde quem governa é a
+         * altura e a lingueta encolhe junto com ela.
+         *
+         * 400×40×150: lingueta = min(0,22×40 = 8,8; 0,06×400 = 24) = 8,8.
+         *   fundo            = 400 × 150               =  60.000
+         *   paredes          = 2 × (400 × 40)          =  32.000
+         *   4 abas de parede = 4 × (36 × 40)           =   5.760
+         *   tampa            = 400 × 150               =  60.000
+         *   2 abas da tampa  = 2 × (120,9 × 34,4 − chanfro 110,76)
+         *                                              =   8.207,16
+         *   língua           = 400 × 40                =  16.000
+         *   2 barbatanas     = 2 × (19,08 × 18,36)     =     700,62
+         *   rolos + pontes   = 2 × (150 × 40) × 2      =  24.000
+         *   4 linguetas      = 4 × (33 × 8,8)          =   1.161,60
+         *   total                                      = 207.829,38 mm²
+         */
+        $rasa = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Mailer,
+            'widthMm' => 400, 'heightMm' => 40, 'depthMm' => 150,
+        ]));
+
+        $this->assertEqualsWithDelta(0.20782938, $rasa->areaM2PerUnit, 0.000001);
+    }
+
+    #[Test]
+    public function a_volta_do_rolo_consome_material(): void
+    {
+        /*
+         * A PONTE do rolo é material de verdade: a dobra de 180° no topo
+         * engole duas espessuras, e são duas pontes por caixa. Com papelão
+         * fino ela some (2×0 = 0) e com 7mm vale 14mm ao longo de toda a
+         * profundidade.
+         *
+         * A espessura entra uma segunda vez, e é a razão de o consumo subir:
+         * as medidas pedidas são as INTERNAS, então os planos de dobra se
+         * afastam para dar lugar às camadas — a largura ganha 5t, e cada
+         * camada do rolo precisa contornar as outras.
+         *
+         * 300×200×150 com t=7 → planos 335 × 157 × 203,5.
+         *   ponte          = 2 × (157 × 14)       =   4.396
+         *   total                                  = 477.820,01 mm²
+         */
+        $fina = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Mailer,
+            'material' => $this->material(['thickness_mm' => 0.0]),
+        ]));
+
+        $grossa = $this->engine->calculate($this->input([
+            'boxModel' => BoxModel::Mailer,
+            'material' => $this->material(['thickness_mm' => 7.0]),
+        ]));
+
+        $this->assertEqualsWithDelta(0.47782001, $grossa->areaM2PerUnit, 0.000001);
+        $this->assertGreaterThan($fina->areaM2PerUnit, $grossa->areaM2PerUnit);
+    }
+
+    #[Test]
+    public function a_mailer_nao_tem_tampa_separada(): void
+    {
+        // A tampa é articulada, parte da mesma chapa: não existe peça solta a
+        // dimensionar, e o formulário não deve oferecer campos de tampa.
+        $result = $this->engine->calculate($this->input(['boxModel' => BoxModel::Mailer]));
+
+        $this->assertFalse(BoxModel::Mailer->hasSeparateLid());
+        $this->assertNull($result->lidWidthMm);
+        $this->assertNull($result->lidHeightMm);
+    }
+
     #[Test]
     public function a_espessura_do_material_aumenta_o_consumo(): void
     {

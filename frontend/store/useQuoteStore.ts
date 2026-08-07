@@ -23,9 +23,12 @@ import type {
 const DEFAULT_SPEC: QuoteSpecification = {
   material_id: null,
   box_model: "rsc",
+  // Proporção rasa e quase quadrada: é a medida de e-commerce mais comum e a
+  // que faz a caixa aparecer inteira no preview em qualquer modelo. Uma
+  // caixa alta e estreita como primeira impressão do 3D dava a peça de perfil.
   width_mm: 300,
-  height_mm: 200,
-  depth_mm: 150,
+  height_mm: 80,
+  depth_mm: 250,
   quantity: 100,
   waste_percent: 10,
   production_minutes_per_unit: 2.5,
