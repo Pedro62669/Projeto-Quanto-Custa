@@ -59,7 +59,7 @@ const dims = {
   h: await page.inputValue("#height"),
   d: await page.inputValue("#depth"),
 };
-check("dimensões iniciais", dims.w === "300" && dims.h === "200" && dims.d === "150", JSON.stringify(dims));
+check("dimensões iniciais", dims.w === "300" && dims.h === "80" && dims.d === "250", JSON.stringify(dims));
 
 const materialLabel = await page.textContent("#material");
 check("material selecionado", Boolean(materialLabel?.trim()), materialLabel?.trim());
@@ -188,7 +188,25 @@ check(
   rotulos.filter((r) => ["Diâmetro", "Largura", "Profundidade", "Altura"].includes(r)).join(", "),
 );
 
-// A tampa do tubo é circular: um único eixo de diâmetro.
+/*
+ * A tampa do tubo é circular: um único eixo de diâmetro.
+ *
+ * Espera a linha APARECER em vez de confiar no waitForTimeout acima. O
+ * recálculo é debounced, e num dia de máquina carregada os 2,5s não bastavam:
+ * o evaluate lia null e o check falhava sem detalhe nenhum — falso negativo
+ * que já custou uma investigação de regressão inexistente.
+ */
+await page
+  .waitForFunction(
+    () =>
+      [...document.querySelectorAll("div")].some((e) =>
+        e.textContent?.startsWith("Tampa (Ø × A)"),
+      ),
+    null,
+    { timeout: 20000 },
+  )
+  .catch(() => {}); // deixa o check falhar com a mensagem dele, não com timeout
+
 const tampaTubo = await page.evaluate(() => {
   const alvo = [...document.querySelectorAll("div")].find((e) =>
     e.textContent?.startsWith("Tampa (Ø × A)"),
@@ -255,6 +273,37 @@ check(
   "a gaveta (luva + gaveta) consome mais que um RSC",
   areaGaveta > areaRsc && areaRsc > 0,
   `gaveta ${areaGaveta} m² > rsc ${areaRsc} m²`,
+);
+
+// ── Mailer box ───────────────────────────────────────────────────────────
+//
+// A caixa continua 200×100×150, a mesma medida usada acima — o RSC já foi
+// medido nessa proporção e serve de referência de graça.
+await page.click("#box-model");
+await page.click('[role="option"]:has-text("Mailer box")');
+await page.waitForTimeout(2500);
+
+const areaMailer = await areaPorUnidade();
+
+/*
+ * A lateral ROLADA é a assinatura do modelo: ela sobe, dobra 180° no topo e
+ * desce por dentro, então cada milímetro de altura entra duas vezes no blank.
+ * Somado à parede frontal, que também rola, a mailer não tem como consumir
+ * menos que um RSC das mesmas medidas.
+ *
+ * Se alguém simplificar o rolo para parede simples, este check cai junto.
+ */
+check(
+  "a mailer (paredes roladas) consome mais que um RSC",
+  areaMailer > areaRsc && areaRsc > 0,
+  `mailer ${areaMailer} m² > rsc ${areaRsc} m²`,
+);
+
+// A tampa é articulada, parte da mesma chapa: não existe peça de tampa a
+// dimensionar, e oferecer os campos sugeriria um grau de liberdade que não há.
+check(
+  "a mailer não expõe campos de tampa",
+  (await page.locator("#lid-height").count()) === 0,
 );
 
 // ── Slider de abertura ───────────────────────────────────────────────────
