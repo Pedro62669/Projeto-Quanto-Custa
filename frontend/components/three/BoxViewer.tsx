@@ -169,6 +169,7 @@ const PECA_MOVEL: Partial<Record<BoxModel, string>> = {
   tray: "Tampa",
   tube: "Tampa",
   drawer: "Gaveta",
+  mailer: "Tampa",
 };
 
 /**

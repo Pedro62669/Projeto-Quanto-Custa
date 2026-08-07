@@ -19,3 +19,11 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Modelos 3D de referência
+#
+# mailer/mailer.py é a FONTE da geometria da mailer (o MailerMesh é port dele)
+# e o .blend é o resultado que o cliente abre no Blender: os dois entram no
+# repositório. Já o .blend1 é o backup automático do Blender — muda a cada
+# salvamento e não descreve nada que o .blend já não descreva.
+mailer/*.blend1

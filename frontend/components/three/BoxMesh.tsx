@@ -1,11 +1,23 @@
 "use client";
 
-import { useRef, Suspense, type ReactNode } from "react";
+import {
+  useRef,
+  useMemo,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  Suspense,
+  type ReactNode,
+} from "react";
 import { useFrame } from "@react-three/fiber";
-import { Edges, useTexture } from "@react-three/drei";
+import { Edges, useTexture, useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
 import type { BoxModel } from "@/lib/pricing/types";
-import { resolveLidDimensions, isCylindrical, hasSeparateLid } from "@/lib/pricing/engine";
+import {
+  resolveLidDimensions,
+  isCylindrical,
+  hasSeparateLid,
+} from "@/lib/pricing/engine";
 
 /**
  * Escala da cena: a MAIOR aresta da embalagem sempre ocupa este número de
@@ -90,6 +102,9 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
   // A gaveta é desenhada por componente próprio (GavetaMesh); a entrada
   // existe para o mapa continuar exaustivo sobre BoxModel.
   drawer: { topo: true, fundo: false },
+  // Idem para a mailer (MailerMesh): ela é uma peça só, dobrada, e não um
+  // arranjo de painéis independentes.
+  mailer: { topo: true, fundo: false },
 };
 
 /**
@@ -101,7 +116,7 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
  * controle que mente sobre o que faz.
  */
 export function hasAperture(model: BoxModel): boolean {
-  return hasSeparateLid(model) || model === "drawer";
+  return hasSeparateLid(model) || model === "drawer" || model === "mailer";
 }
 
 /** Segmentos da revolução: acima disso o ganho visual não paga o custo. */
@@ -184,6 +199,12 @@ function toSceneScale(
  */
 export function assemblyHeightMm(props: BoxMeshProps): number {
   const modelo = props.boxModel ?? "rsc";
+
+  // A mailer não tem tampa separada, mas a tampa aberta sobe — e sem este ramo
+  // a câmera miraria só a base, com a peça saindo pela borda do quadro.
+  if (modelo === "mailer") {
+    return mailerAlturaMontada(props.heightMm, props.depthMm);
+  }
 
   const tampa = resolveLidDimensions(
     modelo,
@@ -408,6 +429,334 @@ function GavetaMesh({
     </group>
   );
 }
+
+/**
+ * Inclinação da tampa aberta em relação à horizontal, em radianos (~68°).
+ *
+ * A mailer é desenhada ABERTA pela mesma razão que a gaveta é desenhada
+ * puxada: fechada, ela é um paralelepípedo indistinguível de um RSC, e o
+ * usuário não teria como confirmar na tela que escolheu o modelo certo.
+ *
+ * O valor não escolhe a pose — quem escolhe é MAILER_T_ABERTA, o instante da
+ * animação do Blender. Este ângulo só DESCREVE aquela pose, para a câmera
+ * saber onde mirar. Mudou o instante, remeça o ângulo.
+ */
+export const MAILER_ANGULO = 1.19;
+
+/**
+ * Altura do conjunto da mailer com a tampa ABERTA, em mm.
+ *
+ * O braço que sobe não é só a profundidade: a língua continua no plano da
+ * tampa e vale a altura da parede, então em caixa alta ela dobra o alcance.
+ *
+ * É uma estimativa, e serve só para a câmera mirar no meio da peça — o
+ * tamanho com que ela é desenhada vem de uma MEDIÇÃO do modelo montado, não
+ * daqui (ver MailerModelo). Antes de o modelo entrar, esta conta também
+ * escalava a peça, e era ela que deixava a caixa alta sair pelo topo do
+ * quadro.
+ */
+function mailerAlturaMontada(heightMm: number, depthMm: number): number {
+  return heightMm + (depthMm + heightMm) * Math.sin(MAILER_ANGULO);
+}
+
+/**
+ * O modelo da mailer não é desenhado aqui: ele é CARREGADO.
+ *
+ * `mailer/box-mailer.blend` é a peça que o cliente modelou, e
+ * `mailer/export_gltf.py` a converte em glTF (rode o Blender headless; o
+ * comando está no cabeçalho do script). Vem tudo junto no arquivo: a
+ * hierarquia de vincos, a espessura já aplicada pelo SOLIDIFY e a animação de
+ * dobra quadro a quadro.
+ *
+ * Por que carregar em vez de desenhar: a versão procedural reconstruía a peça
+ * a partir das razões da faca e, por mais fiel que a conta ficasse, o
+ * resultado na tela não era a caixa dele. Aqui é.
+ *
+ * O que isso custa, e vale saber antes de mexer:
+ *
+ *  - o modelo tem UMA medida (a do script), então redimensionar é escalar por
+ *    eixo. A silhueta acompanha o que o usuário digita, mas a espessura da
+ *    chapa estica junto: numa caixa muito mais estreita que o modelo, a
+ *    parede afina na mesma proporção;
+ *  - o preço continua vindo de `mailerLayout()`, que parametriza o MESMO
+ *    script. Fonte única ainda, só que em dois estágios: o motor recalcula os
+ *    painéis para qualquer medida, o desenho mostra a peça assada.
+ */
+const MAILER_MODELO = "/models/mailer.glb";
+
+/**
+ * A caixa que o modelo representa, em mm — é o `interno_mm` que o script
+ * reporta, e a referência para escalar até as medidas digitadas (que também
+ * são internas, ver mailerLayout).
+ */
+const MAILER_MODELO_INTERNO = { largura: 285, altura: 80, profundidade: 247 };
+
+/**
+ * Os dois instantes da timeline do Blender que o slider interpola, em segundos
+ * (a cena roda a 24 fps).
+ *
+ * Não é a animação inteira: os quadros 1–200 montam a chapa (paredes, rolo,
+ * linguetas) e isso a caixa já vem pronta na tela. O trecho útil é o fecho —
+ * tampa desce, barbatanas dobram, língua entra —, que é justamente o que o
+ * comprador precisa entender do modelo.
+ */
+const MAILER_T_ABERTA = 220 / 24;
+const MAILER_T_FECHADA = 312 / 24;
+
+/** Opacidade dos vincos realçados. */
+const MAILER_VINCO_OPACIDADE = 0.19;
+
+function MailerMesh({
+  widthMm,
+  heightMm,
+  depthMm,
+  abertura,
+  colorHex,
+  textureUrl,
+  showEdges,
+}: {
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+  abertura: number;
+  colorHex: string;
+  textureUrl?: string | null;
+  showEdges: boolean;
+}) {
+  /*
+   * A textura suspende no carregamento, e hook não pode ser condicional — daí
+   * o mesmo desdobramento em dois componentes que TexturedMaterial já faz para
+   * os outros modelos.
+   */
+  if (textureUrl) {
+    return (
+      <Suspense fallback={<MailerModelo {...{ widthMm, heightMm, depthMm, abertura, colorHex, showEdges }} />}>
+        <MailerTexturado
+          url={textureUrl}
+          {...{ widthMm, heightMm, depthMm, abertura, colorHex, showEdges }}
+        />
+      </Suspense>
+    );
+  }
+
+  return <MailerModelo {...{ widthMm, heightMm, depthMm, abertura, colorHex, showEdges }} />;
+}
+
+function MailerTexturado({ url, ...resto }: { url: string } & MailerModeloProps) {
+  const textura = useTexture(url, (loaded) => {
+    for (const item of Array.isArray(loaded) ? loaded : [loaded]) {
+      item.wrapS = item.wrapT = THREE.RepeatWrapping;
+      item.repeat.set(2, 2);
+      item.colorSpace = THREE.SRGBColorSpace;
+    }
+  });
+
+  return <MailerModelo {...resto} textura={textura} />;
+}
+
+interface MailerModeloProps {
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+  abertura: number;
+  colorHex: string;
+  showEdges: boolean;
+}
+
+function MailerModelo({
+  widthMm,
+  heightMm,
+  depthMm,
+  abertura,
+  colorHex,
+  showEdges,
+  textura,
+}: MailerModeloProps & { textura?: THREE.Texture }) {
+  const { scene, animations } = useGLTF(MAILER_MODELO);
+
+  /*
+   * Material próprio, aplicado por cima do que veio do Blender.
+   *
+   * O arquivo traz o kraft do modelo, mas quem manda na cor é a matéria-prima
+   * escolhida na calculadora — senão trocar para papel branco não mudaria nada
+   * na tela.
+   */
+  const material = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: colorHex,
+        map: textura ?? null,
+        roughness: 0.9,
+        metalness: 0,
+      }),
+    [colorHex, textura],
+  );
+
+  /*
+   * Clone da cena carregada.
+   *
+   * O useGLTF guarda o resultado em cache por URL: trocar material ou pose no
+   * objeto original vazaria para qualquer outro uso do mesmo arquivo. O clone
+   * preserva os nomes dos nós, que é como a animação se liga de volta.
+   */
+  const peca = useMemo(() => {
+    const copia = scene.clone(true);
+
+    copia.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+
+      obj.castShadow = true;
+      obj.receiveShadow = true;
+
+      /*
+       * Os vincos realçados são filhos da própria malha, criados uma vez e
+       * apenas escondidos quando o usuário desliga o realce. Criá-los a cada
+       * toggle recompilaria a geometria de arestas de 23 painéis.
+       */
+      const arestas = new THREE.LineSegments(
+        new THREE.EdgesGeometry(obj.geometry, 20),
+        new THREE.LineBasicMaterial({
+          color: 0x000000,
+          transparent: true,
+          opacity: MAILER_VINCO_OPACIDADE,
+        }),
+      );
+      arestas.name = "vincos";
+      obj.add(arestas);
+    });
+
+    return copia;
+  }, [scene]);
+
+  // Materiais e visibilidade das arestas seguem os props sem reconstruir nada.
+  useMemo(() => {
+    peca.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.name !== "vincos") obj.material = material;
+      if (obj.name === "vincos") obj.visible = showEdges;
+    });
+  }, [peca, material, showEdges]);
+
+  useEffect(
+    () => () => {
+      peca.traverse((obj) => {
+        if (obj instanceof THREE.LineSegments) {
+          obj.geometry.dispose();
+          (obj.material as THREE.Material).dispose();
+        }
+      });
+    },
+    [peca],
+  );
+
+  const grupo = useRef<THREE.Group>(null);
+  const { actions, mixer } = useAnimations(animations, grupo);
+  const suave = useAberturaSuave(abertura);
+
+  /*
+   * Cada vinco virou uma animação própria na exportação (são 22). Todas tocam
+   * ao mesmo tempo e nenhuma avança sozinha: quem dita o instante é o slider,
+   * pelo mixer.
+   */
+  /*
+   * Efeito de LAYOUT, e antes da medição logo abaixo: o mixer só posiciona os
+   * vincos depois que as ações tocam. Como useEffect, a medição rodava antes
+   * disso e media a peça na pose de repouso — a chapa PLANA, quase o triplo do
+   * comprimento da caixa montada —, e a peça saía desenhada minúscula.
+   */
+  useLayoutEffect(() => {
+    for (const acao of Object.values(actions)) acao?.play();
+
+    return () => {
+      for (const acao of Object.values(actions)) acao?.stop();
+    };
+  }, [actions]);
+
+  useFrame(() => {
+    mixer.setTime(
+      MAILER_T_FECHADA + (MAILER_T_ABERTA - MAILER_T_FECHADA) * suave.current,
+    );
+  });
+
+  /*
+   * Escala por eixo até as medidas digitadas: o modelo tem UMA medida, e é
+   * assim que a silhueta acompanha o que o usuário digita.
+   *
+   * O preço disso aparece na tampa ABERTA. Fechada, todo painel está alinhado
+   * aos eixos e a escala por eixo é exata; aberta, a tampa está girada, e
+   * esticar mais um eixo que o outro a CISALHA — numa caixa muito mais alta
+   * que o modelo ela sobe bem além do que subiria de verdade. É o custo de
+   * carregar um modelo assado em vez de redesenhar a peça a cada medida.
+   */
+  const escalaEixo: [number, number, number] = [
+    widthMm / MAILER_MODELO_INTERNO.largura,
+    heightMm / MAILER_MODELO_INTERNO.altura,
+    depthMm / MAILER_MODELO_INTERNO.profundidade,
+  ];
+
+  /*
+   * Por isso o enquadramento MEDE a peça em vez de estimá-la.
+   *
+   * A conta analítica (altura + braço da tampa) valia para o desenho
+   * procedural, onde a tampa girava rígida. Com o modelo esticado ela erra
+   * justamente nas proporções extremas, e a peça sai pelo topo do quadro. Uma
+   * medição na pose ABERTA resolve os dois casos de uma vez — e é na aberta,
+   * nunca na atual, senão a caixa mudaria de tamanho enquanto o usuário a
+   * fecha.
+   */
+  const [modelo, setModelo] = useState<{ eixos: THREE.Vector3; piso: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!grupo.current) return;
+
+    mixer.setTime(MAILER_T_ABERTA);
+    grupo.current.updateWorldMatrix(true, true);
+
+    const caixa = new THREE.Box3().setFromObject(peca);
+    const tamanho = caixa.getSize(new THREE.Vector3());
+
+    setModelo({
+      // Desfaz a escala já aplicada: o que fica guardado é a peça em unidades
+      // do MODELO, eixo a eixo, e o resto da conta é analítico a cada mudança
+      // de medida.
+      eixos: tamanho.divide(new THREE.Vector3(...escalaEixo)),
+      piso: caixa.min.y / escalaEixo[1],
+    });
+    // A medição não depende das medidas digitadas — só da peça carregada.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peca, mixer]);
+
+  /*
+   * A maior aresta é a do PRODUTO eixo a eixo, não o produto dos máximos:
+   * numa caixa alta quem estoura é a altura da peça esticada, e usar
+   * max(eixos)×max(escala) superestima — a caixa saía desenhada pequena
+   * demais no meio do quadro.
+   */
+  const ajuste = modelo
+    ? SCENE_MAX_UNITS /
+      Math.max(
+        modelo.eixos.x * escalaEixo[0],
+        modelo.eixos.y * escalaEixo[1],
+        modelo.eixos.z * escalaEixo[2],
+        1e-6,
+      )
+    : 1;
+
+  const escala: [number, number, number] = [
+    escalaEixo[0] * ajuste,
+    escalaEixo[1] * ajuste,
+    escalaEixo[2] * ajuste,
+  ];
+
+  return (
+    <group ref={grupo} scale={escala} position={[0, -(modelo?.piso ?? 0) * escala[1], 0]}>
+      <primitive object={peca} />
+    </group>
+  );
+}
+
+// O arquivo tem ~165 KB e só é pedido quando alguém escolhe o modelo. Pré-
+// carregar evita o vazio de um segundo entre escolher "Mailer" e ver a caixa.
+useGLTF.preload(MAILER_MODELO);
 
 /**
  * Perfil de um copo aberto em cima, para revolução.
@@ -774,6 +1123,20 @@ export function BoxMesh({
         espessuraMm={thicknessMm ?? 0}
         abertura={abertura}
         material={material}
+        showEdges={showEdges}
+      />
+    );
+  }
+
+  if (boxModel === "mailer") {
+    return (
+      <MailerMesh
+        widthMm={widthMm}
+        heightMm={heightMm}
+        depthMm={depthMm}
+        abertura={abertura}
+        colorHex={colorHex}
+        textureUrl={textureUrl}
         showEdges={showEdges}
       />
     );
