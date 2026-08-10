@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\FinancialDashboardController;
 use App\Http\Controllers\Api\InstallmentController;
 use App\Http\Controllers\Api\MaterialController;
 use App\Http\Controllers\Api\MeController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\Platform\PlatformDashboardController;
 use App\Http\Controllers\Api\Platform\PlatformTenantController;
 use App\Http\Controllers\Api\Platform\PlatformUserController;
@@ -67,6 +68,24 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:20
  * O e-mail de confirmação sai daqui, mas não trava nada: ver RegisterController.
  */
 Route::post('/register', RegisterController::class)->middleware('throttle:5,1');
+
+/*
+ * "Esqueci minha senha".
+ *
+ * Públicas por definição — quem chama não consegue autenticar. Até existirem, a
+ * única recuperação possível era o operador da plataforma apertar o botão em
+ * /api/platform, e o assinante ficava trancado para fora da própria empresa até
+ * alguém atender o telefone.
+ *
+ * Throttle nas duas: a primeira dispara e-mail para terceiros (vetor de
+ * incômodo) e a segunda aceita um token, o que a torna alvo de força bruta.
+ * O broker do Laravel ainda impõe 60s entre pedidos para o mesmo e-mail.
+ */
+Route::post('/password/email', [PasswordResetController::class, 'sendLink'])
+    ->middleware('throttle:6,1');
+
+Route::post('/password/reset', [PasswordResetController::class, 'reset'])
+    ->middleware('throttle:6,1');
 
 /*
  * Webhook de cobrança.
