@@ -65,6 +65,20 @@ final readonly class PricingResult
 
         /** Margem líquida efetiva sobre o preço de venda (%) — o número que importa. */
         public float $effectiveMarginPercent,
+
+        /**
+         * Quanto do PREÇO é insumo (%): material, revestimento, ferragem e berço.
+         *
+         * Existe porque "custo de material" em reais não responde a pergunta que
+         * o dono da cartonagem faz — ele quer saber se está vendendo papelão ou
+         * vendendo trabalho. Uma peça com 70% de insumo e outra com 25% pedem
+         * decisões comerciais opostas, e as duas podem ter o mesmo custo
+         * absoluto.
+         */
+        public float $materialSharePercent,
+
+        /** Quanto do preço é mão de obra (%) — a outra metade da mesma pergunta. */
+        public float $laborSharePercent,
     ) {}
 
     /** @return array<string, float|null> */
@@ -97,6 +111,8 @@ final readonly class PricingResult
             'profit_amount' => $this->profitAmount,
             'tax_amount' => $this->taxAmount,
             'effective_margin_percent' => $this->effectiveMarginPercent,
+            'material_share_percent' => $this->materialSharePercent,
+            'labor_share_percent' => $this->laborSharePercent,
         ];
     }
 }

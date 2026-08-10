@@ -43,8 +43,18 @@ final class PricingEngine
      * só é alcançado por `box_model: free`, um valor que não existia antes. Todo
      * orçamento já gravado escolheu outro modelo, e para esses o caminho é o
      * mesmo bit a bit — o BlankCalculator continua sendo quem responde.
+     *
+     * 1.5.0 — frações de insumo e de mão de obra sobre o preço. Minor porque
+     * nenhum valor existente se move: são dois campos NOVOS, derivados dos que
+     * já estavam no resultado.
+     *
+     * Repare no que NÃO mudou de versão junto: o custo por lote com frete
+     * rateado. Ele altera o R$/m² de um material, mas é resolvido pelo
+     * controller ANTES de o motor rodar — o motor recebe o número pronto, como
+     * sempre recebeu. Cadastrar um lote muda o preço da caixa sem mudar uma
+     * linha do cálculo, e é essa fronteira que mantém a paridade possível.
      */
-    public const VERSION = '1.4.0';
+    public const VERSION = '1.5.0';
 
     private const MINUTES_PER_HOUR = 60.0;
 
@@ -312,6 +322,26 @@ final class PricingEngine
 
             effectiveMarginPercent: $totalPrice > 0
                 ? round($profitAmount / $totalPrice * 100, 2)
+                : 0.0,
+
+            /*
+             * Frações sobre o PREÇO, não sobre o custo.
+             *
+             * Sobre o custo elas sempre somariam 100% e não diriam nada. Sobre o
+             * preço respondem a pergunta que o dono da cartonagem realmente faz:
+             * "estou vendendo papelão ou vendendo trabalho?".
+             *
+             * O guarda de preço zero não é teórico: margem zero com custo zero
+             * (peça mínima, tempo zero) é um caminho que a suíte exercita, e uma
+             * divisão por zero aqui derrubaria o cálculo inteiro por causa de um
+             * número que é só informativo.
+             */
+            materialSharePercent: $unitPrice > 0
+                ? round(($materialCost + $wrapCost + $hardwareCost + $cradleCost) / $unitPrice * 100, 2)
+                : 0.0,
+
+            laborSharePercent: $unitPrice > 0
+                ? round($laborCost / $unitPrice * 100, 2)
                 : 0.0,
         );
     }

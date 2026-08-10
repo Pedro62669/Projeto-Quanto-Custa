@@ -28,7 +28,7 @@ import type {
  *     o usuário se a API responder com uma versão diferente (motor defasado
  *     após um deploy parcial).
  */
-export const ENGINE_VERSION = "1.4.0";
+export const ENGINE_VERSION = "1.5.0";
 
 const MM2_PER_M2 = 1_000_000;
 const MM3_PER_M3 = 1_000_000_000;
@@ -1415,6 +1415,22 @@ export function calculatePricing({
 
     effective_margin_percent:
       total_price > 0 ? round((profit_amount / total_price) * 100, 2) : 0,
+
+    /*
+     * Frações sobre o PREÇO, não sobre o custo — sobre o custo elas somariam
+     * sempre 100% e não diriam nada. O guarda de preço zero cobre o caminho
+     * "margem zero com custo zero", que a suíte de paridade exercita.
+     */
+    material_share_percent:
+      unit_price > 0
+        ? round(
+            ((materialCost + wrapCost + hardwareCost + cradleCost) / unit_price) * 100,
+            2,
+          )
+        : 0,
+
+    labor_share_percent:
+      unit_price > 0 ? round((laborCost / unit_price) * 100, 2) : 0,
   };
 }
 

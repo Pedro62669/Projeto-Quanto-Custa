@@ -289,4 +289,16 @@ export interface PricingBreakdown {
   profit_amount: number;
   tax_amount: number;
   effective_margin_percent: number;
+
+  /**
+   * Quanto do PREÇO é insumo (%): material, revestimento, ferragem e berço.
+   *
+   * Sobre o preço e não sobre o custo — sobre o custo as duas frações sempre
+   * somariam 100% e não diriam nada. Assim elas respondem "estou vendendo
+   * papelão ou vendendo trabalho?".
+   */
+  material_share_percent: number;
+
+  /** Quanto do preço é mão de obra (%). */
+  labor_share_percent: number;
 }

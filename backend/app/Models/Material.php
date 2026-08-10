@@ -31,6 +31,8 @@ class Material extends Model
         'tenant_id',
         'name', 'type', 'description',
         'cost_unit', 'cost_per_unit', 'grammage_kg_per_m2',
+        'sheet_width_mm', 'sheet_length_mm',
+        'lot_quantity', 'lot_purchase_cost', 'lot_freight_cost',
         'default_waste_percent', 'thickness_mm',
         'color_hex', 'texture_url', 'is_active',
     ];
@@ -55,6 +57,11 @@ class Material extends Model
             'cost_unit' => MaterialUnit::class,
             'cost_per_unit' => 'float',
             'grammage_kg_per_m2' => 'float',
+            'sheet_width_mm' => 'integer',
+            'sheet_length_mm' => 'integer',
+            'lot_quantity' => 'integer',
+            'lot_purchase_cost' => 'float',
+            'lot_freight_cost' => 'float',
             'default_waste_percent' => 'float',
             'thickness_mm' => 'float',
             'is_active' => 'boolean',
@@ -72,12 +79,63 @@ class Material extends Model
     }
 
     /**
+     * Custo de UM item do lote comprado, já com o frete rateado.
+     *
+     *   (valor da nota + frete) ÷ quantidade de itens
+     *
+     * Devolve null quando o cadastro não descreve um lote — e é esse null que
+     * mantém compatível todo material cadastrado com R$/m² direto. Não é um
+     * fallback preguiçoso: é a única forma de a mudança entrar sem obrigar a
+     * empresa a recadastrar o estoque inteiro antes de voltar a orçar.
+     *
+     * O frete entra aqui e em nenhum outro lugar. Antes disso ele era invisível:
+     * quem paga R$ 400 de entrega numa carga de chapas não via esse dinheiro no
+     * preço da caixa, e no fim do mês o caixa não fechava com a margem que a
+     * planilha prometia.
+     */
+    public function lotUnitCost(): ?float
+    {
+        if ($this->lot_purchase_cost === null || $this->lot_quantity === null) {
+            return null;
+        }
+
+        // Lote de zero itens não é lote — e a divisão estouraria. A validação da
+        // Request já barra, mas um seeder ou importação poderia chegar assim.
+        if ($this->lot_quantity < 1) {
+            return null;
+        }
+
+        // Frete ausente é frete zero (retirada no fornecedor), não cadastro
+        // incompleto: exigi-lo obrigaria a digitar 0 sem necessidade.
+        $total = $this->lot_purchase_cost + ($this->lot_freight_cost ?? 0.0);
+
+        return $total / $this->lot_quantity;
+    }
+
+    /** Área da folha comprada, em m². Null quando as medidas não estão cadastradas. */
+    public function sheetAreaM2(): ?float
+    {
+        if (! $this->sheet_width_mm || ! $this->sheet_length_mm) {
+            return null;
+        }
+
+        return ($this->sheet_width_mm * $this->sheet_length_mm) / 1_000_000.0;
+    }
+
+    /**
      * Normaliza o custo para R$/m², que é o denominador comum do motor de cálculo.
      *
-     * Materiais vendidos por kg são convertidos pela gramatura:
-     *   R$/m² = R$/kg × kg/m²
+     * Três caminhos, nesta ordem de precedência:
      *
-     * Ex.: papelão a R$ 4,50/kg com 0,300 kg/m² => R$ 1,35/m².
+     *  1. LOTE COM FRETE, quando valor, quantidade e medida da folha estão
+     *     cadastrados. É o mais fiel: sai de onde o dinheiro efetivamente saiu.
+     *  2. R$/m² direto.
+     *  3. R$/kg convertido pela gramatura — R$/m² = R$/kg × kg/m².
+     *     Ex.: papelão a R$ 4,50/kg com 0,300 kg/m² => R$ 1,35/m².
+     *
+     * O lote vem primeiro porque, quando existe, os outros dois são cópias
+     * envelhecidas dele: `cost_per_unit` foi digitado numa compra anterior e não
+     * acompanha a nota nova.
      */
     public function costPerSquareMeter(): float
     {
@@ -92,6 +150,13 @@ class Material extends Model
                 "Material #{$this->id} ({$this->name}) é cotado por peça e não tem custo por m². "
                 .'Use-o como ferragem na lista de materiais.'
             );
+        }
+
+        $custoDoItem = $this->lotUnitCost();
+        $areaDaFolha = $this->sheetAreaM2();
+
+        if ($custoDoItem !== null && $areaDaFolha !== null && $areaDaFolha > 0) {
+            return $custoDoItem / $areaDaFolha;
         }
 
         if ($this->cost_unit === MaterialUnit::SquareMeter) {
@@ -126,7 +191,12 @@ class Material extends Model
             );
         }
 
-        return $this->cost_per_unit;
+        /*
+         * Ferragem também vem em lote, e também tem frete: uma caixa de mil ímãs
+         * com R$ 60 de entrega custa mais do que a nota diz. Aqui não é preciso
+         * medida de folha — o item já É a unidade cobrada.
+         */
+        return $this->lotUnitCost() ?? $this->cost_per_unit;
     }
 
     /** Custo de UM metro cúbico — espuma e EVA, vendidos em bloco. */

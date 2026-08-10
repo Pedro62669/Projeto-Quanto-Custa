@@ -1,6 +1,6 @@
 {
-    "engine_version": "1.4.0",
-    "generated_at": "2026-08-10T19:01:03+00:00",
+    "engine_version": "1.5.0",
+    "generated_at": "2026-08-10T19:30:58+00:00",
     "cases": [
         {
             "name": "rsc-padrao",
@@ -62,7 +62,9 @@
                 "total_price": 582.54,
                 "profit_amount": 134.43,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 19.77,
+                "labor_share_percent": 20.03
             }
         },
         {
@@ -125,7 +127,9 @@
                 "total_price": 640.16,
                 "profit_amount": 192.05,
                 "tax_amount": 0,
-                "effective_margin_percent": 30
+                "effective_margin_percent": 30,
+                "material_share_percent": 17.99,
+                "labor_share_percent": 18.22
             }
         },
         {
@@ -188,7 +192,9 @@
                 "total_price": 749.47,
                 "profit_amount": 172.95,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 15.37,
+                "labor_share_percent": 32.7
             }
         },
         {
@@ -251,7 +257,9 @@
                 "total_price": 749.47,
                 "profit_amount": 172.95,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 15.37,
+                "labor_share_percent": 32.7
             }
         },
         {
@@ -314,7 +322,9 @@
                 "total_price": 860.89,
                 "profit_amount": 182.78,
                 "tax_amount": 68.87,
-                "effective_margin_percent": 21.23
+                "effective_margin_percent": 21.23,
+                "material_share_percent": 13.38,
+                "labor_share_percent": 32.27
             }
         },
         {
@@ -377,7 +387,9 @@
                 "total_price": 149.75,
                 "profit_amount": 34.56,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 76.92,
+                "labor_share_percent": 0
             }
         },
         {
@@ -440,7 +452,9 @@
                 "total_price": 14049.35,
                 "profit_amount": 3242.16,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 0.82,
+                "labor_share_percent": 71.18
             }
         },
         {
@@ -503,7 +517,9 @@
                 "total_price": 771.1,
                 "profit_amount": 231.33,
                 "tax_amount": 0,
-                "effective_margin_percent": 30
+                "effective_margin_percent": 30,
+                "material_share_percent": 14.94,
+                "labor_share_percent": 27.02
             }
         },
         {
@@ -566,7 +582,9 @@
                 "total_price": 676.04,
                 "profit_amount": 156.01,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 27.68,
+                "labor_share_percent": 17.26
             }
         },
         {
@@ -629,7 +647,9 @@
                 "total_price": 2532.46,
                 "profit_amount": 584.42,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 63.78,
+                "labor_share_percent": 4.61
             }
         },
         {
@@ -692,7 +712,9 @@
                 "total_price": 2586.01,
                 "profit_amount": 596.77,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 64.05,
+                "labor_share_percent": 4.51
             }
         },
         {
@@ -755,7 +777,9 @@
                 "total_price": 2996.55,
                 "profit_amount": 691.52,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 65.81,
+                "labor_share_percent": 3.89
             }
         },
         {
@@ -823,7 +847,9 @@
                 "total_price": 2750.86,
                 "profit_amount": 634.82,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 64.82,
+                "labor_share_percent": 4.24
             }
         },
         {
@@ -895,7 +921,9 @@
                 "total_price": 2991.36,
                 "profit_amount": 690.32,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 65.79,
+                "labor_share_percent": 3.9
             }
         },
         {
@@ -963,7 +991,9 @@
                 "total_price": 1128.54,
                 "profit_amount": 260.43,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 47.42,
+                "labor_share_percent": 10.34
             }
         },
         {
@@ -1026,7 +1056,9 @@
                 "total_price": 2532.47,
                 "profit_amount": 584.42,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 63.78,
+                "labor_share_percent": 4.61
             }
         },
         {
@@ -1089,7 +1121,9 @@
                 "total_price": 2665.7,
                 "profit_amount": 615.16,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 64.43,
+                "labor_share_percent": 4.38
             }
         },
         {
@@ -1152,7 +1186,9 @@
                 "total_price": 2588.42,
                 "profit_amount": 597.33,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 64.06,
+                "labor_share_percent": 4.51
             }
         },
         {
@@ -1215,7 +1251,9 @@
                 "total_price": 2532.47,
                 "profit_amount": 584.42,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 63.78,
+                "labor_share_percent": 4.61
             }
         },
         {
@@ -1278,7 +1316,9 @@
                 "total_price": 1204.76,
                 "profit_amount": 278.02,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 49.29,
+                "labor_share_percent": 9.68
             }
         },
         {
@@ -1346,7 +1386,9 @@
                 "total_price": 2884.1,
                 "profit_amount": 665.56,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 65.38,
+                "labor_share_percent": 4.05
             }
         },
         {
@@ -1409,7 +1451,9 @@
                 "total_price": 2673.69,
                 "profit_amount": 617.01,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 64.47,
+                "labor_share_percent": 4.36
             }
         },
         {
@@ -1477,7 +1521,9 @@
                 "total_price": 3192.61,
                 "profit_amount": 736.76,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 66.5,
+                "labor_share_percent": 3.65
             }
         },
         {
@@ -1545,7 +1591,9 @@
                 "total_price": 2808.54,
                 "profit_amount": 648.13,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 65.07,
+                "labor_share_percent": 4.15
             }
         },
         {
@@ -1608,7 +1656,9 @@
                 "total_price": 3059.44,
                 "profit_amount": 706.02,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 66.04,
+                "labor_share_percent": 3.81
             }
         },
         {
@@ -1671,7 +1721,9 @@
                 "total_price": 1238.4,
                 "profit_amount": 285.79,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 50.04,
+                "labor_share_percent": 9.42
             }
         },
         {
@@ -1741,7 +1793,9 @@
                 "total_price": 1914.38,
                 "profit_amount": 441.78,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 49.1,
+                "labor_share_percent": 9.75
             }
         },
         {
@@ -1811,7 +1865,9 @@
                 "total_price": 2240.96,
                 "profit_amount": 517.14,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 14.53,
+                "labor_share_percent": 21.87
             }
         },
         {
@@ -1881,7 +1937,9 @@
                 "total_price": 1463.38,
                 "profit_amount": 337.7,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 13.22,
+                "labor_share_percent": 22.32
             }
         },
         {
@@ -1951,7 +2009,9 @@
                 "total_price": 1103.81,
                 "profit_amount": 254.73,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 22.63,
+                "labor_share_percent": 19.03
             }
         },
         {
@@ -2021,7 +2081,9 @@
                 "total_price": 1336.77,
                 "profit_amount": 308.49,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 17.15,
+                "labor_share_percent": 20.95
             }
         },
         {
@@ -2091,7 +2153,9 @@
                 "total_price": 1188.45,
                 "profit_amount": 274.26,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 9.69,
+                "labor_share_percent": 23.56
             }
         },
         {
@@ -2161,7 +2225,9 @@
                 "total_price": 1153.5,
                 "profit_amount": 266.19,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 7.66,
+                "labor_share_percent": 24.27
             }
         },
         {
@@ -2231,7 +2297,9 @@
                 "total_price": 2091.39,
                 "profit_amount": 482.63,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 10.07,
+                "labor_share_percent": 23.43
             }
         },
         {
@@ -2306,7 +2374,9 @@
                 "total_price": 4524.45,
                 "profit_amount": 1044.1,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 65.15,
+                "labor_share_percent": 4.13
             }
         },
         {
@@ -2374,7 +2444,9 @@
                 "total_price": 137543,
                 "profit_amount": 31741,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 64.82,
+                "labor_share_percent": 4.24
             }
         },
         {
@@ -2437,7 +2509,9 @@
                 "total_price": 448.11,
                 "profit_amount": 0,
                 "tax_amount": 0,
-                "effective_margin_percent": 0
+                "effective_margin_percent": 0,
+                "material_share_percent": 25.71,
+                "labor_share_percent": 26.04
             }
         },
         {
@@ -2500,7 +2574,9 @@
                 "total_price": 1568.38,
                 "profit_amount": 1120.27,
                 "tax_amount": 0,
-                "effective_margin_percent": 71.43
+                "effective_margin_percent": 71.43,
+                "material_share_percent": 7.34,
+                "labor_share_percent": 7.44
             }
         },
         {
@@ -2563,7 +2639,9 @@
                 "total_price": 44810.87,
                 "profit_amount": 44362.76,
                 "tax_amount": 0,
-                "effective_margin_percent": 99
+                "effective_margin_percent": 99,
+                "material_share_percent": 0.26,
+                "labor_share_percent": 0.26
             }
         },
         {
@@ -2626,7 +2704,9 @@
                 "total_price": 568.93,
                 "profit_amount": 131.29,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 18.41,
+                "labor_share_percent": 20.51
             }
         },
         {
@@ -2689,7 +2769,9 @@
                 "total_price": 630.87,
                 "profit_amount": 145.59,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 24.15,
+                "labor_share_percent": 18.49
             }
         },
         {
@@ -2752,7 +2834,9 @@
                 "total_price": 652.45,
                 "profit_amount": 150.57,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 17.66,
+                "labor_share_percent": 17.88
             }
         },
         {
@@ -2815,7 +2899,9 @@
                 "total_price": 633.2,
                 "profit_amount": 134.43,
                 "tax_amount": 50.66,
-                "effective_margin_percent": 21.23
+                "effective_margin_percent": 21.23,
+                "material_share_percent": 18.19,
+                "labor_share_percent": 18.42
             }
         },
         {
@@ -2878,7 +2964,9 @@
                 "total_price": 709.18,
                 "profit_amount": 150.57,
                 "tax_amount": 56.73,
-                "effective_margin_percent": 21.23
+                "effective_margin_percent": 21.23,
+                "material_share_percent": 16.24,
+                "labor_share_percent": 16.45
             }
         },
         {
@@ -2941,7 +3029,9 @@
                 "total_price": 552.12,
                 "profit_amount": 127.41,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 16.63,
+                "labor_share_percent": 21.13
             }
         },
         {
@@ -3004,7 +3094,9 @@
                 "total_price": 593.2,
                 "profit_amount": 136.9,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 20.8,
+                "labor_share_percent": 19.67
             }
         },
         {
@@ -3067,7 +3159,9 @@
                 "total_price": 4.33,
                 "profit_amount": 1,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.09
+                "effective_margin_percent": 23.09,
+                "material_share_percent": 0.12,
+                "labor_share_percent": 26.91
             }
         },
         {
@@ -3130,7 +3224,9 @@
                 "total_price": 334.76,
                 "profit_amount": 77.25,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 75.93,
+                "labor_share_percent": 0.35
             }
         },
         {
@@ -3193,7 +3289,9 @@
                 "total_price": 499.42,
                 "profit_amount": 115.25,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 10.26,
+                "labor_share_percent": 23.36
             }
         },
         {
@@ -3256,7 +3354,9 @@
                 "total_price": 5825400,
                 "profit_amount": 1344300,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 19.77,
+                "labor_share_percent": 20.03
             }
         },
         {
@@ -3319,7 +3419,9 @@
                 "total_price": 149.75,
                 "profit_amount": 34.56,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 76.92,
+                "labor_share_percent": 0
             }
         },
         {
@@ -3382,7 +3484,9 @@
                 "total_price": 723.09,
                 "profit_amount": 166.86,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 30.88,
+                "labor_share_percent": 16.13
             }
         },
         {
@@ -3445,7 +3549,9 @@
                 "total_price": 707.05,
                 "profit_amount": 163.17,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 29.84,
+                "labor_share_percent": 16.5
             }
         },
         {
@@ -3508,7 +3614,9 @@
                 "total_price": 675.63,
                 "profit_amount": 155.92,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 27.65,
+                "labor_share_percent": 17.27
             }
         },
         {
@@ -3571,7 +3679,9 @@
                 "total_price": 704.3,
                 "profit_amount": 162.53,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 29.65,
+                "labor_share_percent": 16.56
             }
         },
         {
@@ -3634,7 +3744,9 @@
                 "total_price": 516.26,
                 "profit_amount": 119.14,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 12.44,
+                "labor_share_percent": 22.6
             }
         },
         {
@@ -3697,7 +3809,9 @@
                 "total_price": 485.86,
                 "profit_amount": 112.12,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 8.4,
+                "labor_share_percent": 24.01
             }
         },
         {
@@ -3760,7 +3874,9 @@
                 "total_price": 491.41,
                 "profit_amount": 113.4,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 9.18,
+                "labor_share_percent": 23.74
             }
         },
         {
@@ -3823,7 +3939,9 @@
                 "total_price": 485.86,
                 "profit_amount": 112.12,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 8.4,
+                "labor_share_percent": 24.01
             }
         },
         {
@@ -3886,7 +4004,9 @@
                 "total_price": 499.83,
                 "profit_amount": 115.35,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 10.32,
+                "labor_share_percent": 23.34
             }
         },
         {
@@ -3949,7 +4069,9 @@
                 "total_price": 486.8,
                 "profit_amount": 112.34,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 8.53,
+                "labor_share_percent": 23.97
             }
         },
         {
@@ -4012,7 +4134,9 @@
                 "total_price": 4.33,
                 "profit_amount": 1,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.09
+                "effective_margin_percent": 23.09,
+                "material_share_percent": 0.1,
+                "labor_share_percent": 26.92
             }
         },
         {
@@ -4075,7 +4199,9 @@
                 "total_price": 680.56,
                 "profit_amount": 157.05,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 28,
+                "labor_share_percent": 17.14
             }
         },
         {
@@ -4138,7 +4264,9 @@
                 "total_price": 692.5,
                 "profit_amount": 159.81,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 28.85,
+                "labor_share_percent": 16.85
             }
         },
         {
@@ -4201,7 +4329,9 @@
                 "total_price": 468.02,
                 "profit_amount": 108,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 5.79,
+                "labor_share_percent": 24.93
             }
         },
         {
@@ -4264,7 +4394,9 @@
                 "total_price": 622.47,
                 "profit_amount": 143.65,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 23.44,
+                "labor_share_percent": 18.74
             }
         },
         {
@@ -4327,7 +4459,9 @@
                 "total_price": 637.62,
                 "profit_amount": 147.14,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 24.71,
+                "labor_share_percent": 18.3
             }
         },
         {
@@ -4390,7 +4524,9 @@
                 "total_price": 651.44,
                 "profit_amount": 150.33,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 25.82,
+                "labor_share_percent": 17.91
             }
         },
         {
@@ -4453,7 +4589,9 @@
                 "total_price": 642.1,
                 "profit_amount": 148.17,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 25.08,
+                "labor_share_percent": 18.17
             }
         },
         {
@@ -4516,7 +4654,9 @@
                 "total_price": 664.35,
                 "profit_amount": 153.31,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 26.81,
+                "labor_share_percent": 17.56
             }
         },
         {
@@ -4579,7 +4719,9 @@
                 "total_price": 527.89,
                 "profit_amount": 121.82,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 13.86,
+                "labor_share_percent": 22.1
             }
         },
         {
@@ -4642,7 +4784,9 @@
                 "total_price": 704.68,
                 "profit_amount": 162.62,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 29.68,
+                "labor_share_percent": 16.56
             }
         },
         {
@@ -4705,7 +4849,9 @@
                 "total_price": 468.62,
                 "profit_amount": 108.15,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 5.88,
+                "labor_share_percent": 24.9
             }
         },
         {
@@ -4768,7 +4914,9 @@
                 "total_price": 648.51,
                 "profit_amount": 149.66,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 25.59,
+                "labor_share_percent": 17.99
             }
         },
         {
@@ -4831,7 +4979,9 @@
                 "total_price": 637.62,
                 "profit_amount": 147.14,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 24.71,
+                "labor_share_percent": 18.3
             }
         },
         {
@@ -4894,7 +5044,9 @@
                 "total_price": 161916.75,
                 "profit_amount": 68005.41,
                 "tax_amount": 12953.34,
-                "effective_margin_percent": 42
+                "effective_margin_percent": 42,
+                "material_share_percent": 18.43,
+                "labor_share_percent": 9.19
             }
         },
         {
@@ -4966,7 +5118,9 @@
                 "total_price": 460.75,
                 "profit_amount": 106.33,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 4.67,
+                "labor_share_percent": 25.32
             }
         },
         {
@@ -5046,7 +5200,9 @@
                 "total_price": 542.62,
                 "profit_amount": 125.22,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 15.57,
+                "labor_share_percent": 21.5
             }
         },
         {
@@ -5126,7 +5282,9 @@
                 "total_price": 700.51,
                 "profit_amount": 161.65,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 29.4,
+                "labor_share_percent": 16.65
             }
         },
         {
@@ -5206,7 +5364,9 @@
                 "total_price": 4392.22,
                 "profit_amount": 1013.57,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 57.97,
+                "labor_share_percent": 6.64
             }
         },
         {
@@ -5294,7 +5454,9 @@
                 "total_price": 50530.55,
                 "profit_amount": 19201.58,
                 "tax_amount": 4042.44,
-                "effective_margin_percent": 38
+                "effective_margin_percent": 38,
+                "material_share_percent": 9.01,
+                "labor_share_percent": 13.74
             }
         },
         {
@@ -5366,7 +5528,9 @@
                 "total_price": 4.33,
                 "profit_amount": 1,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.09
+                "effective_margin_percent": 23.09,
+                "material_share_percent": 0,
+                "labor_share_percent": 26.96
             }
         },
         {
@@ -5429,7 +5593,9 @@
                 "total_price": 582.54,
                 "profit_amount": 134.43,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 19.77,
+                "labor_share_percent": 20.03
             }
         },
         {
@@ -5492,7 +5658,9 @@
                 "total_price": 587.06,
                 "profit_amount": 135.47,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 20.21,
+                "labor_share_percent": 19.87
             }
         },
         {
@@ -5555,7 +5723,9 @@
                 "total_price": 668.7,
                 "profit_amount": 154.31,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 27.14,
+                "labor_share_percent": 17.45
             }
         },
         {
@@ -5618,7 +5788,9 @@
                 "total_price": 674.19,
                 "profit_amount": 155.58,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 27.54,
+                "labor_share_percent": 17.3
             }
         },
         {
@@ -5681,7 +5853,9 @@
                 "total_price": 518.36,
                 "profit_amount": 119.62,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 12.7,
+                "labor_share_percent": 22.51
             }
         },
         {
@@ -5744,7 +5918,9 @@
                 "total_price": 519.46,
                 "profit_amount": 119.87,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 12.83,
+                "labor_share_percent": 22.46
             }
         },
         {
@@ -5807,7 +5983,9 @@
                 "total_price": 516.26,
                 "profit_amount": 119.14,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 12.44,
+                "labor_share_percent": 22.6
             }
         },
         {
@@ -5870,7 +6048,9 @@
                 "total_price": 516.26,
                 "profit_amount": 119.14,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 12.44,
+                "labor_share_percent": 22.6
             }
         },
         {
@@ -5933,7 +6113,9 @@
                 "total_price": 637.44,
                 "profit_amount": 147.1,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 24.7,
+                "labor_share_percent": 18.3
             }
         },
         {
@@ -5996,7 +6178,9 @@
                 "total_price": 640.89,
                 "profit_amount": 147.9,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 24.98,
+                "labor_share_percent": 18.2
             }
         },
         {
@@ -6059,7 +6243,9 @@
                 "total_price": 680.56,
                 "profit_amount": 157.05,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 28,
+                "labor_share_percent": 17.14
             }
         },
         {
@@ -6122,7 +6308,9 @@
                 "total_price": 685.66,
                 "profit_amount": 158.23,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 28.37,
+                "labor_share_percent": 17.02
             }
         },
         {
@@ -6185,7 +6373,9 @@
                 "total_price": 637.62,
                 "profit_amount": 147.14,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 24.71,
+                "labor_share_percent": 18.3
             }
         },
         {
@@ -6248,7 +6438,9 @@
                 "total_price": 643.5,
                 "profit_amount": 148.5,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 25.19,
+                "labor_share_percent": 18.13
             }
         },
         {
@@ -6311,7 +6503,9 @@
                 "total_price": 676.04,
                 "profit_amount": 156.01,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 27.68,
+                "labor_share_percent": 17.26
             }
         },
         {
@@ -6374,7 +6568,9 @@
                 "total_price": 683.74,
                 "profit_amount": 157.79,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 28.23,
+                "labor_share_percent": 17.06
             }
         },
         {
@@ -6437,7 +6633,9 @@
                 "total_price": 674.06,
                 "profit_amount": 155.55,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 27.53,
+                "labor_share_percent": 17.31
             }
         },
         {
@@ -6500,7 +6698,9 @@
                 "total_price": 681.41,
                 "profit_amount": 157.25,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 28.07,
+                "labor_share_percent": 17.12
             }
         },
         {
@@ -6563,7 +6763,9 @@
                 "total_price": 688.89,
                 "profit_amount": 158.97,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 28.6,
+                "labor_share_percent": 16.94
             }
         },
         {
@@ -6626,7 +6828,9 @@
                 "total_price": 697.25,
                 "profit_amount": 160.91,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 29.18,
+                "labor_share_percent": 16.73
             }
         },
         {
@@ -6689,7 +6893,9 @@
                 "total_price": 689.78,
                 "profit_amount": 159.18,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 28.66,
+                "labor_share_percent": 16.91
             }
         },
         {
@@ -6752,7 +6958,9 @@
                 "total_price": 698.17,
                 "profit_amount": 161.12,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 29.24,
+                "labor_share_percent": 16.71
             }
         },
         {
@@ -6815,7 +7023,9 @@
                 "total_price": 717.97,
                 "profit_amount": 165.69,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 30.55,
+                "labor_share_percent": 16.25
             }
         },
         {
@@ -6878,7 +7088,9 @@
                 "total_price": 728.34,
                 "profit_amount": 168.08,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 31.21,
+                "labor_share_percent": 16.02
             }
         },
         {
@@ -6941,7 +7153,9 @@
                 "total_price": 692.63,
                 "profit_amount": 159.83,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 28.86,
+                "labor_share_percent": 16.84
             }
         },
         {
@@ -7004,7 +7218,9 @@
                 "total_price": 701.25,
                 "profit_amount": 161.83,
                 "tax_amount": 0,
-                "effective_margin_percent": 23.08
+                "effective_margin_percent": 23.08,
+                "material_share_percent": 29.45,
+                "labor_share_percent": 16.64
             }
         }
     ]

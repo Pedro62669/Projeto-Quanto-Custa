@@ -347,7 +347,7 @@ class CompanyHourPricingTest extends TestCase
 
         // A versão do motor entra no snapshot: é ela que explica, daqui a um
         // ano, por que este orçamento tem o número que tem.
-        $this->assertSame('1.4.0', $quote->pricing_snapshot['engine_version'] ?? null);
+        $this->assertSame('1.5.0', $quote->pricing_snapshot['engine_version'] ?? null);
 
         // O QuoteResource aninha os custos, diferente do payload de simulação.
         $this->assertSame(2.4507, $response->json('data.costs.labor'));
