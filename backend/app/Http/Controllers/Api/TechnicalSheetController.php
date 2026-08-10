@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Material;
 use App\Models\Quote;
 use App\Services\Production\CutTemplateCalculator;
+use App\Services\Production\NestingCalculator;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -20,8 +22,11 @@ use Illuminate\Http\JsonResponse;
  */
 class TechnicalSheetController extends Controller
 {
-    public function __invoke(Quote $quote, CutTemplateCalculator $cutTemplate): JsonResponse
-    {
+    public function __invoke(
+        Quote $quote,
+        CutTemplateCalculator $cutTemplate,
+        NestingCalculator $nesting,
+    ): JsonResponse {
         // Mesma política do orçamento: quem não pode ver a proposta não pode
         // ver a ficha, que carrega as mesmas medidas e o mesmo cliente.
         $this->authorize('view', $quote);
@@ -90,8 +95,201 @@ class TechnicalSheetController extends Controller
                  * como se erra a retirada.
                  */
                 'picking_list' => $this->pickingList($quote, $gabarito),
+
+                /*
+                 * Plano de corte: a perda REAL, medida no arranjo das peças na
+                 * folha, ao lado da perda ORÇADA. É a diferença entre os dois
+                 * que interessa — "você orçou 12%, o corte dá 23%".
+                 *
+                 * Informativo por decisão: o preço continua saindo do percentual
+                 * cadastrado. Nesting é heurística, e um preço que depende de
+                 * heurística muda sem nenhuma entrada ter mudado.
+                 */
+                'cutting_plan' => $this->cuttingPlan($quote, $gabarito, $snapshot, $nesting),
             ],
         ]);
+    }
+
+    /**
+     * Agrupa as peças por MATERIAL e roda o nesting em cada grupo.
+     *
+     * Por material e não por orçamento porque cada um tem folha própria: uma
+     * caixa rígida usa papelão cinza e papel de revestimento, comprados em
+     * formatos diferentes. Um plano único com uma medida só descreveria uma
+     * chapa que não existe no estoque.
+     *
+     * @param  array<string, mixed>  $gabarito
+     * @param  array<string, mixed>  $snapshot
+     * @return array<string, mixed>
+     */
+    private function cuttingPlan(
+        Quote $quote,
+        array $gabarito,
+        array $snapshot,
+        NestingCalculator $nesting,
+    ): array {
+        $grupos = $quote->box_model->isFree()
+            ? $this->gruposDoModeloLivre($snapshot)
+            : $this->gruposComGeometria($quote, $gabarito);
+
+        $planos = [];
+        $avisos = [];
+
+        foreach ($grupos as $grupo) {
+            $material = $grupo['material'];
+
+            /*
+             * Sem a medida da folha não há plano de corte — e o aviso é mais
+             * útil que a ausência: ele diz exatamente qual cadastro completar
+             * para o número aparecer.
+             */
+            if (! $material?->sheet_width_mm || ! $material->sheet_length_mm) {
+                $avisos[] = sprintf(
+                    'Cadastre a medida da folha de "%s" para ver o plano de corte deste material.',
+                    $material?->name ?? 'material não identificado',
+                );
+
+                continue;
+            }
+
+            // Peças do LOTE, não de uma caixa: quem vai cortar corta o pedido
+            // inteiro, e a pergunta é quantas folhas comprar.
+            $pecas = array_map(fn (array $p): array => [
+                'name' => $p['name'],
+                'width_mm' => $p['width_mm'],
+                'length_mm' => $p['length_mm'],
+                'quantity' => $p['quantity'] * $quote->quantity,
+            ], $grupo['parts']);
+
+            try {
+                $plano = $nesting->plan(
+                    parts: $pecas,
+                    sheetWidthMm: (float) $material->sheet_width_mm,
+                    sheetLengthMm: (float) $material->sheet_length_mm,
+                    allowRotation: $material->grain_direction->permiteRotacao(),
+                );
+            } catch (\DomainException $e) {
+                // Peça maior que a folha: cadastro incoerente, não erro de
+                // programação. Vira aviso na ficha em vez de derrubá-la.
+                $avisos[] = $e->getMessage();
+
+                continue;
+            }
+
+            $perdaOrcada = (float) $material->default_waste_percent;
+
+            $planos[] = [
+                'material' => ['id' => $material->id, 'name' => $material->name],
+                'sheet' => [
+                    'width_mm' => (float) $material->sheet_width_mm,
+                    'length_mm' => (float) $material->sheet_length_mm,
+                ],
+                'kerf_mm' => NestingCalculator::DEFAULT_KERF_MM,
+                'grain_direction' => $material->grain_direction->value,
+                'rotation_allowed' => $material->grain_direction->permiteRotacao(),
+
+                'quoted_waste_percent' => $perdaOrcada,
+                'real_waste_percent' => $plano['waste_percent'],
+
+                /*
+                 * A linha que paga o módulo inteiro. Positiva significa que a
+                 * empresa está perdendo mais chapa do que cobra — e o valor sai
+                 * do lucro sem aparecer em lugar nenhum.
+                 */
+                'divergence_percent' => round($plano['waste_percent'] - $perdaOrcada, 2),
+
+                ...$plano,
+            ];
+        }
+
+        return [
+            'by_material' => $planos,
+            'warnings' => $avisos,
+            'notes' => [
+                'A perda real é medida no arranjo das peças na folha, com a lâmina '
+                    .'de '.NestingCalculator::DEFAULT_KERF_MM.'mm descontada a cada corte.',
+                'Os cortes são guilhotinados: atravessam a folha de ponta a ponta, '
+                    .'como na guilhotina da bancada.',
+
+                /*
+                 * O limite do método, dito na cara. Um plano de corte que se
+                 * apresenta como ótimo e não é faz a produção confiar num número
+                 * que a bancada vai desmentir.
+                 */
+                'O arranjo é uma boa solução, não a melhor possível: quem corta '
+                    .'pode conseguir mais peças por folha.',
+                'Este plano NÃO altera o preço do orçamento — ele mostra se a perda '
+                    .'cadastrada está próxima da real.',
+            ],
+        ];
+    }
+
+    /**
+     * Modelo livre: cada peça aponta para o próprio material.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return list<array{material: ?Material, parts: list<array<string, mixed>>}>
+     */
+    private function gruposDoModeloLivre(array $snapshot): array
+    {
+        $porMaterial = [];
+
+        foreach ($snapshot['custom_parts'] ?? [] as $part) {
+            $id = $part['material_id'] ?? null;
+
+            if ($id === null) {
+                continue;
+            }
+
+            $porMaterial[$id][] = [
+                'name' => $part['name'] ?? 'Peça',
+                'width_mm' => (float) $part['width_mm'],
+                'length_mm' => (float) $part['length_mm'],
+                'quantity' => (int) $part['quantity'],
+            ];
+        }
+
+        // Uma consulta para todos os materiais — o N+1 morava aqui.
+        $materiais = Material::query()->findMany(array_keys($porMaterial))->keyBy('id');
+
+        $grupos = [];
+
+        foreach ($porMaterial as $id => $parts) {
+            $grupos[] = ['material' => $materiais->get($id), 'parts' => $parts];
+        }
+
+        return $grupos;
+    }
+
+    /**
+     * Modelos com geometria: a estrutura sai do material principal do orçamento.
+     *
+     * O revestimento fica de fora por ora, e a razão é honesta: o orçamento
+     * grava `material_id` da estrutura, mas o material do revestimento entra
+     * como componente e só o CUSTO dele é persistido — não o id. Sem o id não
+     * há folha, e sem folha não há plano. Inventar uma medida seria pior que
+     * omitir.
+     *
+     * @param  array<string, mixed>  $gabarito
+     * @return list<array{material: ?Material, parts: list<array<string, mixed>>}>
+     */
+    private function gruposComGeometria(Quote $quote, array $gabarito): array
+    {
+        $pecas = array_map(fn (array $p): array => [
+            'name' => $p['name'],
+            'width_mm' => (float) $p['width_mm'],
+
+            // O gabarito chama de `height_mm` o que o nesting chama de
+            // comprimento: são o mesmo eixo da peça deitada na folha.
+            'length_mm' => (float) $p['height_mm'],
+            'quantity' => (int) $p['quantity'],
+        ], $gabarito['structure'] ?? []);
+
+        if ($pecas === []) {
+            return [];
+        }
+
+        return [['material' => $quote->material, 'parts' => $pecas]];
     }
 
     /**

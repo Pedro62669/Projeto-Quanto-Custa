@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\GrainDirection;
 use App\Enums\MaterialType;
 use App\Enums\MaterialUnit;
 use App\Traits\BelongsToTenant;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
+ * @property GrainDirection $grain_direction
  * @property MaterialType $type
  * @property MaterialUnit $cost_unit
  */
@@ -33,7 +35,7 @@ class Material extends Model
         'cost_unit', 'cost_per_unit', 'grammage_kg_per_m2',
         'sheet_width_mm', 'sheet_length_mm',
         'lot_quantity', 'lot_purchase_cost', 'lot_freight_cost',
-        'default_waste_percent', 'thickness_mm',
+        'default_waste_percent', 'thickness_mm', 'grain_direction',
         'color_hex', 'texture_url', 'is_active',
     ];
 
@@ -46,6 +48,7 @@ class Material extends Model
      */
     protected $attributes = [
         'default_waste_percent' => 10.00,
+        'grain_direction' => GrainDirection::None->value,
         'color_hex' => '#C8A06A',
         'is_active' => true,
     ];
@@ -64,6 +67,7 @@ class Material extends Model
             'lot_freight_cost' => 'float',
             'default_waste_percent' => 'float',
             'thickness_mm' => 'float',
+            'grain_direction' => GrainDirection::class,
             'is_active' => 'boolean',
         ];
     }
