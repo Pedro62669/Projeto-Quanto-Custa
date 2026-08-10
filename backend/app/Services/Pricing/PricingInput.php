@@ -100,6 +100,34 @@ final readonly class PricingInput
          * }|null
          */
         public ?array $cradle = null,
+
+        /**
+         * Peças medidas à mão — só no modelo livre.
+         *
+         * Chegam NORMALIZADAS, com `cost_per_m2` e `waste_percent` já
+         * resolvidos pelo controller a partir do material de cada peça. É o
+         * mesmo desenho de `wrapCostPerM2` e de `cradle.cost_per_unit`, e pela
+         * mesma razão: o motor tem gêmeo em TypeScript, que recebe números da
+         * API. Passar o model obrigaria o lado TS a reimplementar
+         * costPerSquareMeter() e a conversão por gramatura.
+         *
+         * Cada peça carrega a PRÓPRIA perda, e não a do orçamento: papelão
+         * cinza desperdiça 12% e tecido 15%, e um percentual único trataria os
+         * dois igual. A perda é propriedade do insumo — quem a define é o
+         * cadastro do material, como em todo o resto do sistema.
+         *
+         * `quantity` é POR CAIXA. Ver a migration.
+         *
+         * @var list<array{
+         *     role: string,
+         *     cost_per_m2: float,
+         *     waste_percent: float,
+         *     width_mm: float,
+         *     length_mm: float,
+         *     quantity: int
+         * }>
+         */
+        public array $customParts = [],
     ) {}
 
     /**
@@ -118,6 +146,7 @@ final readonly class PricingInput
         ?float $wrapCostPerM2 = null,
         array $hardware = [],
         ?array $cradle = null,
+        array $customParts = [],
     ): self {
         $boxModel = BoxModel::from($data['box_model'] ?? BoxModel::Rsc->value);
 
@@ -162,6 +191,14 @@ final readonly class PricingInput
 
             // O berço vale em qualquer modelo: caixa dobrada também acomoda.
             cradle: $cradle,
+
+            /*
+             * As peças só existem no modelo livre. Descartá-las nos demais é
+             * deliberado: um RSC que chegasse com peças somaria a planificação
+             * calculada MAIS os retângulos digitados, cobrando o material duas
+             * vezes — e o número sairia plausível, que é o pior tipo de erro.
+             */
+            customParts: $boxModel->isFree() ? $customParts : [],
         );
     }
 }

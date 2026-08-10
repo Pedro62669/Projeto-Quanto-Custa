@@ -126,6 +126,16 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
   rigid_magnet: { topo: true, fundo: false },
   rigid_magnet_side: { topo: true, fundo: false },
   rigid_magnet_wrap: { topo: true, fundo: false },
+  /*
+   * Modelo livre: não há caixa a desenhar.
+   *
+   * A entrada existe só para o mapa continuar exaustivo sobre BoxModel — é o
+   * TypeScript que cobra, e cobra bem: foi ele que pegou cada modelo novo que
+   * esquecemos de mapear. Quem renderiza o modelo livre é o editor de peças,
+   * não uma cena 3D: sem construção conhecida, qualquer caixa desenhada aqui
+   * seria uma ficção com aparência de conferência.
+   */
+  free: { topo: true, fundo: false },
 };
 
 /**

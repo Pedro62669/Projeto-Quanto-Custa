@@ -140,6 +140,38 @@ enum BoxModel: string
      */
     case RigidMagnetWrap = 'rigid_magnet_wrap';
 
+    /**
+     * Modelo livre: o usuário descreve as peças, o sistema soma.
+     *
+     * É o único caso do enum que NÃO tem geometria. Todos os outros derivam a
+     * planificação de largura, altura e profundidade por uma equação no
+     * BlankCalculator; aqui não há equação a aplicar, porque não há construção
+     * conhecida — é a caixa que o cliente desenhou, o expositor, o estojo com
+     * recorte, a peça que só existe uma vez.
+     *
+     * O que ele resolve: hoje, uma peça fora do catálogo obriga a escolher o
+     * modelo "mais parecido" e aceitar uma área que não corresponde ao que vai
+     * ser cortado. O preço sai, parece certo, e está errado — sem nada na tela
+     * que denuncie.
+     *
+     * O custo é a contrapartida honesta: quem escolhe o modelo livre assume
+     * medir as peças. Ver PricingEngine::customPartsConsumption() e
+     * QuoteCustomPart.
+     */
+    case Free = 'free';
+
+    /**
+     * Não há planificação a calcular: as peças vêm da mão do usuário.
+     *
+     * Quem consome: o motor (desvia do BlankCalculator), o gabarito de corte
+     * (lista as peças em vez de derivá-las) e a UI (mostra o editor de peças no
+     * lugar da cena 3D).
+     */
+    public function isFree(): bool
+    {
+        return $this === self::Free;
+    }
+
     public function label(): string
     {
         return match ($this) {
@@ -156,6 +188,7 @@ enum BoxModel: string
             self::RigidMagnet => 'Caixa ímã (rígida)',
             self::RigidMagnetSide => 'Caixa ímã com abas laterais',
             self::RigidMagnetWrap => 'Caixa ímã de aba envolvente',
+            self::Free => 'Modelo livre (peças medidas)',
         };
     }
 
@@ -279,6 +312,14 @@ enum BoxModel: string
             self::RigidMagnet => 19.0,
             self::RigidMagnetSide => 22.0,
             self::RigidMagnetWrap => 21.0,
+
+            /*
+             * Sem construção conhecida, não há tempo conhecido. 5 minutos é um
+             * ponto de partida deliberadamente medíocre: quem usa o modelo
+             * livre já está medindo as peças à mão, e vai medir o tempo também.
+             * Um número otimista aqui produziria margem que não existe.
+             */
+            self::Free => 5.0,
         };
     }
 }

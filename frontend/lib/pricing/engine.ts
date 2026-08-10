@@ -4,6 +4,7 @@ import type {
   CompanyHourBreakdown,
   CompanyHourParams,
   CostSettings,
+  CustomPartLine,
   EfficiencyPercent,
   EfficiencyScenarioResult,
   Material,
@@ -27,7 +28,7 @@ import type {
  *     o usuário se a API responder com uma versão diferente (motor defasado
  *     após um deploy parcial).
  */
-export const ENGINE_VERSION = "1.3.0";
+export const ENGINE_VERSION = "1.4.0";
 
 const MM2_PER_M2 = 1_000_000;
 const MM3_PER_M3 = 1_000_000_000;
@@ -448,6 +449,71 @@ export function isRigid(model: BoxModel): boolean {
 }
 
 /**
+ * Não há planificação a calcular: as peças vêm da mão do usuário.
+ * ⚠️ Espelha BoxModel::isFree() do PHP.
+ */
+export function isFree(model: BoxModel): boolean {
+  return model === "free";
+}
+
+/**
+ * Soma as peças medidas à mão do modelo livre.
+ *
+ * ⚠️ Espelha PricingEngine::customPartsConsumption() do PHP.
+ *
+ * Separa estrutura de revestimento porque são linhas diferentes da ficha de
+ * custo, e cada peça aplica a PRÓPRIA perda — o usuário mistura papelão (12%),
+ * kraft (8%) e tecido (15%) no mesmo orçamento, e um percentual único trataria
+ * os três igual.
+ */
+export function customPartsConsumption(parts: CustomPartLine[]): {
+  structureNetM2: number;
+  structureGrossM2: number;
+  structureCost: number;
+  wrapNetM2: number;
+  wrapGrossM2: number;
+  wrapCost: number;
+} {
+  if (parts.length === 0) {
+    /*
+     * Sem peça não há caixa. O PHP lança DomainException (que vira 422); aqui a
+     * mensagem é a mesma, para a tela dizer a mesma coisa que a API diria.
+     */
+    throw new Error(
+      "O modelo livre precisa de ao menos uma peça. " +
+        "Informe as chapas e folhas que serão cortadas, com medida e quantidade.",
+    );
+  }
+
+  const totais = {
+    structureNetM2: 0,
+    structureGrossM2: 0,
+    structureCost: 0,
+    wrapNetM2: 0,
+    wrapGrossM2: 0,
+    wrapCost: 0,
+  };
+
+  for (const part of parts) {
+    // Quantidade é POR CAIXA — o lote entra depois, com o resto do orçamento.
+    const liquida = ((part.width_mm * part.length_mm) / MM2_PER_M2) * part.quantity;
+    const bruta = liquida * (1 + part.waste_percent / 100);
+
+    if (part.role === "wrap") {
+      totais.wrapNetM2 += liquida;
+      totais.wrapGrossM2 += bruta;
+      totais.wrapCost += bruta * part.cost_per_m2;
+    } else {
+      totais.structureNetM2 += liquida;
+      totais.structureGrossM2 += bruta;
+      totais.structureCost += bruta * part.cost_per_m2;
+    }
+  }
+
+  return totais;
+}
+
+/**
  * Área do REVESTIMENTO por peça, em m² — só na cartonagem rígida.
  *
  * A mesma planificação do cinza acrescida da virada em todas as bordas, mais a
@@ -813,6 +879,19 @@ export function blankDimensions(
 
       return { width: widest, height: totalArea / widest };
     }
+
+    case "free":
+      /*
+       * O modelo livre não tem planificação — chegar aqui é erro de quem
+       * chamou, não entrada inválida do usuário.
+       *
+       * calculatePricing() desvia antes, em isFree(). Devolver {0,0} em
+       * silêncio seria pior que estourar: produziria uma área zero que se
+       * propaga até um preço só de mão de obra, plausível e errado.
+       */
+      throw new Error(
+        "blankDimensions não se aplica ao modelo livre — as peças vêm de custom_parts.",
+      );
   }
 }
 
@@ -1105,57 +1184,91 @@ export function calculatePricing({
   settings,
 }: CalculateArgs): PricingBreakdown {
   // ── 1. Geometria ──────────────────────────────────────────────────────────
-  //
-  // A tampa é resolvida ANTES do plano de corte: o consumo de material precisa
-  // refletir a tampa REAL, não a sugerida.
-  const lid = resolveLidDimensions(
-    spec.box_model,
-    spec.width_mm,
-    spec.height_mm,
-    spec.depth_mm,
-    material.thickness_mm ?? 0,
-    spec,
-  );
+  let lid: LidDimensions | null;
+  let blank: { width: number; height: number };
+  let netAreaPerUnit: number;
+  let grossAreaPerUnit: number;
+  let materialCost: number;
+  let netWrapAreaPerUnit: number;
+  let grossWrapAreaPerUnit: number;
+  let wrapCost: number;
 
-  const blank = blankDimensions(
-    spec.box_model,
-    spec.width_mm,
-    spec.height_mm,
-    spec.depth_mm,
-    material.thickness_mm ?? 0,
-    lid,
-  );
+  if (isFree(spec.box_model)) {
+    /*
+     * Modelo livre: não há equação a aplicar.
+     *
+     * Todos os outros modelos derivam a planificação de largura, altura e
+     * profundidade. Aqui a construção é desconhecida — é a caixa que o cliente
+     * desenhou — e quem mede é o usuário. O motor apenas soma o que ele mediu.
+     */
+    const consumo = customPartsConsumption(spec.custom_parts ?? []);
 
-  const netAreaPerUnit = (blank.width * blank.height) / MM2_PER_M2;
+    lid = null;
 
-  // Desperdício incide sobre a ÁREA (aparas, refile, setup), não sobre o custo.
-  const grossAreaPerUnit = netAreaPerUnit * (1 + spec.waste_percent / 100);
+    // Não existe UM blank: existem N retângulos. Zero é a resposta honesta, e é
+    // o que a ficha técnica lê para listar as peças em vez de desenhar.
+    blank = { width: 0, height: 0 };
+
+    netAreaPerUnit = consumo.structureNetM2;
+    grossAreaPerUnit = consumo.structureGrossM2;
+    materialCost = consumo.structureCost;
+
+    netWrapAreaPerUnit = consumo.wrapNetM2;
+    grossWrapAreaPerUnit = consumo.wrapGrossM2;
+    wrapCost = consumo.wrapCost;
+  } else {
+    // A tampa é resolvida ANTES do plano de corte: o consumo de material precisa
+    // refletir a tampa REAL, não a sugerida.
+    lid = resolveLidDimensions(
+      spec.box_model,
+      spec.width_mm,
+      spec.height_mm,
+      spec.depth_mm,
+      material.thickness_mm ?? 0,
+      spec,
+    );
+
+    blank = blankDimensions(
+      spec.box_model,
+      spec.width_mm,
+      spec.height_mm,
+      spec.depth_mm,
+      material.thickness_mm ?? 0,
+      lid,
+    );
+
+    netAreaPerUnit = (blank.width * blank.height) / MM2_PER_M2;
+
+    // Desperdício incide sobre a ÁREA (aparas, refile, setup), não sobre o custo.
+    grossAreaPerUnit = netAreaPerUnit * (1 + spec.waste_percent / 100);
+
+    // ── 2. Matéria-prima ────────────────────────────────────────────────────
+    materialCost = grossAreaPerUnit * material.cost_per_m2;
+
+    /*
+     * Revestimento: a segunda área da cartonagem rígida.
+     *
+     * O papel cobre o cinza e vira sobre as bordas, então consome MAIS chapa que
+     * a estrutura — e custa mais por m². Tratar os dois como um material só
+     * subestimaria justamente o mais caro. O desperdício incide igual: a mesma
+     * guilhotina, as mesmas aparas.
+     */
+    netWrapAreaPerUnit = wrapAreaInSquareMeters(
+      spec.box_model,
+      spec.width_mm,
+      spec.height_mm,
+      spec.depth_mm,
+      material.thickness_mm ?? 0,
+      lid,
+    );
+
+    grossWrapAreaPerUnit = netWrapAreaPerUnit * (1 + spec.waste_percent / 100);
+
+    wrapCost =
+      spec.wrap_cost_per_m2 == null ? 0 : grossWrapAreaPerUnit * spec.wrap_cost_per_m2;
+  }
+
   const grossAreaTotal = grossAreaPerUnit * spec.quantity;
-
-  // ── 2. Matéria-prima ──────────────────────────────────────────────────────
-  const materialCost = grossAreaPerUnit * material.cost_per_m2;
-
-  /*
-   * Revestimento: a segunda área da cartonagem rígida.
-   *
-   * O papel cobre o cinza e vira sobre as bordas, então consome MAIS chapa que
-   * a estrutura — e custa mais por m². Tratar os dois como um material só
-   * subestimaria justamente o mais caro. O desperdício incide igual: a mesma
-   * guilhotina, as mesmas aparas.
-   */
-  const netWrapAreaPerUnit = wrapAreaInSquareMeters(
-    spec.box_model,
-    spec.width_mm,
-    spec.height_mm,
-    spec.depth_mm,
-    material.thickness_mm ?? 0,
-    lid,
-  );
-
-  const grossWrapAreaPerUnit = netWrapAreaPerUnit * (1 + spec.waste_percent / 100);
-
-  const wrapCost =
-    spec.wrap_cost_per_m2 == null ? 0 : grossWrapAreaPerUnit * spec.wrap_cost_per_m2;
 
   /*
    * Ferragem: contada, não medida. Sem desperdício percentual em cima — ímã

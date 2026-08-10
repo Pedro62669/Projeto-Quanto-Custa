@@ -91,6 +91,48 @@ class SimulateQuoteRequest extends FormRequest
             // Fração da altura interna. Abaixo de 10% o berço não segura nada;
             // acima de 100% ele não cabe na caixa.
             'cradle_height_ratio' => ['nullable', 'numeric', 'min:0.1', 'max:1'],
+
+            /*
+             * Peças medidas à mão — modelo livre.
+             *
+             * `required` quando o modelo é `free`: sem peça não há caixa, e um
+             * modelo livre vazio produziria um orçamento só de mão de obra —
+             * um preço que parece calculado e não descreve nada. O motor também
+             * recusa (DomainException), mas errar aqui devolve o campo exato ao
+             * formulário em vez de uma mensagem geral.
+             *
+             * Nos outros modelos as peças são simplesmente descartadas: ver
+             * PricingInput::fromValidated().
+             */
+            'custom_parts' => [
+                Rule::requiredIf(fn () => $this->input('box_model') === BoxModel::Free->value),
+                'array', 'max:60',
+            ],
+            'custom_parts.*.material_id' => [
+                'required', 'integer',
+                Rule::exists('materials', 'id')->where('is_active', true),
+            ],
+            'custom_parts.*.name' => ['required', 'string', 'max:120'],
+
+            /*
+             * Só estrutura e revestimento. Ferragem e berço continuam em
+             * `components`, onde já funcionam para qualquer modelo — ímã é
+             * contado, não medido, e berço tem parâmetros de construção
+             * próprios. Aceitá-los aqui criaria um segundo caminho para o mesmo
+             * custo, e os dois divergiriam.
+             */
+            'custom_parts.*.role' => ['nullable', Rule::in([
+                ComponentRole::Structure->value,
+                ComponentRole::Wrap->value,
+            ])],
+
+            // Mesmos limites físicos das dimensões da caixa: abaixo de 1mm não
+            // se corta, acima de 3m não há chapa.
+            'custom_parts.*.width_mm' => ['required', 'integer', 'min:1', 'max:3000'],
+            'custom_parts.*.length_mm' => ['required', 'integer', 'min:1', 'max:3000'],
+
+            // Por CAIXA, não pelo lote — ver a migration.
+            'custom_parts.*.quantity' => ['required', 'integer', 'min:1', 'max:500'],
         ];
     }
 
@@ -101,6 +143,12 @@ class SimulateQuoteRequest extends FormRequest
             'material_id.exists' => 'A matéria-prima selecionada não existe ou está inativa.',
             'components.*.material_id.exists' => 'Um dos materiais da lista não existe ou está inativo.',
             'components.*.role.enum' => 'O papel do material deve ser estrutura, revestimento ou ferragem.',
+            'custom_parts.required' => 'O modelo livre precisa de ao menos uma peça. '
+                .'Informe as chapas e folhas que serão cortadas, com medida e quantidade.',
+            'custom_parts.*.material_id.exists' => 'Uma das peças aponta para um material que não existe ou está inativo.',
+            'custom_parts.*.role.in' => 'A peça só pode ser estrutura ou revestimento. '
+                .'Ferragem e berço entram na lista de materiais, não nas peças.',
+            'custom_parts.*.name.required' => 'Dê um nome a cada peça — é por ele que a produção vai identificá-la.',
             'lid_width_mm.gte' => 'A tampa encaixa por fora: sua largura não pode ser menor que a da caixa.',
             'lid_depth_mm.gte' => 'A tampa encaixa por fora: sua profundidade não pode ser menor que a da caixa.',
             '*.min' => 'O campo :attribute está abaixo do mínimo permitido.',

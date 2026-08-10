@@ -1,6 +1,6 @@
 {
-    "engine_version": "1.3.0",
-    "generated_at": "2026-08-10T00:09:34+00:00",
+    "engine_version": "1.4.0",
+    "generated_at": "2026-08-10T19:01:03+00:00",
     "cases": [
         {
             "name": "rsc-padrao",
@@ -33,7 +33,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -95,7 +96,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -157,7 +159,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -219,7 +222,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -281,7 +285,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -343,7 +348,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -405,7 +411,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -467,7 +474,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -529,7 +537,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.531568,
@@ -591,7 +600,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.531568,
@@ -653,7 +663,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.545563,
@@ -715,7 +726,8 @@
                 "lid_height_mm": 120,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.652608,
@@ -782,7 +794,8 @@
                         "quantity": 4
                     }
                 ],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.531568,
@@ -853,7 +866,8 @@
                         "quantity": 1
                     }
                 ],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.531568,
@@ -920,7 +934,8 @@
                         "quantity": 2
                     }
                 ],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -982,7 +997,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.527256,
@@ -1044,7 +1060,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.559656,
@@ -1106,7 +1123,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.540614,
@@ -1168,7 +1186,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.527256,
@@ -1230,7 +1249,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.182356,
@@ -1297,7 +1317,8 @@
                         "quantity": 4
                     }
                 ],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.559656,
@@ -1359,7 +1380,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.5616,
@@ -1426,7 +1448,8 @@
                         "quantity": 4
                     }
                 ],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.6232,
@@ -1493,7 +1516,8 @@
                         "quantity": 2
                     }
                 ],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.567837,
@@ -1555,7 +1579,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.642043,
@@ -1617,7 +1642,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": 22.5,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.190537,
@@ -1686,7 +1712,8 @@
                     "columns": 1,
                     "height_ratio": 1,
                     "strip_thickness_mm": 0
-                }
+                },
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -1755,7 +1782,8 @@
                     "columns": 1,
                     "height_ratio": 1,
                     "strip_thickness_mm": 0
-                }
+                },
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -1824,7 +1852,8 @@
                     "columns": 1,
                     "height_ratio": 1,
                     "strip_thickness_mm": 0
-                }
+                },
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -1893,7 +1922,8 @@
                     "columns": 1,
                     "height_ratio": 1,
                     "strip_thickness_mm": 0
-                }
+                },
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -1962,7 +1992,8 @@
                     "columns": 4,
                     "height_ratio": 1,
                     "strip_thickness_mm": 0
-                }
+                },
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2031,7 +2062,8 @@
                     "columns": 1,
                     "height_ratio": 1,
                     "strip_thickness_mm": 0
-                }
+                },
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2100,7 +2132,8 @@
                     "columns": 8,
                     "height_ratio": 1,
                     "strip_thickness_mm": 3
-                }
+                },
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.0715,
@@ -2169,7 +2202,8 @@
                     "columns": 1,
                     "height_ratio": 0.5,
                     "strip_thickness_mm": 0
-                }
+                },
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2243,7 +2277,8 @@
                     "columns": 1,
                     "height_ratio": 1,
                     "strip_thickness_mm": 0
-                }
+                },
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.6232,
@@ -2310,7 +2345,8 @@
                         "quantity": 4
                     }
                 ],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.531568,
@@ -2372,7 +2408,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2434,7 +2471,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2496,7 +2534,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2558,7 +2597,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2620,7 +2660,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2682,7 +2723,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2744,7 +2786,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2806,7 +2849,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2868,7 +2912,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -2930,7 +2975,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.350532,
@@ -2992,7 +3038,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.0015,
@@ -3054,7 +3101,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 72.21,
@@ -3116,7 +3164,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.145614,
@@ -3178,7 +3227,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -3240,7 +3290,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -3302,7 +3353,8 @@
                 "lid_height_mm": 120,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.6344,
@@ -3364,7 +3416,8 @@
                 "lid_height_mm": 120,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.599336,
@@ -3426,7 +3479,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.530677,
@@ -3488,7 +3542,8 @@
                 "lid_height_mm": 95.5,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.593325,
@@ -3550,7 +3605,8 @@
                 "lid_height_mm": 999,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.1824,
@@ -3612,7 +3668,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.115969,
@@ -3674,7 +3731,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.128093,
@@ -3736,7 +3794,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.115969,
@@ -3798,7 +3857,8 @@
                 "lid_height_mm": 130,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.146498,
@@ -3860,7 +3920,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.118015,
@@ -3922,7 +3983,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.001237,
@@ -3984,7 +4046,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.54145,
@@ -4046,7 +4109,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.567546,
@@ -4108,7 +4172,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.076992,
@@ -4170,7 +4235,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.4145,
@@ -4232,7 +4298,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.447624,
@@ -4294,7 +4361,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.47782,
@@ -4356,7 +4424,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.457411,
@@ -4418,7 +4487,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.506021,
@@ -4480,7 +4550,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.207829,
@@ -4542,7 +4613,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.594167,
@@ -4604,7 +4676,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.078288,
@@ -4666,7 +4739,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.47141,
@@ -4728,7 +4802,8 @@
                 "lid_height_mm": 999,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.447624,
@@ -4790,7 +4865,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.783747,
@@ -4819,6 +4895,478 @@
                 "profit_amount": 68005.41,
                 "tax_amount": 12953.34,
                 "effective_margin_percent": 42
+            }
+        },
+        {
+            "name": "livre-uma-peca",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0,
+                "use_company_hour": false,
+                "company_minute_cost": null
+            },
+            "spec": {
+                "box_model": "free",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "wrap_cost_per_m2": null,
+                "hardware": [],
+                "cradle": null,
+                "custom_parts": [
+                    {
+                        "role": "structure",
+                        "cost_per_m2": 3.2,
+                        "waste_percent": 12,
+                        "width_mm": 300,
+                        "length_mm": 200,
+                        "quantity": 1
+                    }
+                ]
+            },
+            "expected": {
+                "area_m2_per_unit": 0.06,
+                "area_m2_total": 6.72,
+                "blank_width_mm": 0,
+                "blank_height_mm": 0,
+                "wrap_area_m2_per_unit": 0,
+                "cradle_area_m2_per_unit": 0,
+                "cradle_volume_m3_per_unit": 0,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 0.215,
+                "wrap_cost": 0,
+                "hardware_cost": 0,
+                "cradle_cost": 0,
+                "cradle_minutes": 0,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.5442,
+                "unit_price": 4.6075,
+                "total_cost": 354.42,
+                "total_price": 460.75,
+                "profit_amount": 106.33,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "livre-perdas-diferentes",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0,
+                "use_company_hour": false,
+                "company_minute_cost": null
+            },
+            "spec": {
+                "box_model": "free",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 45,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "wrap_cost_per_m2": null,
+                "hardware": [],
+                "cradle": null,
+                "custom_parts": [
+                    {
+                        "role": "structure",
+                        "cost_per_m2": 3.2,
+                        "waste_percent": 12,
+                        "width_mm": 300,
+                        "length_mm": 200,
+                        "quantity": 2
+                    },
+                    {
+                        "role": "structure",
+                        "cost_per_m2": 3.2,
+                        "waste_percent": 8,
+                        "width_mm": 150,
+                        "length_mm": 200,
+                        "quantity": 4
+                    }
+                ]
+            },
+            "expected": {
+                "area_m2_per_unit": 0.24,
+                "area_m2_total": 26.4,
+                "blank_width_mm": 0,
+                "blank_height_mm": 0,
+                "wrap_area_m2_per_unit": 0,
+                "cradle_area_m2_per_unit": 0,
+                "cradle_volume_m3_per_unit": 0,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 0.8448,
+                "wrap_cost": 0,
+                "hardware_cost": 0,
+                "cradle_cost": 0,
+                "cradle_minutes": 0,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 4.174,
+                "unit_price": 5.4262,
+                "total_cost": 417.4,
+                "total_price": 542.62,
+                "profit_amount": 125.22,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "livre-com-revestimento",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0,
+                "use_company_hour": false,
+                "company_minute_cost": null
+            },
+            "spec": {
+                "box_model": "free",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 100,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "wrap_cost_per_m2": null,
+                "hardware": [],
+                "cradle": null,
+                "custom_parts": [
+                    {
+                        "role": "structure",
+                        "cost_per_m2": 3.2,
+                        "waste_percent": 12,
+                        "width_mm": 300,
+                        "length_mm": 200,
+                        "quantity": 1
+                    },
+                    {
+                        "role": "wrap",
+                        "cost_per_m2": 22.5,
+                        "waste_percent": 8,
+                        "width_mm": 330,
+                        "length_mm": 230,
+                        "quantity": 1
+                    }
+                ]
+            },
+            "expected": {
+                "area_m2_per_unit": 0.06,
+                "area_m2_total": 6.72,
+                "blank_width_mm": 0,
+                "blank_height_mm": 0,
+                "wrap_area_m2_per_unit": 0.0759,
+                "cradle_area_m2_per_unit": 0,
+                "cradle_volume_m3_per_unit": 0,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 0.215,
+                "wrap_cost": 1.8444,
+                "hardware_cost": 0,
+                "cradle_cost": 0,
+                "cradle_minutes": 0,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 5.3886,
+                "unit_price": 7.0051,
+                "total_cost": 538.86,
+                "total_price": 700.51,
+                "profit_amount": 161.65,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "livre-multiplas-por-caixa",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0,
+                "use_company_hour": false,
+                "company_minute_cost": null
+            },
+            "spec": {
+                "box_model": "free",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 250,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "wrap_cost_per_m2": null,
+                "hardware": [],
+                "cradle": null,
+                "custom_parts": [
+                    {
+                        "role": "structure",
+                        "cost_per_m2": 4.1,
+                        "waste_percent": 12,
+                        "width_mm": 420,
+                        "length_mm": 310,
+                        "quantity": 6
+                    },
+                    {
+                        "role": "wrap",
+                        "cost_per_m2": 18.75,
+                        "waste_percent": 15,
+                        "width_mm": 450,
+                        "length_mm": 340,
+                        "quantity": 2
+                    }
+                ]
+            },
+            "expected": {
+                "area_m2_per_unit": 0.7812,
+                "area_m2_total": 218.736,
+                "blank_width_mm": 0,
+                "blank_height_mm": 0,
+                "wrap_area_m2_per_unit": 0.306,
+                "cradle_area_m2_per_unit": 0,
+                "cradle_volume_m3_per_unit": 0,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 3.5873,
+                "wrap_cost": 6.5981,
+                "hardware_cost": 0,
+                "cradle_cost": 0,
+                "cradle_minutes": 0,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 13.5146,
+                "unit_price": 17.5689,
+                "total_cost": 3378.65,
+                "total_price": 4392.22,
+                "profit_amount": 1013.57,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.08
+            }
+        },
+        {
+            "name": "livre-tudo-combinado",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 12,
+                "tax_percent": 8,
+                "use_company_hour": false,
+                "company_minute_cost": null
+            },
+            "spec": {
+                "box_model": "free",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 1750,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 8.5,
+                "profit_margin_percent": 38,
+                "pricing_mode": "margin",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "wrap_cost_per_m2": null,
+                "hardware": [],
+                "cradle": null,
+                "custom_parts": [
+                    {
+                        "role": "structure",
+                        "cost_per_m2": 5.4321,
+                        "waste_percent": 12.5,
+                        "width_mm": 287.3,
+                        "length_mm": 141.9,
+                        "quantity": 3
+                    },
+                    {
+                        "role": "structure",
+                        "cost_per_m2": 5.4321,
+                        "waste_percent": 12.5,
+                        "width_mm": 91.7,
+                        "length_mm": 141.9,
+                        "quantity": 2
+                    },
+                    {
+                        "role": "wrap",
+                        "cost_per_m2": 28.3333,
+                        "waste_percent": 9.75,
+                        "width_mm": 317.3,
+                        "length_mm": 171.9,
+                        "quantity": 1
+                    }
+                ]
+            },
+            "expected": {
+                "area_m2_per_unit": 0.148328,
+                "area_m2_total": 292.020888,
+                "blank_width_mm": 0,
+                "blank_height_mm": 0,
+                "wrap_area_m2_per_unit": 0.054544,
+                "cradle_area_m2_per_unit": 0,
+                "cradle_volume_m3_per_unit": 0,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 0.9064,
+                "wrap_cost": 1.6961,
+                "hardware_cost": 0,
+                "cradle_cost": 0,
+                "cradle_minutes": 0,
+                "labor_cost": 3.9667,
+                "machine_cost": 6.375,
+                "energy_cost": 0.9775,
+                "overhead_cost": 1.6706,
+                "unit_cost": 15.5923,
+                "unit_price": 28.8746,
+                "total_cost": 27286.53,
+                "total_price": 50530.55,
+                "profit_amount": 19201.58,
+                "tax_amount": 4042.44,
+                "effective_margin_percent": 38
+            }
+        },
+        {
+            "name": "livre-peca-minima",
+            "material": {
+                "cost_per_m2": 3.2,
+                "thickness_mm": 0
+            },
+            "settings": {
+                "energy_tariff_per_kwh": 0.92,
+                "machine_hour_rate": 45,
+                "machine_power_kw": 7.5,
+                "labor_hour_rate": 28,
+                "overhead_percent": 0,
+                "tax_percent": 0,
+                "use_company_hour": false,
+                "company_minute_cost": null
+            },
+            "spec": {
+                "box_model": "free",
+                "width_mm": 300,
+                "height_mm": 200,
+                "depth_mm": 150,
+                "quantity": 1,
+                "waste_percent": 10,
+                "production_minutes_per_unit": 2.5,
+                "profit_margin_percent": 30,
+                "pricing_mode": "markup",
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "wrap_cost_per_m2": null,
+                "hardware": [],
+                "cradle": null,
+                "custom_parts": [
+                    {
+                        "role": "structure",
+                        "cost_per_m2": 3.2,
+                        "waste_percent": 0,
+                        "width_mm": 1,
+                        "length_mm": 1,
+                        "quantity": 1
+                    }
+                ]
+            },
+            "expected": {
+                "area_m2_per_unit": 1.0e-6,
+                "area_m2_total": 1.0e-6,
+                "blank_width_mm": 0,
+                "blank_height_mm": 0,
+                "wrap_area_m2_per_unit": 0,
+                "cradle_area_m2_per_unit": 0,
+                "cradle_volume_m3_per_unit": 0,
+                "lid_width_mm": null,
+                "lid_depth_mm": null,
+                "lid_height_mm": null,
+                "material_cost": 0,
+                "wrap_cost": 0,
+                "hardware_cost": 0,
+                "cradle_cost": 0,
+                "cradle_minutes": 0,
+                "labor_cost": 1.1667,
+                "machine_cost": 1.875,
+                "energy_cost": 0.2875,
+                "overhead_cost": 0,
+                "unit_cost": 3.3292,
+                "unit_price": 4.3279,
+                "total_cost": 3.33,
+                "total_price": 4.33,
+                "profit_amount": 1,
+                "tax_amount": 0,
+                "effective_margin_percent": 23.09
             }
         },
         {
@@ -4852,7 +5400,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.32725,
@@ -4914,7 +5463,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.337132,
@@ -4976,7 +5526,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.515536,
@@ -5038,7 +5589,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.527536,
@@ -5100,7 +5652,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.187,
@@ -5162,7 +5715,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.1894,
@@ -5224,7 +5778,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.1824,
@@ -5286,7 +5841,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.1824,
@@ -5348,7 +5904,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.447215,
@@ -5410,7 +5967,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.454763,
@@ -5472,7 +6030,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.54145,
@@ -5534,7 +6093,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.552586,
@@ -5596,7 +6156,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.447624,
@@ -5658,7 +6219,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.460454,
@@ -5720,7 +6282,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.531568,
@@ -5782,7 +6345,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.548392,
@@ -5844,7 +6408,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.527256,
@@ -5906,7 +6471,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.543312,
@@ -5968,7 +6534,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.559656,
@@ -6030,7 +6597,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.57792,
@@ -6092,7 +6660,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.5616,
@@ -6154,7 +6723,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.579936,
@@ -6216,7 +6786,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.6232,
@@ -6278,7 +6849,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.645856,
@@ -6340,7 +6912,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.567837,
@@ -6402,7 +6975,8 @@
                 "lid_height_mm": null,
                 "wrap_cost_per_m2": null,
                 "hardware": [],
-                "cradle": null
+                "cradle": null,
+                "custom_parts": []
             },
             "expected": {
                 "area_m2_per_unit": 0.586656,

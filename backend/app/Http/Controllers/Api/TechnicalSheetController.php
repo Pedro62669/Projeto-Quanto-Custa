@@ -49,6 +49,14 @@ class TechnicalSheetController extends Controller
                 'depth' => (float) $quote->lid_depth_mm,
                 'height' => (float) $quote->lid_height_mm,
             ] : null,
+
+            /*
+             * As peças do modelo livre saem do SNAPSHOT pela mesma razão que a
+             * espessura: as linhas em `quote_custom_parts` continuam editáveis,
+             * e a produção precisa cortar o que foi VENDIDO, não o que alguém
+             * ajustou depois de a proposta ter saído.
+             */
+            customParts: $snapshot['custom_parts'] ?? [],
         );
 
         return response()->json([

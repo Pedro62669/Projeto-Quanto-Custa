@@ -38,8 +38,13 @@ final class PricingEngine
      *
      * 1.3.0 — berços de acomodação. Minor pela mesma razão: sem berço na
      * entrada, o custo e os minutos extras saem zero.
+     *
+     * 1.4.0 — modelo livre. Ainda minor, e vale explicar por quê: o ramo novo
+     * só é alcançado por `box_model: free`, um valor que não existia antes. Todo
+     * orçamento já gravado escolheu outro modelo, e para esses o caminho é o
+     * mesmo bit a bit — o BlankCalculator continua sendo quem responde.
      */
-    public const VERSION = '1.3.0';
+    public const VERSION = '1.4.0';
 
     private const MINUTES_PER_HOUR = 60.0;
 
@@ -49,67 +54,102 @@ final class PricingEngine
         $settings = $input->settings;
 
         // ── 1. Geometria: quanto material a peça consome ────────────────────
-        $blankCalculator = new BlankCalculator(thicknessMm: $material->thickness_mm ?? 0.0);
+        if ($input->boxModel->isFree()) {
+            /*
+             * Modelo livre: não há equação a aplicar.
+             *
+             * Todos os outros modelos derivam a planificação de largura, altura
+             * e profundidade. Aqui a construção é desconhecida — é a caixa que o
+             * cliente desenhou — e quem mede é o usuário. O motor apenas soma o
+             * que ele mediu.
+             *
+             * O BlankCalculator inteiro fica de fora, e é isso que torna o
+             * modelo honesto: forçar uma peça fora do catálogo no molde "mais
+             * parecido" produziria uma área que não corresponde ao que vai ser
+             * cortado, e um preço plausível e errado.
+             */
+            $consumo = $this->customPartsConsumption($input->customParts);
 
-        /*
-         * A tampa é resolvida ANTES do plano de corte, e de propósito: o
-         * consumo de material precisa refletir a tampa REAL. Calcular o blank
-         * com a tampa sugerida faria uma tampa mais alta sair de graça.
-         */
-        $lid = $blankCalculator->resolveLidDimensions(
-            $input->boxModel,
-            $input->widthMm,
-            $input->heightMm,
-            $input->depthMm,
-            [
-                'width' => $input->lidWidthMm,
-                'depth' => $input->lidDepthMm,
-                'height' => $input->lidHeightMm,
-            ],
-        );
+            $lid = null;
 
-        $blank = $blankCalculator->blankDimensions(
-            $input->boxModel,
-            $input->widthMm,
-            $input->heightMm,
-            $input->depthMm,
-            $lid,
-        );
+            /*
+             * Não existe UM blank: existem N retângulos. Zero aqui é a resposta
+             * honesta, e é o que a ficha técnica lê para saber que precisa
+             * listar as peças em vez de desenhar uma planificação.
+             */
+            $blank = ['width' => 0.0, 'height' => 0.0];
 
-        $netAreaPerUnit = ($blank['width'] * $blank['height']) / 1_000_000.0;
+            $netAreaPerUnit = $consumo['structure_net_m2'];
+            $grossAreaPerUnit = $consumo['structure_gross_m2'];
+            $materialCost = $consumo['structure_cost'];
 
-        // Desperdício: aparas, refile e perdas de setup. Incide sobre a área,
-        // não sobre o custo — mantém o número interpretável em m².
-        $grossAreaPerUnit = $netAreaPerUnit * (1 + $input->wastePercent / 100);
+            $netWrapAreaPerUnit = $consumo['wrap_net_m2'];
+            $grossWrapAreaPerUnit = $consumo['wrap_gross_m2'];
+            $wrapCost = $consumo['wrap_cost'];
+        } else {
+            $blankCalculator = new BlankCalculator(thicknessMm: $material->thickness_mm ?? 0.0);
+
+            /*
+             * A tampa é resolvida ANTES do plano de corte, e de propósito: o
+             * consumo de material precisa refletir a tampa REAL. Calcular o blank
+             * com a tampa sugerida faria uma tampa mais alta sair de graça.
+             */
+            $lid = $blankCalculator->resolveLidDimensions(
+                $input->boxModel,
+                $input->widthMm,
+                $input->heightMm,
+                $input->depthMm,
+                [
+                    'width' => $input->lidWidthMm,
+                    'depth' => $input->lidDepthMm,
+                    'height' => $input->lidHeightMm,
+                ],
+            );
+
+            $blank = $blankCalculator->blankDimensions(
+                $input->boxModel,
+                $input->widthMm,
+                $input->heightMm,
+                $input->depthMm,
+                $lid,
+            );
+
+            $netAreaPerUnit = ($blank['width'] * $blank['height']) / 1_000_000.0;
+
+            // Desperdício: aparas, refile e perdas de setup. Incide sobre a área,
+            // não sobre o custo — mantém o número interpretável em m².
+            $grossAreaPerUnit = $netAreaPerUnit * (1 + $input->wastePercent / 100);
+
+            // ── 2. Custo da matéria-prima ───────────────────────────────────
+            // costPerSquareMeter() normaliza materiais cotados em kg via gramatura.
+            $materialCost = $grossAreaPerUnit * $material->costPerSquareMeter();
+
+            /*
+             * Revestimento: a segunda área da cartonagem rígida.
+             *
+             * O papel cobre o cinza e vira sobre as bordas, então consome MAIS
+             * chapa que a estrutura. E custa mais por m² — revestimento bom passa
+             * de R$ 20 onde o cinza fica em R$ 5. Tratar os dois como um material
+             * só subestimaria justamente o mais caro dos dois.
+             *
+             * O desperdício incide igual: a mesma guilhotina, as mesmas aparas.
+             */
+            $netWrapAreaPerUnit = $blankCalculator->wrapAreaInSquareMeters(
+                $input->boxModel,
+                $input->widthMm,
+                $input->heightMm,
+                $input->depthMm,
+                $lid,
+            );
+
+            $grossWrapAreaPerUnit = $netWrapAreaPerUnit * (1 + $input->wastePercent / 100);
+
+            $wrapCost = $input->wrapCostPerM2 === null
+                ? 0.0
+                : $grossWrapAreaPerUnit * $input->wrapCostPerM2;
+        }
+
         $grossAreaTotal = $grossAreaPerUnit * $input->quantity;
-
-        // ── 2. Custo da matéria-prima ───────────────────────────────────────
-        // costPerSquareMeter() normaliza materiais cotados em kg via gramatura.
-        $materialCost = $grossAreaPerUnit * $material->costPerSquareMeter();
-
-        /*
-         * Revestimento: a segunda área da cartonagem rígida.
-         *
-         * O papel cobre o cinza e vira sobre as bordas, então consome MAIS
-         * chapa que a estrutura. E custa mais por m² — revestimento bom passa
-         * de R$ 20 onde o cinza fica em R$ 5. Tratar os dois como um material
-         * só subestimaria justamente o mais caro dos dois.
-         *
-         * O desperdício incide igual: a mesma guilhotina, as mesmas aparas.
-         */
-        $netWrapAreaPerUnit = $blankCalculator->wrapAreaInSquareMeters(
-            $input->boxModel,
-            $input->widthMm,
-            $input->heightMm,
-            $input->depthMm,
-            $lid,
-        );
-
-        $grossWrapAreaPerUnit = $netWrapAreaPerUnit * (1 + $input->wastePercent / 100);
-
-        $wrapCost = $input->wrapCostPerM2 === null
-            ? 0.0
-            : $grossWrapAreaPerUnit * $input->wrapCostPerM2;
 
         /*
          * Ferragem: contada, não medida.
@@ -274,6 +314,68 @@ final class PricingEngine
                 ? round($profitAmount / $totalPrice * 100, 2)
                 : 0.0,
         );
+    }
+
+    /**
+     * Soma as peças medidas à mão do modelo livre.
+     *
+     * Separa por papel do componente porque estrutura e revestimento são LINHAS
+     * DIFERENTES da ficha de custo — o cinza e o papel de capa têm preços que
+     * diferem por quatro vezes, e uma soma única esconderia qual dos dois puxou
+     * o custo para cima.
+     *
+     * Cada peça aplica a PRÓPRIA perda. É a diferença mais importante em
+     * relação aos modelos com equação, onde um percentual único vale para tudo:
+     * aqui o usuário mistura papelão (12%), kraft (8%) e tecido (15%) no mesmo
+     * orçamento, e um número só trataria os três igual.
+     *
+     * @param  list<array{
+     *     role: string,
+     *     cost_per_m2: float,
+     *     waste_percent: float,
+     *     width_mm: float,
+     *     length_mm: float,
+     *     quantity: int
+     * }>  $parts
+     * @return array{
+     *     structure_net_m2: float, structure_gross_m2: float, structure_cost: float,
+     *     wrap_net_m2: float, wrap_gross_m2: float, wrap_cost: float
+     * }
+     */
+    private function customPartsConsumption(array $parts): array
+    {
+        if ($parts === []) {
+            /*
+             * Sem peça não há caixa. Deixar passar produziria um orçamento com
+             * material zero e só mão de obra — um preço que parece calculado e
+             * não descreve nada. DomainException vira 422 com a mensagem na
+             * tela; ver o mapeamento em bootstrap/app.php.
+             */
+            throw new \DomainException(
+                'O modelo livre precisa de ao menos uma peça. '
+                .'Informe as chapas e folhas que serão cortadas, com medida e quantidade.'
+            );
+        }
+
+        $totais = [
+            'structure_net_m2' => 0.0, 'structure_gross_m2' => 0.0, 'structure_cost' => 0.0,
+            'wrap_net_m2' => 0.0, 'wrap_gross_m2' => 0.0, 'wrap_cost' => 0.0,
+        ];
+
+        foreach ($parts as $part) {
+            // Quantidade é POR CAIXA — a multiplicação pelo lote acontece
+            // depois, junto com todo o resto do orçamento.
+            $liquida = ($part['width_mm'] * $part['length_mm']) / 1_000_000.0 * $part['quantity'];
+            $bruta = $liquida * (1 + $part['waste_percent'] / 100);
+
+            $prefixo = $part['role'] === 'wrap' ? 'wrap' : 'structure';
+
+            $totais["{$prefixo}_net_m2"] += $liquida;
+            $totais["{$prefixo}_gross_m2"] += $bruta;
+            $totais["{$prefixo}_cost"] += $bruta * $part['cost_per_m2'];
+        }
+
+        return $totais;
     }
 
     /**

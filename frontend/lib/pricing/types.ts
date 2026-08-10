@@ -19,7 +19,14 @@ export type BoxModel =
   | "rigid_book_flap"
   | "rigid_magnet"
   | "rigid_magnet_side"
-  | "rigid_magnet_wrap";
+  | "rigid_magnet_wrap"
+  /**
+   * Modelo livre: sem geometria. O usuário mede as peças e o motor soma.
+   *
+   * É o único valor da união que não tem planificação — a UI mostra o editor de
+   * peças no lugar da cena 3D. Ver `custom_parts` em QuoteSpecification.
+   */
+  | "free";
 export type PricingMode = "markup" | "margin";
 
 /** "un" = peça: ferragem contada, não medida (ímã, fecho, rebite). */
@@ -203,6 +210,35 @@ export interface QuoteSpecification {
 
   /** Berço de acomodação. Ausente ou null = caixa vazia. */
   cradle?: CradleSpec | null;
+
+  /**
+   * Peças medidas à mão — só no modelo livre.
+   *
+   * Ignoradas nos demais modelos, e de propósito: um RSC que chegasse com peças
+   * somaria a planificação calculada MAIS os retângulos digitados, cobrando o
+   * material duas vezes. O erro sairia plausível, que é o pior tipo.
+   */
+  custom_parts?: CustomPartLine[];
+}
+
+/**
+ * Uma peça retangular do modelo livre. ⚠️ Espelha PricingInput::$customParts.
+ *
+ * Chega normalizada do backend: `cost_per_m2` e `waste_percent` já resolvidos a
+ * partir do material da peça. O front NÃO recalcula nenhum dos dois — fazê-lo
+ * seria reimplementar a conversão por gramatura, que é exatamente o que a suíte
+ * de paridade existe para impedir.
+ */
+export interface CustomPartLine {
+  /** "structure" (papelão) ou "wrap" (revestimento). */
+  role: ComponentRole;
+  cost_per_m2: number;
+  /** Vem do material da peça, não do orçamento: cada insumo perde o seu. */
+  waste_percent: number;
+  width_mm: number;
+  length_mm: number;
+  /** Peças iguais POR CAIXA, não pelo lote. */
+  quantity: number;
 }
 
 /** Saída do cálculo — idêntica ao PricingResult do PHP. */

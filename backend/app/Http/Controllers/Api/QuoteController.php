@@ -98,7 +98,11 @@ class QuoteController extends Controller
         $data = $request->validated();
         $result = $this->calculateFrom($data, $material, $settings);
 
-        $quote = DB::transaction(fn () => Quote::create([
+        // Resolvidas uma vez e reaproveitadas nos dois destinos: as linhas de
+        // `quote_custom_parts` e a fotografia dentro do snapshot.
+        $customParts = $this->resolveCustomParts($data['custom_parts'] ?? []);
+
+        $quote = DB::transaction(fn () => tap(Quote::create([
             'user_id' => $request->user()->id,
             'material_id' => $material->id,
             'cost_setting_id' => $settings->id,
@@ -148,10 +152,39 @@ class QuoteController extends Controller
                     'labor_hour_rate', 'overhead_percent', 'tax_percent',
                 ]),
                 'breakdown' => $result->toArray(),
+
+                /*
+                 * As peças CONGELADAS, e não só uma flag de "é modelo livre".
+                 *
+                 * Mesma razão do material e dos custos logo acima: se o usuário
+                 * corrigir uma medida ou o preço do papelão amanhã, o orçamento
+                 * que o cliente aprovou ontem não pode mudar de valor. As linhas
+                 * em `quote_custom_parts` continuam editáveis; esta cópia é o
+                 * que foi combinado.
+                 */
+                'custom_parts' => $customParts,
             ],
 
             'status' => 'draft',
-        ]));
+        ]), function (Quote $quote) use ($customParts): void {
+            /*
+             * As peças viram linhas próprias além de entrarem no snapshot: é a
+             * tabela que a ficha técnica consulta e que o usuário edita ao
+             * duplicar o orçamento. O snapshot é fotografia, não fonte de
+             * trabalho.
+             */
+            foreach ($customParts as $part) {
+                $quote->customParts()->create([
+                    'tenant_id' => $quote->tenant_id,
+                    'material_id' => $part['material_id'],
+                    'name' => $part['name'],
+                    'component_role' => $part['role'],
+                    'width_mm' => (int) $part['width_mm'],
+                    'length_mm' => (int) $part['length_mm'],
+                    'quantity' => $part['quantity'],
+                ]);
+            }
+        }));
 
         return (new QuoteResource($quote->load('material')))
             ->response()
@@ -228,8 +261,59 @@ class QuoteController extends Controller
                 $bom['wrap_cost_per_m2'],
                 $bom['hardware'],
                 $bom['cradle'],
+                $this->resolveCustomParts($data['custom_parts'] ?? []),
             )
         );
+    }
+
+    /**
+     * Traduz as peças do modelo livre em números para o motor.
+     *
+     * Mesma regra de resolveComponents(): o motor recebe VALORES, nunca models.
+     * `costPerSquareMeter()` e o percentual de perda são lidos AQUI, uma vez, no
+     * servidor — o gêmeo em TypeScript recebe os dois prontos e não
+     * reimplementa a conversão por gramatura.
+     *
+     * A perda sai do MATERIAL de cada peça, e não do orçamento. É a diferença
+     * que importa no modelo livre: um mesmo orçamento mistura papelão cinza
+     * (12%), kraft (8%) e tecido (15%), e um percentual único trataria os três
+     * igual — subestimando justamente o que mais desperdiça.
+     *
+     * A busca é escopada pelo TenantScope: uma peça apontando para o material de
+     * outra empresa não é encontrada, e o orçamento falha em vez de precificar
+     * com o custo do vizinho.
+     *
+     * @param  list<array<string, mixed>>  $parts
+     * @return list<array{role: string, cost_per_m2: float, waste_percent: float, width_mm: float, length_mm: float, quantity: int}>
+     */
+    private function resolveCustomParts(array $parts): array
+    {
+        $resolvidas = [];
+
+        foreach ($parts as $part) {
+            $material = Material::active()->findOrFail($part['material_id']);
+
+            $resolvidas[] = [
+                'role' => $part['role'] ?? ComponentRole::Structure->value,
+                'cost_per_m2' => $material->costPerSquareMeter(),
+                'waste_percent' => (float) $material->default_waste_percent,
+                'width_mm' => (float) $part['width_mm'],
+                'length_mm' => (float) $part['length_mm'],
+                'quantity' => (int) $part['quantity'],
+
+                /*
+                 * Descritivos, ignorados pelo motor. Viajam junto para não
+                 * exigir uma segunda volta ao banco na hora de gravar as peças e
+                 * de congelá-las no snapshot — e é o snapshot que a ficha
+                 * técnica lê para dizer à produção o que cortar.
+                 */
+                'name' => (string) $part['name'],
+                'material_id' => $material->id,
+                'material_name' => $material->name,
+            ];
+        }
+
+        return $resolvidas;
     }
 
     /**

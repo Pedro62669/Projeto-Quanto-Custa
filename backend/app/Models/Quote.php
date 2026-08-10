@@ -101,6 +101,20 @@ class Quote extends Model
         return $this->hasMany(Transaction::class);
     }
 
+    /**
+     * Peças medidas à mão — só existem no modelo livre.
+     *
+     * Ordenadas por papel e depois por id: estrutura antes de revestimento é a
+     * ordem em que a peça é montada, e é a ordem em que a ficha técnica precisa
+     * listar para quem está na bancada.
+     */
+    public function customParts(): HasMany
+    {
+        return $this->hasMany(QuoteCustomPart::class)
+            ->orderBy('component_role')
+            ->orderBy('id');
+    }
+
     public function scopeOwnedBy(Builder $query, User $user): Builder
     {
         return $query->where('user_id', $user->id);

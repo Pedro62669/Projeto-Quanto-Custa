@@ -57,7 +57,12 @@ final class CutTemplateCalculator
         float $depthMm,
         float $thicknessMm,
         ?array $lidMm = null,
+        array $customParts = [],
     ): array {
+        if ($model->isFree()) {
+            return $this->freeTemplate($customParts);
+        }
+
         $calculator = new BlankCalculator(thicknessMm: $thicknessMm);
 
         if ($model->isBook()) {
@@ -260,6 +265,67 @@ final class CutTemplateCalculator
     }
 
     /** @return array{name: string, width_mm: float, height_mm: float, quantity: int} */
+    /**
+     * Modelo livre: o gabarito É a lista que o usuário digitou.
+     *
+     * Nenhuma derivação, e é o ponto. Nos outros modelos este serviço recalcula
+     * as peças a partir das mesmas funções de layout que precificam, para que a
+     * ficha e o preço não possam divergir. Aqui não há o que recalcular: as
+     * medidas vêm do snapshot do orçamento, que é a mesma lista que o motor
+     * somou. Reprocessá-las de qualquer outra forma criaria a divergência que
+     * o resto da classe existe para impedir.
+     *
+     * Vem do SNAPSHOT e não da tabela `quote_custom_parts` de propósito — as
+     * linhas continuam editáveis, e a produção precisa cortar o que foi
+     * vendido, não o que alguém ajustou depois de a proposta ter saído.
+     *
+     * @param  list<array<string, mixed>>  $parts
+     * @return array{structure: list<array<string, mixed>>, wrap: list<array<string, mixed>>, notes: list<string>}
+     */
+    private function freeTemplate(array $parts): array
+    {
+        $estrutura = [];
+        $revestimento = [];
+
+        foreach ($parts as $part) {
+            $peca = $this->peca(
+                (string) ($part['name'] ?? 'Peça'),
+                (float) ($part['width_mm'] ?? 0),
+                (float) ($part['length_mm'] ?? 0),
+                (int) ($part['quantity'] ?? 1),
+            );
+
+            // O material de cada peça entra na linha: no modelo livre eles
+            // variam peça a peça, e quem separa as pilhas na bancada precisa
+            // saber qual chapa pegar.
+            $peca['material'] = $part['material_name'] ?? null;
+
+            if (($part['role'] ?? 'structure') === 'wrap') {
+                $revestimento[] = $peca;
+            } else {
+                $estrutura[] = $peca;
+            }
+        }
+
+        return [
+            'structure' => $estrutura,
+            'wrap' => $revestimento,
+            'notes' => [
+                'Modelo livre: estas são as medidas informadas no orçamento, sem derivação.',
+                'As quantidades são POR CAIXA — multiplique pelo tamanho do lote.',
+
+                /*
+                 * O aviso que substitui todos os outros. Nos modelos com
+                 * geometria, o sistema garante que a peça cortada é a peça
+                 * vendida. Aqui essa garantia é de quem mediu, e dizê-lo é mais
+                 * honesto do que deixar a ficha parecer conferida.
+                 */
+                'A conferência das medidas é de quem as informou: o sistema não '
+                    .'valida se as peças fecham uma caixa.',
+            ],
+        ];
+    }
+
     private function peca(string $nome, float $largura, float $altura, int $quantidade = 1): array
     {
         return [

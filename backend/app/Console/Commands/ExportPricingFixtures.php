@@ -59,6 +59,7 @@ class ExportPricingFixtures extends Command
                 wrapCostPerM2: $scenario['wrapCostPerM2'],
                 hardware: $scenario['hardware'],
                 cradle: $scenario['cradle'],
+                customParts: $scenario['customParts'],
             );
 
             $cases[] = [
@@ -103,6 +104,9 @@ class ExportPricingFixtures extends Command
                     'wrap_cost_per_m2' => $scenario['wrapCostPerM2'],
                     'hardware' => $scenario['hardware'],
                     'cradle' => $scenario['cradle'],
+
+                    // Peças do modelo livre: já normalizadas, como a API entrega.
+                    'custom_parts' => $scenario['customParts'],
                 ],
                 'expected' => $engine->calculate($input)->toArray(),
             ];
@@ -180,6 +184,26 @@ class ExportPricingFixtures extends Command
 
             // null = caixa vazia, sem berço.
             'cradle' => $o['cradle'] ?? null,
+
+            // vazio = qualquer modelo com geometria; só o livre usa peças.
+            'customParts' => $o['customParts'] ?? [],
+        ];
+
+        /** Uma peça do modelo livre, já normalizada como a API a entrega. */
+        $peca = fn (
+            string $role,
+            float $costPerM2,
+            float $wastePercent,
+            float $widthMm,
+            float $lengthMm,
+            int $quantity,
+        ) => [
+            'role' => $role,
+            'cost_per_m2' => $costPerM2,
+            'waste_percent' => $wastePercent,
+            'width_mm' => $widthMm,
+            'length_mm' => $lengthMm,
+            'quantity' => $quantity,
         ];
 
         $scenarios = [
@@ -513,10 +537,90 @@ class ExportPricingFixtures extends Command
                 'productionMinutes' => 4.25, 'marginPercent' => 42.0,
                 'pricingMode' => 'margin',
             ]),
+
+            /*
+             * Modelo livre: o único caminho que NÃO passa pelo BlankCalculator.
+             *
+             * Os casos abaixo cobrem o que os dois motores teriam como divergir
+             * em silêncio — a separação estrutura/revestimento, a perda POR
+             * PEÇA e a multiplicação da quantidade por caixa.
+             */
+            'livre-uma-peca' => $base([
+                'boxModel' => BoxModel::Free,
+                'customParts' => [$peca('structure', 3.20, 12.0, 300.0, 200.0, 1)],
+            ]),
+
+            // Duas perdas diferentes no mesmo orçamento: é o caso que denuncia
+            // qualquer motor que aplique um percentual único.
+            'livre-perdas-diferentes' => $base([
+                'boxModel' => BoxModel::Free,
+                'wastePercent' => 45.0, // do orçamento — deve ser IGNORADA nas peças
+                'customParts' => [
+                    $peca('structure', 3.20, 12.0, 300.0, 200.0, 2),
+                    $peca('structure', 3.20, 8.0, 150.0, 200.0, 4),
+                ],
+            ]),
+
+            // Estrutura e revestimento somam em linhas separadas da ficha.
+            'livre-com-revestimento' => $base([
+                'boxModel' => BoxModel::Free,
+                'customParts' => [
+                    $peca('structure', 3.20, 12.0, 300.0, 200.0, 1),
+                    $peca('wrap', 22.50, 8.0, 330.0, 230.0, 1),
+                ],
+            ]),
+
+            // Quantidade por caixa × lote: o erro de multiplicar uma vez só
+            // apareceria aqui, e em nenhum outro caso.
+            'livre-multiplas-por-caixa' => $base([
+                'boxModel' => BoxModel::Free,
+                'quantity' => 250,
+                'customParts' => [
+                    $peca('structure', 4.10, 12.0, 420.0, 310.0, 6),
+                    $peca('wrap', 18.75, 15.0, 450.0, 340.0, 2),
+                ],
+            ]),
+
+            /*
+             * Peças com medida fracionada e material por quilo, no modo margin
+             * e com imposto — o modelo livre atravessando todo o resto da
+             * cadeia. Se a soma das áreas divergir num décimo de milímetro, é
+             * aqui que o efeito aparece amplificado.
+             */
+            'livre-tudo-combinado' => $base([
+                'boxModel' => BoxModel::Free,
+                'settings' => ['overhead_percent' => 12.0, 'tax_percent' => 8.0],
+                'quantity' => 1750,
+                'productionMinutes' => 8.5,
+                'marginPercent' => 38.0,
+                'pricingMode' => 'margin',
+                'customParts' => [
+                    $peca('structure', 5.4321, 12.5, 287.3, 141.9, 3),
+                    $peca('structure', 5.4321, 12.5, 91.7, 141.9, 2),
+                    $peca('wrap', 28.3333, 9.75, 317.3, 171.9, 1),
+                ],
+            ]),
+
+            // Uma peça mínima: exercita o arredondamento com área ínfima.
+            'livre-peca-minima' => $base([
+                'boxModel' => BoxModel::Free,
+                'quantity' => 1,
+                'customParts' => [$peca('structure', 3.20, 0.0, 1.0, 1.0, 1)],
+            ]),
         ];
 
-        // Um caso por modelo de caixa: cada um tem sua própria planificação.
+        /*
+         * Um caso por modelo de caixa: cada um tem sua própria planificação.
+         *
+         * O modelo livre fica de fora porque ele não TEM planificação — sem
+         * peças na entrada, os dois motores lançam exceção, que é justamente o
+         * comportamento correto. Os casos dele estão acima, com peças.
+         */
         foreach (BoxModel::cases() as $model) {
+            if ($model->isFree()) {
+                continue;
+            }
+
             $scenarios["modelo-{$model->value}"] = $base(['boxModel' => $model]);
             $scenarios["modelo-{$model->value}-espesso"] = $base([
                 'boxModel' => $model,

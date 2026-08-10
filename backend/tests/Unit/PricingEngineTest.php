@@ -291,6 +291,15 @@ class PricingEngineTest extends TestCase
         $areas = [];
 
         foreach (BoxModel::cases() as $model) {
+            /*
+             * O modelo livre fica de fora porque ele não TEM planificação: a
+             * área vem das peças que o usuário mede, e sem peças o motor recusa
+             * — comportamento que o teste do modelo livre cobre à parte.
+             */
+            if ($model->isFree()) {
+                continue;
+            }
+
             $areas[$model->value] = $this->engine
                 ->calculate($this->input(['boxModel' => $model]))
                 ->areaM2PerUnit;
