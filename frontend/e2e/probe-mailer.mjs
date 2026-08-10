@@ -5,15 +5,12 @@
  * MUNDO e imprime. É como se confere se a barbatana entrou no bolso e se a
  * lingueta caiu na fenda — ângulo de câmera não prova isso.
  */
-import { chromium } from "playwright";
+import { abrirNavegador } from "./browser.mjs";
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const [W, H, D] = (process.argv[2] ?? "300x80x250").split("x");
 
-const browser = await chromium.launch({
-  executablePath: "/usr/bin/google-chrome",
-  args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--no-sandbox"],
-});
+const browser = await abrirNavegador();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
 /*

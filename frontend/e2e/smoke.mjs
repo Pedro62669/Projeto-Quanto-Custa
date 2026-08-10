@@ -2,7 +2,7 @@
  * Smoke test end-to-end no navegador real.
  * Login → calculadora → reatividade do 3D → gravação do orçamento.
  */
-import { chromium } from "playwright";
+import { abrirNavegador, pastaDeSaida } from "./browser.mjs";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
@@ -14,7 +14,7 @@ const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
  */
 const EMAIL = process.env.E2E_EMAIL ?? "admin@quantocusta.local";
 const SENHA = process.env.E2E_PASSWORD ?? "admin123";
-const OUT = "/tmp/claude-1000/-var-www-html-quantoCusta/6a279545-fa78-41fb-8b54-46d2abb886a9/scratchpad";
+const OUT = pastaDeSaida();
 
 const log = (...a) => console.log(...a);
 let failures = 0;
@@ -23,12 +23,7 @@ function check(label, ok, detail = "") {
   if (!ok) failures++;
 }
 
-// Usa o Chrome do sistema (o bundle do Playwright não está no cache) e força
-// rasterização por software, sem a qual não há WebGL em headless.
-const browser = await chromium.launch({
-  executablePath: "/usr/bin/google-chrome",
-  args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--no-sandbox"],
-});
+const browser = await abrirNavegador();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
 const consoleErrors = [];
@@ -96,10 +91,21 @@ check("dobrar a largura aumenta o preço", num(precoNovo) > num(precoInicial), `
 await page.screenshot({ path: `${OUT}/02-largura-600.png` });
 
 // ── 7. Modo de precificação: markup vs margem ────────────────────────────
+//
+// Espera a margem MUDAR, pelo mesmo motivo do check da tampa do tubo lá
+// embaixo: com 1,5s cravados o valor era lido um passo atrasado e o check caía
+// sozinho em máquina carregada, mostrando o número velho dos dois lados.
 const margemMarkup = await page.textContent("text=/de margem real/");
 await page.click('button:has-text("Sobre a venda")');
-await page.waitForTimeout(1500);
-const margemReal = await page.textContent("text=/de margem real/");
+
+// Pollar pelo MESMO seletor que faz a leitura, e não por uma condição escrita à
+// parte: se a espera olhasse um nó e o check lesse outro, ela poderia dar por
+// satisfeita com um valor que o check nem vê.
+let margemReal = margemMarkup;
+for (let i = 0; i < 40 && margemReal?.trim() === margemMarkup?.trim(); i++) {
+  await page.waitForTimeout(500);
+  margemReal = await page.textContent("text=/de margem real/");
+}
 check("alternar para modo margem entrega 30% reais", /\b30([.,]0+)?%/.test(margemReal ?? ""), `${margemMarkup?.trim()} → ${margemReal?.trim()}`);
 
 // ── 8. Tampa: renderização e medidas ─────────────────────────────────────
