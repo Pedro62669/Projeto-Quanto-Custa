@@ -9,6 +9,17 @@
 .env.*
 !.env.example
 
+# Documentos internos de planejamento
+#
+# Este repositório é PÚBLICO. A pasta guarda os documentos de negócio que
+# orientaram o desenvolvimento — incluindo .docx com estratégia e precificação —
+# e nada ali é necessário para rodar ou entender o código.
+#
+# Publicar é irreversível na prática: o GitHub mantém o objeto acessível pelo
+# hash mesmo depois de um commit que o remova, e buscadores podem já ter copiado.
+# Os arquivos continuam no disco de quem desenvolve, fora do versionamento.
+/docs.desenvolvimento/
+
 # Sistema operacional / editores
 .DS_Store
 Thumbs.db
