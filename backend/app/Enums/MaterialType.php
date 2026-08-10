@@ -10,6 +10,10 @@ enum MaterialType: string
     case Paper = 'paper';
     case Fabric = 'fabric';
     case Plastic = 'plastic';
+
+    /** Ímã, fecho, rebite, fita — comprado e consumido por peça. */
+    case Hardware = 'hardware';
+
     case Other = 'other';
 
     public function label(): string
@@ -19,6 +23,7 @@ enum MaterialType: string
             self::Paper => 'Papel',
             self::Fabric => 'Tecido',
             self::Plastic => 'Plástico',
+            self::Hardware => 'Ferragem',
             self::Other => 'Outro',
         };
     }

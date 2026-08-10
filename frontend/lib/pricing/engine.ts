@@ -1,6 +1,11 @@
 import type {
   BoxModel,
+  CradleType,
+  CompanyHourBreakdown,
+  CompanyHourParams,
   CostSettings,
+  EfficiencyPercent,
+  EfficiencyScenarioResult,
   Material,
   PricingBreakdown,
   PricingMode,
@@ -22,9 +27,10 @@ import type {
  *     o usuário se a API responder com uma versão diferente (motor defasado
  *     após um deploy parcial).
  */
-export const ENGINE_VERSION = "1.0.0";
+export const ENGINE_VERSION = "1.3.0";
 
 const MM2_PER_M2 = 1_000_000;
+const MM3_PER_M3 = 1_000_000_000;
 const MINUTES_PER_HOUR = 60;
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -35,6 +41,48 @@ const GLUE_FLAP_MM = 35;
 const LID_CLEARANCE_MM = 2;
 const LID_HEIGHT_RATIO = 0.35;
 const SEAL_MM = 10;
+
+/**
+ * Virada do revestimento sobre as bordas, em mm — cartonagem rígida.
+ *
+ * ⚠️ Espelha TURN_IN_MM de BlankCalculator.php.
+ *
+ * O papel não para na quina: dobra por cima dela e cola no lado de dentro.
+ * Entra DUAS vezes por eixo (uma borda de cada lado), e é a razão de o
+ * revestimento sempre consumir mais chapa que o cinza que ele cobre.
+ */
+const TURN_IN_MM = 15;
+
+/** Sobra de esquadrejo do papelão cinza, em mm. ⚠️ Espelha RIGID_TRIM_MM. */
+const RIGID_TRIM_MM = 8;
+
+/**
+ * Canaleta entre os painéis da capa, em múltiplos da espessura.
+ *
+ * ⚠️ Espelha HINGE_GAP_RATIO de BlankCalculator.php.
+ *
+ * É a fenda que permite a capa dobrar, e ela é VAZIA: quem une os painéis é o
+ * papel de revestimento, que atravessa o vão e vira a dobradiça. Por isso a
+ * canaleta não consome papelão, mas consome revestimento.
+ */
+const HINGE_GAP_RATIO = 1.5;
+
+/**
+ * Quanto a aba envolvente avança sob o fundo, em fração da profundidade.
+ * ⚠️ Espelha MAGNET_WRAP_UNDER_RATIO de BlankCalculator.php.
+ */
+const MAGNET_WRAP_UNDER_RATIO = 0.25;
+
+/**
+ * Pad de assentamento do ímã na ponta da aba, em mm.
+ * ⚠️ Espelha MAGNET_PAD_MM de BlankCalculator.php.
+ *
+ * A aba avança sobre a face frontal para que o ímã encontre o par do berço.
+ * Em MILÍMETROS e não em espessuras: o ímã tem tamanho próprio, e papelão mais
+ * fino não o faz encolher. É também o que a separa da aba do livro, que só
+ * cobre a parede e se recolhe por atrito.
+ */
+const MAGNET_PAD_MM = 12;
 
 /* ── Mailer: as razões da faca ───────────────────────────────────────────────
  *
@@ -261,7 +309,198 @@ export function isCylindrical(model: BoxModel): boolean {
 
 /** Modelos que têm uma tampa como peça separada. */
 export function hasSeparateLid(model: BoxModel): boolean {
-  return model === "tray" || model === "tube";
+  return model === "tray" || model === "tube" || model === "rigid_telescopic";
+}
+
+/**
+ * Família da capa rígida: painéis articulados + berço colado.
+ *
+ * Livro e ímã compartilham a construção inteira — a diferença está nas abas e
+ * no fecho. ⚠️ Espelha isBook() do PHP.
+ */
+export function isBook(model: BoxModel): boolean {
+  return (
+    model === "rigid_book" ||
+    model === "rigid_book_flap" ||
+    isMagnet(model)
+  );
+}
+
+/** Família ímã: a aba frontal aloja o fecho magnético. */
+export function isMagnet(model: BoxModel): boolean {
+  return (
+    model === "rigid_magnet" ||
+    model === "rigid_magnet_side" ||
+    model === "rigid_magnet_wrap"
+  );
+}
+
+/** A capa tem um quarto painel que fecha a lateral aberta (só o livro). */
+export function hasClosingFlap(model: BoxModel): boolean {
+  return model === "rigid_book_flap";
+}
+
+/**
+ * Ímãs sugeridos para o formulário e para o desenho.
+ *
+ * SUGESTÃO e não regra: quem cobra é a lista de materiais. O número existe
+ * para o usuário não começar do zero e esquecer de lançar a ferragem — o
+ * esquecimento mais caro do modelo, porque o ímã não aparece na foto.
+ *
+ * ⚠️ Espelha suggestedMagnets() do PHP.
+ */
+export function suggestedMagnets(model: BoxModel): number {
+  if (model === "rigid_magnet_side") return 4;
+  if (model === "rigid_magnet" || model === "rigid_magnet_wrap") return 2;
+
+  return 0;
+}
+
+export interface BookLayout {
+  bercoW: number;
+  bercoD: number;
+  bercoH: number;
+  capaW: number;
+  capaD: number;
+  lombada: number;
+  aba: number;
+  magnetFlap: number;
+  sideFlap: number;
+  sideFlapCount: number;
+  canaleta: number;
+  dobradicas: number;
+}
+
+/**
+ * Geometria da caixa livro, em mm — a fonte única dos dois blanks e do 3D.
+ *
+ * ⚠️ Espelha bookLayout() de BlankCalculator.php. O renderizador lê daqui os
+ * MESMOS números que entram no preço: um painel que exista na figura e não na
+ * conta (ou o contrário) é uma divergência que nenhum teste deste projeto
+ * enxerga, porque a paridade só compara PHP com TS.
+ *
+ * As medidas informadas são as INTERNAS do berço. A lombada precisa vencer a
+ * altura do berço MAIS as duas capas que ela une — é o erro clássico do
+ * modelo: lombada curta deixa a caixa arqueada e sem fechar.
+ */
+export function bookLayout(
+  model: BoxModel,
+  widthMm: number,
+  heightMm: number,
+  depthMm: number,
+  t: number,
+): BookLayout {
+  const bercoW = widthMm + 2 * t;
+  const bercoD = depthMm + 2 * t;
+  const bercoH = heightMm + t;
+
+  const capaW = bercoW + 2 * LID_CLEARANCE_MM;
+  const capaD = bercoD + 2 * LID_CLEARANCE_MM;
+
+  const lombada = bercoH + 2 * t;
+  const canaleta = HINGE_GAP_RATIO * t;
+
+  const aba = hasClosingFlap(model) ? bercoH + t : 0;
+
+  /*
+   * Aba do fecho magnético: desce da tampa sobre a parede frontal, vencendo a
+   * altura do berço mais a espessura da tampa. A envolvente vai além e dobra
+   * sob o fundo — é o quanto ela avança que a separa das outras duas.
+   */
+  const magnetFlap =
+    model === "rigid_magnet_wrap"
+      ? bercoH + t + MAGNET_PAD_MM + MAGNET_WRAP_UNDER_RATIO * capaD
+      : isMagnet(model)
+        ? bercoH + t + MAGNET_PAD_MM
+        : 0;
+
+  // Correm ao longo da PROFUNDIDADE da capa: painéis à parte, e não um
+  // prolongamento da capa corrida.
+  const sideFlap = model === "rigid_magnet_side" ? bercoH + t : 0;
+  const sideFlapCount = model === "rigid_magnet_side" ? 2 : 0;
+
+  // Dobradiças no REVESTIMENTO: as duas da capa mais uma por aba articulada.
+  const dobradicas =
+    2 + (hasClosingFlap(model) ? 1 : 0) + (magnetFlap > 0 ? 1 : 0) + sideFlapCount;
+
+  return {
+    bercoW,
+    bercoD,
+    bercoH,
+    capaW,
+    capaD,
+    lombada,
+    aba,
+    magnetFlap,
+    sideFlap,
+    sideFlapCount,
+    canaleta,
+    dobradicas,
+  };
+}
+
+/**
+ * Cartonagem RÍGIDA: papelão cinza revestido com papel, em vez de uma chapa
+ * vincada que se sustenta sozinha. ⚠️ Espelha BoxModel::isRigid() do PHP.
+ */
+export function isRigid(model: BoxModel): boolean {
+  return model === "rigid_telescopic" || isBook(model);
+}
+
+/**
+ * Área do REVESTIMENTO por peça, em m² — só na cartonagem rígida.
+ *
+ * A mesma planificação do cinza acrescida da virada em todas as bordas, mais a
+ * espessura, porque o papel percorre a lateral do painel antes de dobrar.
+ * Devolve 0 nos modelos dobrados, onde o material é um só.
+ *
+ * ⚠️ Espelha wrapAreaInSquareMeters() de BlankCalculator.php.
+ */
+export function wrapAreaInSquareMeters(
+  model: BoxModel,
+  widthMm: number,
+  heightMm: number,
+  depthMm: number,
+  thicknessMm: number,
+  lidMm?: LidDimensions | null,
+): number {
+  if (!isRigid(model)) return 0;
+
+  const t = thicknessMm;
+
+  const panel = (w: number, h: number, d: number): number =>
+    (w + 2 * h + 2 * t + 2 * TURN_IN_MM) * (d + 2 * h + 2 * t + 2 * TURN_IN_MM);
+
+  /*
+   * Caixa livro: AQUI a canaleta conta. O papel é uma folha só que cobre os
+   * três painéis E os vãos entre eles — é ele que vira a dobradiça. Descontar
+   * a canaleta daria uma folha curta demais para colar.
+   */
+  if (isBook(model)) {
+    const l = bookLayout(model, widthMm, heightMm, depthMm, t);
+
+    const capaAberta =
+      2 * l.capaW + l.lombada + l.aba + l.magnetFlap + l.dobradicas * l.canaleta;
+
+    const capa = (capaAberta + 2 * TURN_IN_MM) * (l.capaD + 2 * TURN_IN_MM);
+
+    // Cada aba lateral é revestida como painel próprio: fica exposta pelos
+    // dois lados ao abrir a caixa.
+    const laterais =
+      l.sideFlapCount *
+      ((l.sideFlap + 2 * TURN_IN_MM) * (l.capaD + 2 * TURN_IN_MM));
+
+    return (capa + laterais + panel(widthMm, heightMm, depthMm)) / MM2_PER_M2;
+  }
+
+  const lid =
+    lidMm ?? defaultLidDimensions(model, widthMm, heightMm, depthMm, t)!;
+
+  const area =
+    panel(widthMm, heightMm, depthMm) +
+    panel(lid.widthMm, lid.heightMm, lid.depthMm);
+
+  return area / MM2_PER_M2;
 }
 
 /** Medidas físicas da tampa, em milímetros. */
@@ -380,6 +619,67 @@ export function blankDimensions(
       // Duas peças reduzidas a um retângulo de área equivalente.
       const totalArea = baseW * baseH + lidW * lidH;
       const width = Math.max(baseW, lidW);
+
+      return { width, height: totalArea / width };
+    }
+
+    /*
+     * Cartonagem rígida: este blank é o do PAPELÃO CINZA. O revestimento tem
+     * área própria — ver wrapAreaInSquareMeters().
+     *
+     * Cada peça é uma cruz: o fundo com as quatro paredes ao redor. Diferente
+     * da bandeja dobrada, a cruz aqui não é vincada — é o desenho de corte de
+     * cinco painéis que serão colados em esquadro. Para o consumo de chapa dá
+     * no mesmo, e os quatro cantos vazios são apara já coberta pelo desperdício.
+     *
+     * ⚠️ Espelha rigidTelescopicBlank() de BlankCalculator.php.
+     */
+    case "rigid_telescopic": {
+      const lid =
+        lidMm ?? defaultLidDimensions(model, widthMm, heightMm, depthMm, t)!;
+
+      const baseW = widthMm + 2 * heightMm + 2 * t + RIGID_TRIM_MM;
+      const baseH = depthMm + 2 * heightMm + 2 * t + RIGID_TRIM_MM;
+
+      const lidW = lid.widthMm + 2 * lid.heightMm + 2 * t + RIGID_TRIM_MM;
+      const lidH = lid.depthMm + 2 * lid.heightMm + 2 * t + RIGID_TRIM_MM;
+
+      const totalArea = baseW * baseH + lidW * lidH;
+      const width = Math.max(baseW, lidW);
+
+      return { width, height: totalArea / width };
+    }
+
+    /*
+     * Caixa livro: capa de painéis + berço de quatro paredes.
+     *
+     * A CANALETA NÃO ENTRA AQUI, e é o que separa este modelo dos demais: os
+     * painéis da capa são cortados separados, e o vão entre eles é ar —
+     * papelão que ninguém compra. Somá-lo cobraria do cliente o espaço vazio
+     * da dobradiça. Ele reaparece em wrapAreaInSquareMeters(), onde é real.
+     *
+     * ⚠️ Espelha bookBlank() de BlankCalculator.php.
+     */
+    case "rigid_book":
+    case "rigid_book_flap":
+    case "rigid_magnet":
+    case "rigid_magnet_side":
+    case "rigid_magnet_wrap": {
+      const l = bookLayout(model, widthMm, heightMm, depthMm, t);
+
+      const capaCorrida =
+        2 * l.capaW + l.lombada + l.aba + l.magnetFlap + RIGID_TRIM_MM;
+      const capaAltura = l.capaD + RIGID_TRIM_MM;
+
+      const areaLaterais = l.sideFlapCount * (l.sideFlap * l.capaD);
+
+      const bercoCruzW = widthMm + 2 * heightMm + 2 * t + RIGID_TRIM_MM;
+      const bercoCruzH = depthMm + 2 * heightMm + 2 * t + RIGID_TRIM_MM;
+
+      const totalArea =
+        capaCorrida * capaAltura + areaLaterais + bercoCruzW * bercoCruzH;
+
+      const width = Math.max(capaCorrida, bercoCruzW);
 
       return { width, height: totalArea / width };
     }
@@ -517,6 +817,273 @@ export function blankDimensions(
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
+ * Berços de acomodação — espelha CradleCalculator.php
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** ⚠️ Espelham as constantes de CradleCalculator.php. */
+const CRADLE_CLEARANCE_MM = 1;
+const DEFAULT_STRIP_THICKNESS_MM = 1.9;
+const STRIP_TRIM_MM = 4;
+
+/** Minutos que cada tipo de berço acrescenta. ⚠️ Espelha extraProductionMinutes(). */
+export function cradleExtraMinutes(type: CradleType): number {
+  switch (type) {
+    case "foam":
+      return 1.5;
+    case "board_niche":
+      return 8;
+    case "paper_niche":
+      return 4.5;
+    case "paper_fold":
+      return 2;
+    case "divider_grid":
+      return 3.5;
+  }
+}
+
+/** Cobrado por volume (m³) em vez de área (m²)? */
+export function isCradleVolumetric(type: CradleType): boolean {
+  return type === "foam";
+}
+
+/**
+ * O que um berço consome, na grandeza que o tipo dele cobra.
+ *
+ * ⚠️ Espelha CradleCalculator::consumption() passo a passo. As dimensões que
+ * entram são as INTERNAS da caixa: o berço veste o vão útil, com folga para
+ * entrar.
+ */
+export function cradleConsumption(
+  type: CradleType,
+  widthMm: number,
+  heightMm: number,
+  depthMm: number,
+  rows = 1,
+  columns = 1,
+  heightRatio = 1,
+  stripThicknessMm = 0,
+): { area_m2: number; volume_m3: number; strips: number } {
+  const w = Math.max(widthMm - 2 * CRADLE_CLEARANCE_MM, 0);
+  const d = Math.max(depthMm - 2 * CRADLE_CLEARANCE_MM, 0);
+  const h = Math.max(heightMm * heightRatio, 0);
+
+  switch (type) {
+    /*
+     * Espuma: o bloco inteiro. O nicho recortado NÃO é descontado — o vazio
+     * sai de um bloco já comprado, e o miolo é sobra. Descontá-lo faria o
+     * berço mais elaborado sair mais barato que o simples.
+     */
+    case "foam":
+      return { area_m2: 0, volume_m3: (w * d * h) / MM3_PER_M3, strips: 0 };
+
+    // Nichos de cartonagem: fundo + quatro paredes, uma bandeja rasa.
+    case "board_niche":
+      return {
+        area_m2: ((w + 2 * h) * (d + 2 * h)) / MM2_PER_M2,
+        volume_m3: 0,
+        strips: 0,
+      };
+
+    // Base de cartonagem MAIS a colmeia de papel: mais área que o nicho
+    // rígido apesar de mais barato — o papel é fino e a colmeia tem muitas
+    // paredes.
+    case "paper_niche":
+      return {
+        area_m2: (w * d + 2 * (w + d) * h) / MM2_PER_M2,
+        volume_m3: 0,
+        strips: 0,
+      };
+
+    // Peça única dobrada: a cruz clássica.
+    case "paper_fold":
+      return {
+        area_m2: ((w + 2 * h) * (d + 2 * h)) / MM2_PER_M2,
+        volume_m3: 0,
+        strips: 0,
+      };
+
+    case "divider_grid": {
+      const transversais = Math.max(rows - 1, 0);
+      const longitudinais = Math.max(columns - 1, 0);
+
+      if (transversais + longitudinais === 0) {
+        return { area_m2: 0, volume_m3: 0, strips: 0 };
+      }
+
+      const espessura =
+        stripThicknessMm > 0 ? stripThicknessMm : DEFAULT_STRIP_THICKNESS_MM;
+
+      /*
+       * Cada tira perde a espessura das que a cruzam — sem isso a grade não
+       * fecha no vão e as tiras estufam as paredes. A ranhura fêmea-fêmea não
+       * desconta área: é um rasgo, e o que sai dele é apara.
+       */
+      const compTransversal =
+        Math.max(w - longitudinais * espessura, 0) + STRIP_TRIM_MM;
+      const compLongitudinal =
+        Math.max(d - transversais * espessura, 0) + STRIP_TRIM_MM;
+
+      const area =
+        transversais * (compTransversal * h) +
+        longitudinais * (compLongitudinal * h);
+
+      return {
+        area_m2: area / MM2_PER_M2,
+        volume_m3: 0,
+        strips: transversais + longitudinais,
+      };
+    }
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Hora-empresa — espelha CompanyHourCalculator::compute() do PHP
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Os três cenários, na ordem em que a interface exibe.
+ *
+ * ⚠️ Espelha EfficiencyScenario::comparison(), label() e description().
+ * Do otimista ao conservador: a leitura de cima para baixo mostra o custo
+ * SUBINDO conforme a estimativa fica realista, que é a lição do painel.
+ */
+export const EFFICIENCY_SCENARIOS: {
+  percent: EfficiencyPercent;
+  label: string;
+  description: string;
+}[] = [
+  {
+    percent: 100,
+    label: "Sem eficiência (otimista)",
+    description:
+      "Considera que toda hora paga é hora produzida. Subestima o custo.",
+  },
+  {
+    percent: 85,
+    label: "Recomendado (equilibrado)",
+    description: "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+  },
+  {
+    percent: 75,
+    label: "Conservador (muitos imprevistos)",
+    description:
+      "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+  },
+];
+
+export interface CompanyHourArgs {
+  /** Só as despesas ATIVAS; a tela filtra antes de chamar. */
+  fixedCostAmounts: number[];
+  equipment: { purchase_value: number; useful_life_months: number }[];
+  params: CompanyHourParams;
+}
+
+/**
+ * Custo da hora e do minuto da empresa, calculado no navegador.
+ *
+ * ⚠️ Espelha CompanyHourCalculator::compute() passo a passo, incluindo a ORDEM
+ * dos arredondamentos. Divergir aqui faz a tela de configuração mostrar uma
+ * hora e o motor de preço cobrar outra — e o usuário descobre isso pelo
+ * orçamento errado, não por um erro na tela.
+ *
+ * Existe para que mexer na jornada, no fator ou no botão de depreciação
+ * recalcule na hora, sem uma ida ao servidor por caractere digitado.
+ */
+export function calculateCompanyHour({
+  fixedCostAmounts,
+  equipment,
+  params,
+}: CompanyHourArgs): CompanyHourBreakdown {
+  const fixedCostsTotal = round(
+    fixedCostAmounts.reduce((total, value) => total + value, 0),
+    2,
+  );
+
+  /*
+   * Cada máquina é arredondada ANTES de entrar no total — o mesmo que o
+   * append `monthly_depreciation` faz para a tela. Somar os valores cheios
+   * daria um total que não fecha com a soma das linhas que o usuário vê.
+   */
+  const depreciationTotal = round(
+    equipment.reduce(
+      (total, m) =>
+        total +
+        (m.useful_life_months > 0
+          ? round(m.purchase_value / m.useful_life_months, 2)
+          : 0),
+      0,
+    ),
+    2,
+  );
+
+  const costBase = round(
+    fixedCostsTotal + (params.include_depreciation ? depreciationTotal : 0),
+    2,
+  );
+
+  const monthlyHours = params.hours_per_day * params.days_per_month;
+
+  if (monthlyHours <= 0) {
+    throw new Error(
+      "Informe as horas por dia e os dias por mês: sem jornada não há hora produtiva para ratear os custos.",
+    );
+  }
+
+  const scenario = (
+    cenario: (typeof EFFICIENCY_SCENARIOS)[number],
+  ): EfficiencyScenarioResult => {
+    const productiveHours = monthlyHours * (cenario.percent / 100);
+
+    // 2 casas na hora: é o número que a tela exibe e o usuário confere.
+    const hourCost = round(costBase / productiveHours, 2);
+
+    /*
+     * O minuto deriva da hora JÁ ARREDONDADA. Quem multiplicar o custo do
+     * minuto por 60 na calculadora precisa chegar exatamente no custo da hora
+     * que está na tela — um centavo de diferença entre dois números exibidos
+     * lado a lado destrói a confiança na conta inteira.
+     */
+    const minuteCost = round(hourCost / 60, 4);
+
+    return {
+      efficiency_percent: cenario.percent,
+      label: cenario.label,
+      description: cenario.description,
+      productive_hours: round(productiveHours, 2),
+      hour_cost: hourCost,
+      minute_cost: minuteCost,
+    };
+  };
+
+  const ativo =
+    EFFICIENCY_SCENARIOS.find((c) => c.percent === params.efficiency_percent) ??
+    EFFICIENCY_SCENARIOS[1];
+
+  return {
+    parameters: params,
+    cost_base: {
+      fixed_costs: fixedCostsTotal,
+      depreciation: params.include_depreciation ? depreciationTotal : 0,
+      total: costBase,
+    },
+    monthly_hours: round(monthlyHours, 2),
+
+    /*
+     * Usa o total CHEIO do parque, e não a parcela que entrou na base: a
+     * pergunta "quanto de máquina tem nesta caixa" não muda porque o usuário
+     * desligou o botão — desligar muda como ele COBRA, não o que consome.
+     */
+    depreciation_per_unit:
+      params.monthly_production_volume > 0
+        ? round(depreciationTotal / params.monthly_production_volume, 4)
+        : 0,
+
+    active_scenario: scenario(ativo),
+    comparison: EFFICIENCY_SCENARIOS.map(scenario),
+  };
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
  * Precificação — espelha PricingEngine.php
  * ──────────────────────────────────────────────────────────────────────────── */
 
@@ -568,16 +1135,122 @@ export function calculatePricing({
   // ── 2. Matéria-prima ──────────────────────────────────────────────────────
   const materialCost = grossAreaPerUnit * material.cost_per_m2;
 
-  // ── 3. Mão de obra e operacional ──────────────────────────────────────────
-  const hours = spec.production_minutes_per_unit / MINUTES_PER_HOUR;
+  /*
+   * Revestimento: a segunda área da cartonagem rígida.
+   *
+   * O papel cobre o cinza e vira sobre as bordas, então consome MAIS chapa que
+   * a estrutura — e custa mais por m². Tratar os dois como um material só
+   * subestimaria justamente o mais caro. O desperdício incide igual: a mesma
+   * guilhotina, as mesmas aparas.
+   */
+  const netWrapAreaPerUnit = wrapAreaInSquareMeters(
+    spec.box_model,
+    spec.width_mm,
+    spec.height_mm,
+    spec.depth_mm,
+    material.thickness_mm ?? 0,
+    lid,
+  );
 
-  const laborCost = hours * settings.labor_hour_rate;
+  const grossWrapAreaPerUnit = netWrapAreaPerUnit * (1 + spec.waste_percent / 100);
+
+  const wrapCost =
+    spec.wrap_cost_per_m2 == null ? 0 : grossWrapAreaPerUnit * spec.wrap_cost_per_m2;
+
+  /*
+   * Ferragem: contada, não medida. Sem desperdício percentual em cima — ímã
+   * não tem apara, e quem quebra um lança a perda na quantidade, onde ela é
+   * visível e discutível.
+   */
+  const hardwareCost = (spec.hardware ?? []).reduce(
+    (total, item) => total + item.cost_per_piece * item.quantity,
+    0,
+  );
+
+  /*
+   * Berço de acomodação. A grandeza depende do TIPO: espuma é volume, o resto
+   * é área. O desperdício incide nos dois — a espuma também tem apara de
+   * corte, e ignorá-la faria o berço mais caro parecer o único sem perda.
+   */
+  let cradleCost = 0;
+  let cradleMinutes = 0;
+  let cradleAreaPerUnit = 0;
+  let cradleVolumePerUnit = 0;
+
+  if (spec.cradle) {
+    const c = cradleConsumption(
+      spec.cradle.type,
+      spec.width_mm,
+      spec.height_mm,
+      spec.depth_mm,
+      spec.cradle.rows,
+      spec.cradle.columns,
+      spec.cradle.height_ratio,
+      spec.cradle.strip_thickness_mm,
+    );
+
+    cradleAreaPerUnit = c.area_m2;
+    cradleVolumePerUnit = c.volume_m3;
+
+    const grandeza = isCradleVolumetric(spec.cradle.type)
+      ? cradleVolumePerUnit
+      : cradleAreaPerUnit;
+
+    cradleCost =
+      grandeza * (1 + spec.waste_percent / 100) * spec.cradle.cost_per_unit;
+
+    cradleMinutes = cradleExtraMinutes(spec.cradle.type);
+  }
+
+  // ── 3. Mão de obra e operacional ──────────────────────────────────────────
+  // O tempo do berço entra na jornada da peça: é trabalho real, e deixá-lo de
+  // fora faria a mão de obra da caixa com nichos custar o mesmo que a de uma
+  // caixa vazia.
+  const hours =
+    (spec.production_minutes_per_unit + cradleMinutes) / MINUTES_PER_HOUR;
+
+  /*
+   * Dois regimes de custo indireto, e nunca os dois ao mesmo tempo.
+   *
+   * ESTIMATIVA (modo desligado, comportamento histórico): mão de obra por R$/h
+   * digitado, indiretos por percentual sobre o custo direto. Dois palpites.
+   *
+   * HORA-EMPRESA (modo ligado): o minuto já carrega a despesa fixa real da
+   * empresa, rateada pelas horas que de fato produzem.
+   *
+   * O rateio percentual ZERA no segundo regime porque cobra exatamente as
+   * mesmas despesas — mantê-lo somaria aluguel sobre aluguel, com o erro
+   * crescendo junto com o tempo de produção da peça.
+   *
+   * Espelha PricingEngine.php passo a passo; divergir aqui quebra a paridade.
+   */
+  const companyMinuteCost = settings.use_company_hour
+    ? (settings.company_minute_cost ?? null)
+    : null;
+
+  const laborCost =
+    companyMinuteCost !== null
+      ? (spec.production_minutes_per_unit + cradleMinutes) * companyMinuteCost
+      : hours * settings.labor_hour_rate;
+
+  // Com o modo ligado e depreciação inclusa, este campo passa a valer
+  // MANUTENÇÃO apenas — a depreciação já entrou pela hora-empresa.
   const machineCost = hours * settings.machine_hour_rate;
   const energyCost = hours * settings.machine_power_kw * settings.energy_tariff_per_kwh;
 
   // ── 4. CMV ────────────────────────────────────────────────────────────────
-  const directCost = materialCost + laborCost + machineCost + energyCost;
-  const overheadCost = directCost * (settings.overhead_percent / 100);
+  const directCost =
+    materialCost +
+    wrapCost +
+    hardwareCost +
+    cradleCost +
+    laborCost +
+    machineCost +
+    energyCost;
+
+  const overheadCost =
+    companyMinuteCost !== null ? 0 : directCost * (settings.overhead_percent / 100);
+
   const rawUnitCost = directCost + overheadCost;
 
   // ── 5. Preço ──────────────────────────────────────────────────────────────
@@ -602,12 +1275,19 @@ export function calculatePricing({
     area_m2_total: round(grossAreaTotal, 6),
     blank_width_mm: round(blank.width, 2),
     blank_height_mm: round(blank.height, 2),
+    wrap_area_m2_per_unit: round(netWrapAreaPerUnit, 6),
+    cradle_area_m2_per_unit: round(cradleAreaPerUnit, 6),
+    cradle_volume_m3_per_unit: round(cradleVolumePerUnit, 9),
 
     lid_width_mm: lid ? round(lid.widthMm, 2) : null,
     lid_depth_mm: lid ? round(lid.depthMm, 2) : null,
     lid_height_mm: lid ? round(lid.heightMm, 2) : null,
 
     material_cost: money(materialCost),
+    wrap_cost: money(wrapCost),
+    hardware_cost: money(hardwareCost),
+    cradle_cost: money(cradleCost),
+    cradle_minutes: round(cradleMinutes, 2),
     labor_cost: money(laborCost),
     machine_cost: money(machineCost),
     energy_cost: money(energyCost),

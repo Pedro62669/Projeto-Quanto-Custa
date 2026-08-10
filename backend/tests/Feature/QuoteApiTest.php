@@ -222,7 +222,10 @@ class QuoteApiTest extends TestCase
 
         $snapshot = Quote::first()->pricing_snapshot;
 
-        $this->assertSame('1.0.0', $snapshot['engine_version']);
+        // 1.3.0 desde os berços. Fixar a versão aqui é intencional:
+        // o snapshot é o que explica o preço de um orçamento antigo, e uma
+        // mudança de motor que passe despercebida torna o histórico mudo.
+        $this->assertSame('1.3.0', $snapshot['engine_version']);
         $this->assertSame(3.20, $snapshot['material']['cost_per_unit']);
         $this->assertSame(3.20, $snapshot['material_cost_per_m2']);
         $this->assertArrayHasKey('cost_settings', $snapshot);

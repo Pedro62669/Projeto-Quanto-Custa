@@ -69,6 +69,18 @@ class AuthController extends Controller
 
         RateLimiter::clear($throttleKey);
 
+        /*
+         * Marca o acesso.
+         *
+         * forceFill em vez de update() porque `last_login_at` está fora do
+         * $fillable de propósito: é rastro do sistema, não campo de formulário.
+         *
+         * Redundante com access_logs à primeira vista — mas o expurgo da LGPD
+         * apaga registros com mais de 6 meses, e quem sumiu há sete é justamente
+         * quem a campanha de reengajamento procura. Ver a migration.
+         */
+        $user->forceFill(['last_login_at' => now()])->save();
+
         $token = $user->createToken(
             $credentials['device_name'] ?? 'web',
             expiresAt: now()->addDays(7),

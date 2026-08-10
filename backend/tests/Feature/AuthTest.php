@@ -46,12 +46,20 @@ class AuthTest extends TestCase
             ->assertJsonPath('data.user.role', 'user')
             ->assertJsonStructure(['data' => ['token', 'user' => ['id', 'name', 'email', 'role']]]);
 
-        // O token precisa realmente abrir as portas da API.
+        /*
+         * O token precisa realmente abrir as portas da API.
+         *
+         * `data.user.id` e não `id` na raiz: o /api/me deixou de ser
+         * `fn ($r) => $r->user()` e passou a devolver o contexto da sessão
+         * inteiro — usuário, empresa, plano vigente e cotas. A mudança é o que
+         * evita cada tela do frontend fazer quatro requisições para montar o
+         * cabeçalho. Ver MeController.
+         */
         $token = $response->json('data.token');
         $this->withHeader('Authorization', "Bearer {$token}")
             ->getJson('/api/me')
             ->assertOk()
-            ->assertJsonPath('id', $user->id);
+            ->assertJsonPath('data.user.id', $user->id);
     }
 
     #[Test]

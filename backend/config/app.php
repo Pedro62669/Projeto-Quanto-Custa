@@ -56,6 +56,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | Endereço do Next.js. A arquitetura é headless: o Laravel não serve tela
+    | nenhuma, então todo link que vai dentro de um e-mail (redefinição de senha,
+    | convite de retorno) precisa apontar para o outro domínio — usar APP_URL
+    | levaria o usuário para a API, que responderia 404 no navegador dele.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ComponentRole;
+use App\Enums\CradleType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SimulateQuoteRequest;
 use App\Http\Requests\StoreQuoteRequest;
@@ -11,6 +13,7 @@ use App\Http\Resources\QuoteResource;
 use App\Models\CostSetting;
 use App\Models\Material;
 use App\Models\Quote;
+use App\Services\Pricing\CompanyHourCalculator;
 use App\Services\Pricing\PricingEngine;
 use App\Services\Pricing\PricingInput;
 use App\Services\Pricing\PricingResult;
@@ -30,6 +33,7 @@ class QuoteController extends Controller
 {
     public function __construct(
         private readonly PricingEngine $pricing,
+        private readonly CompanyHourCalculator $companyHour,
     ) {}
 
     /**
@@ -124,8 +128,9 @@ class QuoteController extends Controller
             // Resultado materializado (as chaves de PricingResult casam com as colunas).
             ...collect($result->toArray())
                 ->only([
-                    'area_m2_per_unit', 'area_m2_total',
-                    'material_cost', 'labor_cost', 'machine_cost', 'energy_cost',
+                    'area_m2_per_unit', 'area_m2_total', 'wrap_area_m2_per_unit',
+                    'material_cost', 'wrap_cost', 'hardware_cost',
+                    'labor_cost', 'machine_cost', 'energy_cost',
                     'overhead_cost', 'unit_cost', 'unit_price',
                     'total_cost', 'total_price', 'profit_amount',
                 ])
@@ -206,8 +211,125 @@ class QuoteController extends Controller
         $material = Material::active()->findOrFail($data['material_id']);
         $settings = CostSetting::current();
 
+        $bom = $this->resolveComponents($data['components'] ?? [], $data);
+
+        /*
+         * O custo do minuto é resolvido AQUI, e não dentro do motor: o
+         * PricingEngine é puro e não toca no banco, e somar despesas fixas e
+         * depreciação exige duas consultas. Devolve null com o modo desligado,
+         * e nesse caso o motor calcula exatamente como sempre calculou.
+         */
         return $this->pricing->calculate(
-            PricingInput::fromValidated($data, $material, $settings)
+            PricingInput::fromValidated(
+                $data,
+                $material,
+                $settings,
+                $this->companyHour->minuteCostFor($settings),
+                $bom['wrap_cost_per_m2'],
+                $bom['hardware'],
+                $bom['cradle'],
+            )
         );
+    }
+
+    /**
+     * Traduz a lista de materiais do payload em números para o motor.
+     *
+     * O motor recebe VALORES, não models: ele é puro, tem gêmeo em TypeScript e
+     * não pode consultar banco. É aqui que `costPerSquareMeter()` (com a
+     * conversão por gramatura) e `costPerPiece()` são chamados — uma vez, no
+     * servidor, para que as duas pontas usem o mesmo número.
+     *
+     * A busca é escopada pelo TenantScope: um `material_id` de outra empresa
+     * simplesmente não é encontrado, e o orçamento falha em vez de precificar
+     * com o custo do vizinho.
+     *
+     * @param  list<array{material_id: int, role: string, quantity?: float|null}>  $components
+     * @param  array<string, mixed>  $data  Payload validado, de onde saem os
+     *                                      parâmetros de construção do berço.
+     * @return array{wrap_cost_per_m2: ?float, hardware: list<array{cost_per_piece: float, quantity: float}>, cradle: ?array<string, mixed>}
+     */
+    private function resolveComponents(array $components, array $data = []): array
+    {
+        $wrapCostPerM2 = null;
+        $hardware = [];
+        $cradleMaterial = null;
+
+        foreach ($components as $component) {
+            $material = Material::active()->findOrFail($component['material_id']);
+            $role = ComponentRole::from($component['role']);
+
+            match ($role) {
+                /*
+                 * O último revestimento vence, e não há erro se vierem dois.
+                 * Uma peça tem UMA pele; receber duas é a interface trocando a
+                 * seleção, não o usuário pedindo duas camadas — e derrubar a
+                 * simulação por isso seria hostil no meio da digitação.
+                 */
+                ComponentRole::Wrap => $wrapCostPerM2 = $material->costPerSquareMeter(),
+
+                ComponentRole::Hardware => $hardware[] = [
+                    'cost_per_piece' => $material->costPerPiece(),
+                    // Sem quantidade explícita, uma peça: é o mínimo que faz
+                    // sentido para quem acabou de arrastar um ímã para a lista.
+                    'quantity' => (float) ($component['quantity'] ?? 1),
+                ],
+
+                /*
+                 * Estrutura na lista é redundante — ela já é o `material_id` do
+                 * orçamento. Ignorar em vez de recusar deixa o frontend enviar
+                 * a lista COMPLETA (que é como ele a exibe) sem ter que
+                 * filtrar a linha da estrutura antes de mandar.
+                 */
+                ComponentRole::Structure => null,
+
+                ComponentRole::Cradle => $cradleMaterial = $material,
+            };
+        }
+
+        return [
+            'wrap_cost_per_m2' => $wrapCostPerM2,
+            'hardware' => $hardware,
+            'cradle' => $this->resolveCradle($cradleMaterial, $data),
+        ];
+    }
+
+    /**
+     * Monta a especificação do berço a partir do material e dos parâmetros.
+     *
+     * O TIPO decide qual conversão de custo usar, e é aí que a escolha errada
+     * de material aparece: pedir berço de espuma com um papelão cotado em m²
+     * lança DomainException com a mensagem do próprio Material, em vez de
+     * multiplicar volume por preço de área e devolver um número sem sentido.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>|null
+     */
+    private function resolveCradle(?Material $material, array $data): ?array
+    {
+        if ($material === null || ! isset($data['cradle_type'])) {
+            return null;
+        }
+
+        $type = CradleType::from($data['cradle_type']);
+
+        return [
+            'type' => $type->value,
+
+            'cost_per_unit' => $type->isVolumetric()
+                ? $material->costPerCubicMeter()
+                : $material->costPerSquareMeter(),
+
+            'rows' => (int) ($data['cradle_rows'] ?? 1),
+            'columns' => (int) ($data['cradle_columns'] ?? 1),
+            'height_ratio' => (float) ($data['cradle_height_ratio'] ?? 1.0),
+
+            /*
+             * A espessura da tira sai do MATERIAL, não do formulário: quem
+             * define a largura da ranhura é o papelão escolhido, e pedir o
+             * número ao usuário abriria espaço para uma grade que não encaixa.
+             */
+            'strip_thickness_mm' => (float) ($material->thickness_mm ?? 0.0),
+        ];
     }
 }

@@ -17,6 +17,9 @@ import {
   resolveLidDimensions,
   isCylindrical,
   hasSeparateLid,
+  isBook,
+  bookLayout,
+  suggestedMagnets,
 } from "@/lib/pricing/engine";
 
 /**
@@ -105,6 +108,24 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
   // Idem para a mailer (MailerMesh): ela é uma peça só, dobrada, e não um
   // arranjo de painéis independentes.
   mailer: { topo: true, fundo: false },
+  /*
+   * Tampa solta rígida: a mesma silhueta da bandeja — base aberta em cima com
+   * a tampa por fora —, então o desenho reaproveita o caminho de painéis dela.
+   *
+   * O que a rígida tem a mais é INVISÍVEL neste nível: o revestimento é uma
+   * camada de papel de décimos de milímetro sobre o cinza, e desenhá-la
+   * mudaria a silhueta em menos de um pixel. A diferença que importa está no
+   * preço, não na figura — e está coberta por wrap_cost.
+   */
+  rigid_telescopic: { topo: true, fundo: false },
+  // A família livro é desenhada por componente próprio (LivroMesh): a capa é
+  // articulada, e não um arranjo de painéis parados. As entradas existem para
+  // o mapa continuar exaustivo sobre BoxModel.
+  rigid_book: { topo: true, fundo: false },
+  rigid_book_flap: { topo: true, fundo: false },
+  rigid_magnet: { topo: true, fundo: false },
+  rigid_magnet_side: { topo: true, fundo: false },
+  rigid_magnet_wrap: { topo: true, fundo: false },
 };
 
 /**
@@ -116,7 +137,14 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
  * controle que mente sobre o que faz.
  */
 export function hasAperture(model: BoxModel): boolean {
-  return hasSeparateLid(model) || model === "drawer" || model === "mailer";
+  // A caixa livro entra porque a capa é articulada: o slider percorre o giro
+  // da tampa em torno da lombada, que é a peça móvel do modelo.
+  return (
+    hasSeparateLid(model) ||
+    model === "drawer" ||
+    model === "mailer" ||
+    isBook(model)
+  );
 }
 
 /** Segmentos da revolução: acima disso o ganho visual não paga o custo. */
@@ -320,6 +348,210 @@ const Painel = ({
     {showEdges && <Edges threshold={15} color="#00000030" />}
   </mesh>
 );
+
+/**
+ * Caixa livro: capa de painéis articulados + berço colado na contracapa.
+ *
+ * Componente próprio, como a gaveta e o tubo, porque a peça tem uma
+ * ARTICULAÇÃO — não é um arranjo de painéis parados. A tampa e a lombada giram
+ * em torno das canaletas, e o slider de abertura percorre esse giro.
+ *
+ * A geometria lê bookLayout() do motor de preço: os mesmos números que entram
+ * na conta desenham a figura. Um painel que exista aqui e não lá — ou o
+ * contrário — é uma divergência que nenhum teste do projeto enxerga, porque a
+ * paridade só compara PHP com TS, nunca o preço com o desenho.
+ */
+function LivroMesh({
+  boxModel,
+  widthMm,
+  heightMm,
+  depthMm,
+  espessuraMm,
+  abertura,
+  material,
+  showEdges,
+}: {
+  boxModel: BoxModel;
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+  espessuraMm: number;
+  abertura: number;
+  material: ReactNode;
+  showEdges: boolean;
+}) {
+  const l = bookLayout(boxModel, widthMm, heightMm, depthMm, espessuraMm);
+
+  /*
+   * O enquadramento usa a capa ABERTA, não a caixa fechada.
+   *
+   * Aberta, a tampa deita para trás e a peça ocupa quase o dobro da
+   * profundidade. Normalizar pela caixa fechada faria a tampa sair do
+   * enquadramento no meio da animação — o mesmo cuidado que a gaveta toma com
+   * o deslize máximo.
+   */
+  const extensaoAberta = l.capaD + l.lombada + l.capaW;
+  const fator =
+    SCENE_MAX_UNITS / Math.max(l.capaW, l.bercoH + l.lombada, extensaoAberta, 1);
+
+  const capaW = l.capaW * fator;
+  const capaD = l.capaD * fator;
+  const lombada = l.lombada * fator;
+
+  // Livro e ímã nunca têm as duas: uma soma resolve os dois casos sem um
+  // condicional que teria que ser repetido em cada uso abaixo.
+  const abaDianteira = (l.aba + l.magnetFlap) * fator;
+  const sideFlap = l.sideFlap * fator;
+
+  const imas = suggestedMagnets(boxModel);
+
+  const bercoW = l.bercoW * fator;
+  const bercoD = l.bercoD * fator;
+  const bercoH = l.bercoH * fator;
+
+  // Espessura visível com piso, senão o painel some em caixas grandes.
+  const t = Math.min(
+    Math.max(espessuraMm * fator, MIN_WALL_UNITS),
+    bercoW / 4,
+    bercoH / 2,
+  );
+
+  const tampaRef = useRef<THREE.Group>(null);
+  const abaRef = useRef<THREE.Group>(null);
+  const lateralEsqRef = useRef<THREE.Group>(null);
+  const lateralDirRef = useRef<THREE.Group>(null);
+  const suave = useAberturaSuave(abertura);
+
+  useFrame(() => {
+    /*
+     * A capa gira em torno da canaleta traseira, e a aba em torno da borda da
+     * tampa. Rotação e não translação: é uma dobradiça, e mover a peça em
+     * linha reta faria a tampa flutuar solta da lombada.
+     *
+     * O giro da tampa vai a -100°, e não a -90°: capa dura aberta passa um
+     * pouco do reto por causa da espessura da lombada, e parar exatamente no
+     * reto deixa a peça com cara de papel.
+     */
+    if (tampaRef.current) {
+      tampaRef.current.rotation.x = -(Math.PI * 0.555) * suave.current;
+    }
+
+    // A aba abre ANTES da tampa (ela precisa liberar a lateral primeiro), e por
+    // isso satura na primeira metade do curso.
+    if (abaRef.current) {
+      abaRef.current.rotation.x = (Math.PI / 2) * Math.min(suave.current * 2, 1);
+    }
+
+    /*
+     * As laterais abrem PARA FORA, em sentidos opostos. Elas saem primeiro de
+     * todas (saturam a um terço do curso): na peça real é preciso liberá-las
+     * antes de levantar a tampa, senão elas travam nas paredes do berço.
+     */
+    const lateral = (Math.PI / 2) * Math.min(suave.current * 3, 1);
+
+    if (lateralEsqRef.current) lateralEsqRef.current.rotation.z = -lateral;
+    if (lateralDirRef.current) lateralDirRef.current.rotation.z = lateral;
+  });
+
+  const painel = (
+    sx: number,
+    sy: number,
+    sz: number,
+    px: number,
+    py: number,
+    pz: number,
+    key: string,
+  ) => (
+    <mesh key={key} scale={[sx, sy, sz]} position={[px, py, pz]} castShadow receiveShadow>
+      <boxGeometry args={[1, 1, 1]} />
+      {material}
+      {showEdges && <Edges threshold={15} color="#00000030" />}
+    </mesh>
+  );
+
+  // A lombada fica na borda TRASEIRA: é onde o livro abre.
+  const zLombada = -capaD / 2 - t / 2;
+
+  return (
+    <group position={[0, t / 2, 0]}>
+      {/* ── Contracapa: o painel que apoia no chão ─────────────────────── */}
+      {painel(capaW, t, capaD, 0, 0, 0, "contracapa")}
+
+      {/* ── Lombada: em pé na borda traseira, unindo as duas capas ─────── */}
+      {painel(capaW, lombada, t, 0, lombada / 2, zLombada, "lombada")}
+
+      {/*
+       * ── Tampa: gira em torno do topo da lombada ──────────────────────
+       *
+       * O grupo tem origem NA DOBRADIÇA e o painel é deslocado meia
+       * profundidade para frente: assim a rotação acontece na canaleta, e não
+       * no centro da tampa (que a faria varrer o interior da caixa).
+       */}
+      <group ref={tampaRef} position={[0, lombada, zLombada]}>
+        {painel(capaW, t, capaD, 0, 0, capaD / 2, "tampa")}
+
+        {/*
+         * Aba dianteira: fechamento do livro ou fecho magnético.
+         *
+         * As duas ocupam a mesma posição e nunca coexistem — o livro tem `aba`,
+         * o ímã tem `magnetFlap`. Desenhá-las pelo mesmo grupo mantém uma
+         * dobradiça só na cena, que é o que a peça real tem.
+         */}
+        {abaDianteira > 0 && (
+          <group ref={abaRef} position={[0, 0, capaD]}>
+            {painel(capaW, t, abaDianteira, 0, 0, abaDianteira / 2, "aba")}
+
+            {/*
+             * Os ímãs, na ponta da aba. Desenhados porque são a razão do
+             * modelo: sem eles a peça parece uma caixa livro, e o usuário não
+             * enxerga o que está pagando na lista de materiais.
+             */}
+            {imas > 0 &&
+              Array.from({ length: imas }, (_, i) => (
+                <mesh
+                  key={`ima-${i}`}
+                  position={[
+                    // Espalhados na largura, simétricos em torno do centro.
+                    ((i + 0.5) / imas - 0.5) * capaW * 0.6,
+                    -t * 0.6,
+                    abaDianteira * 0.82,
+                  ]}
+                  castShadow
+                >
+                  <cylinderGeometry args={[t * 0.9, t * 0.9, t * 0.5, 16]} />
+                  <meshStandardMaterial color="#8A8F98" roughness={0.35} metalness={0.85} />
+                </mesh>
+              ))}
+          </group>
+        )}
+
+        {/*
+         * Abas laterais: descem pelas bordas da tampa e se recolhem para
+         * dentro ao fechar. Giram no sentido oposto uma da outra.
+         */}
+        {sideFlap > 0 && (
+          <>
+            <group ref={lateralEsqRef} position={[-capaW / 2, 0, capaD / 2]}>
+              {painel(t, sideFlap, capaD, -t / 2, -sideFlap / 2, 0, "aba-lat-esq")}
+            </group>
+            <group ref={lateralDirRef} position={[capaW / 2, 0, capaD / 2]}>
+              {painel(t, sideFlap, capaD, t / 2, -sideFlap / 2, 0, "aba-lat-dir")}
+            </group>
+          </>
+        )}
+      </group>
+
+      {/* ── Berço: bandeja de quatro paredes colada sobre a contracapa ─── */}
+      <group position={[0, t / 2, 0]}>
+        {painel(bercoW, t, bercoD, 0, t / 2, 0, "berco-fundo")}
+        {painel(t, bercoH, bercoD, -(bercoW - t) / 2, t + bercoH / 2, 0, "berco-esq")}
+        {painel(t, bercoH, bercoD, (bercoW - t) / 2, t + bercoH / 2, 0, "berco-dir")}
+        {painel(bercoW - 2 * t, bercoH, t, 0, t + bercoH / 2, (bercoD - t) / 2, "berco-frente")}
+        {painel(bercoW - 2 * t, bercoH, t, 0, t + bercoH / 2, -(bercoD - t) / 2, "berco-tras")}
+      </group>
+    </group>
+  );
+}
 
 /**
  * Caixa gaveta: luva externa + gaveta deslizando para fora.
@@ -1117,6 +1349,21 @@ export function BoxMesh({
   if (boxModel === "drawer") {
     return (
       <GavetaMesh
+        widthMm={widthMm}
+        heightMm={heightMm}
+        depthMm={depthMm}
+        espessuraMm={thicknessMm ?? 0}
+        abertura={abertura}
+        material={material}
+        showEdges={showEdges}
+      />
+    );
+  }
+
+  if (isBook(boxModel)) {
+    return (
+      <LivroMesh
+        boxModel={boxModel}
         widthMm={widthMm}
         heightMm={heightMm}
         depthMm={depthMm}

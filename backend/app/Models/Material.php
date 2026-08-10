@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\MaterialType;
 use App\Enums\MaterialUnit;
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,9 +18,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Material extends Model
 {
+    use BelongsToTenant;
     use HasFactory;
 
+    /**
+     * `tenant_id` é preenchível pelo mesmo motivo que em CostSetting: o
+     * `creating` da trait sobrescreve o campo depois do fill(), neutralizando
+     * qualquer valor vindo de request autenticado. Serve a quem grava sem
+     * usuário logado — seeder e factory.
+     */
     protected $fillable = [
+        'tenant_id',
         'name', 'type', 'description',
         'cost_unit', 'cost_per_unit', 'grammage_kg_per_m2',
         'default_waste_percent', 'thickness_mm',
@@ -72,6 +81,19 @@ class Material extends Model
      */
     public function costPerSquareMeter(): float
     {
+        /*
+         * Ferragem não tem área. Um ímã de 6×2mm tem R$/m² astronômico e sem
+         * significado nenhum — o consumo dele é contado, não medido. Recusar
+         * aqui evita que um material cadastrado na unidade errada entre no
+         * cálculo de área e produza um preço absurdo sem ninguém perceber.
+         */
+        if (! $this->cost_unit->isAreaBased()) {
+            throw new \DomainException(
+                "Material #{$this->id} ({$this->name}) é cotado por peça e não tem custo por m². "
+                .'Use-o como ferragem na lista de materiais.'
+            );
+        }
+
         if ($this->cost_unit === MaterialUnit::SquareMeter) {
             return $this->cost_per_unit;
         }
@@ -85,5 +107,38 @@ class Material extends Model
         }
 
         return $this->cost_per_unit * $this->grammage_kg_per_m2;
+    }
+
+    /**
+     * Custo de UMA peça de ferragem.
+     *
+     * Espelho de costPerSquareMeter() para o outro regime de cobrança: aqui o
+     * preço de compra já É o custo unitário, sem conversão. O método existe
+     * mesmo sendo trivial para que o motor nunca leia `cost_per_unit` cru — é
+     * a leitura crua que faz alguém multiplicar preço de quilo por quantidade
+     * de peças sem notar.
+     */
+    public function costPerPiece(): float
+    {
+        if ($this->cost_unit->isAreaBased()) {
+            throw new \DomainException(
+                "Material #{$this->id} ({$this->name}) é cotado por área e não pode ser contado por peça."
+            );
+        }
+
+        return $this->cost_per_unit;
+    }
+
+    /** Custo de UM metro cúbico — espuma e EVA, vendidos em bloco. */
+    public function costPerCubicMeter(): float
+    {
+        if (! $this->cost_unit->isVolumetric()) {
+            throw new \DomainException(
+                "Material #{$this->id} ({$this->name}) não é cotado por metro cúbico. "
+                .'Berço em espuma exige material comprado em bloco.'
+            );
+        }
+
+        return $this->cost_per_unit;
     }
 }

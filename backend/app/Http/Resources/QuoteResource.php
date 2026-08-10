@@ -52,6 +52,13 @@ class QuoteResource extends JsonResource
 
             'costs' => [
                 'material' => $this->material_cost,
+
+                // Lista de materiais: zero fora da cartonagem rígida e sem
+                // ferragem. Vão sempre presentes para que a ficha técnica não
+                // precise testar a existência da chave antes de somar.
+                'wrap' => $this->wrap_cost,
+                'hardware' => $this->hardware_cost,
+
                 'labor' => $this->labor_cost,
                 'machine' => $this->machine_cost,
                 'energy' => $this->energy_cost,

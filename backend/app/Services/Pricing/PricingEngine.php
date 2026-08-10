@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Pricing;
 
+use App\Enums\CradleType;
+
 /**
  * Motor de precificação — única fonte de verdade dos números do sistema.
  *
@@ -23,8 +25,21 @@ namespace App\Services\Pricing;
  */
 final class PricingEngine
 {
-    /** Gravada no snapshot: permite explicar por que um orçamento antigo tem outro número. */
-    public const VERSION = '1.0.0';
+    /**
+     * Gravada no snapshot: permite explicar por que um orçamento antigo tem
+     * outro número.
+     *
+     * 1.1.0 — modo hora-empresa. A minor e não uma major porque o
+     * comportamento de toda configuração existente é bit a bit o mesmo: o
+     * regime novo só entra com `use_company_hour` ligado, que nasce falso.
+     *
+     * 1.2.0 — lista de materiais: revestimento e ferragem. Também minor: sem
+     * componentes na entrada, os dois custos saem zero e o preço não se move.
+     *
+     * 1.3.0 — berços de acomodação. Minor pela mesma razão: sem berço na
+     * entrada, o custo e os minutos extras saem zero.
+     */
+    public const VERSION = '1.3.0';
 
     private const MINUTES_PER_HOUR = 60.0;
 
@@ -72,10 +87,124 @@ final class PricingEngine
         // costPerSquareMeter() normaliza materiais cotados em kg via gramatura.
         $materialCost = $grossAreaPerUnit * $material->costPerSquareMeter();
 
-        // ── 3. Mão de obra e operacional ────────────────────────────────────
-        $hours = $input->productionMinutesPerUnit / self::MINUTES_PER_HOUR;
+        /*
+         * Revestimento: a segunda área da cartonagem rígida.
+         *
+         * O papel cobre o cinza e vira sobre as bordas, então consome MAIS
+         * chapa que a estrutura. E custa mais por m² — revestimento bom passa
+         * de R$ 20 onde o cinza fica em R$ 5. Tratar os dois como um material
+         * só subestimaria justamente o mais caro dos dois.
+         *
+         * O desperdício incide igual: a mesma guilhotina, as mesmas aparas.
+         */
+        $netWrapAreaPerUnit = $blankCalculator->wrapAreaInSquareMeters(
+            $input->boxModel,
+            $input->widthMm,
+            $input->heightMm,
+            $input->depthMm,
+            $lid,
+        );
 
-        $laborCost = $hours * $settings->labor_hour_rate;
+        $grossWrapAreaPerUnit = $netWrapAreaPerUnit * (1 + $input->wastePercent / 100);
+
+        $wrapCost = $input->wrapCostPerM2 === null
+            ? 0.0
+            : $grossWrapAreaPerUnit * $input->wrapCostPerM2;
+
+        /*
+         * Ferragem: contada, não medida.
+         *
+         * Sem desperdício percentual em cima — ímã não tem apara. Quem quebra
+         * um na montagem lança a perda na quantidade, que é onde ela é visível
+         * e discutível, em vez de diluída num percentual de refile.
+         */
+        $hardwareCost = 0.0;
+
+        foreach ($input->hardware as $item) {
+            $hardwareCost += $item['cost_per_piece'] * $item['quantity'];
+        }
+
+        /*
+         * Berço de acomodação.
+         *
+         * Consome numa grandeza que depende do TIPO: espuma é volume (bloco
+         * escavado), cartonagem e papel são área. O desperdício incide nos dois
+         * — a espuma também tem apara de corte, e ignorá-la faria o berço mais
+         * caro do catálogo parecer o único sem perda.
+         *
+         * O tempo extra é somado à jornada da peça, e não escondido: montar
+         * nichos revestidos custa oito minutos que ninguém lembra de lançar.
+         */
+        $cradleCost = 0.0;
+        $cradleMinutes = 0.0;
+        $cradleAreaPerUnit = 0.0;
+        $cradleVolumePerUnit = 0.0;
+
+        if ($input->cradle !== null) {
+            $cradleType = CradleType::from($input->cradle['type']);
+
+            $consumo = (new CradleCalculator)->consumption(
+                type: $cradleType,
+                widthMm: $input->widthMm,
+                heightMm: $input->heightMm,
+                depthMm: $input->depthMm,
+                rows: $input->cradle['rows'],
+                columns: $input->cradle['columns'],
+                heightRatio: $input->cradle['height_ratio'],
+                stripThicknessMm: $input->cradle['strip_thickness_mm'],
+            );
+
+            $cradleAreaPerUnit = $consumo['area_m2'];
+            $cradleVolumePerUnit = $consumo['volume_m3'];
+
+            $grandeza = $cradleType->isVolumetric() ? $cradleVolumePerUnit : $cradleAreaPerUnit;
+
+            $cradleCost = $grandeza * (1 + $input->wastePercent / 100)
+                * $input->cradle['cost_per_unit'];
+
+            $cradleMinutes = $cradleType->extraProductionMinutes();
+        }
+
+        // ── 3. Mão de obra e operacional ────────────────────────────────────
+        //
+        // O tempo do berço entra na jornada da peça: ele é trabalho real, e
+        // deixá-lo de fora faria a mão de obra da caixa com nichos custar o
+        // mesmo que a de uma caixa vazia.
+        $hours = ($input->productionMinutesPerUnit + $cradleMinutes) / self::MINUTES_PER_HOUR;
+
+        /*
+         * Dois regimes de custo indireto, e nunca os dois ao mesmo tempo.
+         *
+         * ESTIMATIVA (modo desligado, comportamento histórico): a mão de obra
+         * sai de um R$/h digitado e os indiretos de um percentual sobre o custo
+         * direto. Dois palpites.
+         *
+         * HORA-EMPRESA (modo ligado): o minuto já carrega a despesa fixa real
+         * da empresa — aluguel, contador, energia, pró-labore e, opcionalmente,
+         * a depreciação do parque — rateada pelas horas que de fato produzem.
+         *
+         * Por que o rateio percentual ZERA no segundo regime: ele existe para
+         * cobrar exatamente as mesmas despesas. Mantê-lo somaria aluguel sobre
+         * aluguel, e o erro cresceria junto com o tempo de produção da peça —
+         * silencioso justamente nos pedidos maiores.
+         */
+        if ($input->companyMinuteCost !== null) {
+            $laborCost = ($input->productionMinutesPerUnit + $cradleMinutes)
+                * $input->companyMinuteCost;
+        } else {
+            $laborCost = $hours * $settings->labor_hour_rate;
+        }
+
+        /*
+         * A hora-máquina permanece nos dois regimes, mas MUDA DE SIGNIFICADO.
+         *
+         * Ela foi definida como "depreciação + manutenção". Com o modo ligado e
+         * `company_includes_depreciation`, a depreciação já entrou pela
+         * hora-empresa, e este campo passa a valer manutenção apenas. O motor
+         * não tem como separar as duas parcelas de um número só — quem publica
+         * a configuração precisa ajustá-lo, e é o que a validação do
+         * CostSettingController avisa.
+         */
         $machineCost = $hours * $settings->machine_hour_rate;
 
         // Energia = horas × kW × R$/kWh. Rateia o consumo real do parque em vez
@@ -83,8 +212,13 @@ final class PricingEngine
         $energyCost = $hours * $settings->machine_power_kw * $settings->energy_tariff_per_kwh;
 
         // ── 4. CMV (custo da mercadoria vendida) ────────────────────────────
-        $directCost = $materialCost + $laborCost + $machineCost + $energyCost;
-        $overheadCost = $directCost * ($settings->overhead_percent / 100);
+        $directCost = $materialCost + $wrapCost + $hardwareCost + $cradleCost
+            + $laborCost + $machineCost + $energyCost;
+
+        $overheadCost = $input->companyMinuteCost !== null
+            ? 0.0
+            : $directCost * ($settings->overhead_percent / 100);
+
         $unitCost = $directCost + $overheadCost;
 
         // ── 5. Precificação ─────────────────────────────────────────────────
@@ -111,12 +245,19 @@ final class PricingEngine
             areaM2Total: round($grossAreaTotal, 6),
             blankWidthMm: round($blank['width'], 2),
             blankHeightMm: round($blank['height'], 2),
+            wrapAreaM2PerUnit: round($netWrapAreaPerUnit, 6),
+            cradleAreaM2PerUnit: round($cradleAreaPerUnit, 6),
+            cradleVolumeM3PerUnit: round($cradleVolumePerUnit, 9),
 
             lidWidthMm: $lid ? round($lid['width'], 2) : null,
             lidDepthMm: $lid ? round($lid['depth'], 2) : null,
             lidHeightMm: $lid ? round($lid['height'], 2) : null,
 
             materialCost: $this->money($materialCost),
+            wrapCost: $this->money($wrapCost),
+            hardwareCost: $this->money($hardwareCost),
+            cradleCost: $this->money($cradleCost),
+            cradleMinutes: round($cradleMinutes, 2),
             laborCost: $this->money($laborCost),
             machineCost: $this->money($machineCost),
             energyCost: $this->money($energyCost),

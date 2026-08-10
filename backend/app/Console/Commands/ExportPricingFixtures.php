@@ -55,6 +55,10 @@ class ExportPricingFixtures extends Command
                 lidWidthMm: $scenario['lidWidthMm'],
                 lidDepthMm: $scenario['lidDepthMm'],
                 lidHeightMm: $scenario['lidHeightMm'],
+                companyMinuteCost: $scenario['companyMinuteCost'],
+                wrapCostPerM2: $scenario['wrapCostPerM2'],
+                hardware: $scenario['hardware'],
+                cradle: $scenario['cradle'],
             );
 
             $cases[] = [
@@ -66,10 +70,21 @@ class ExportPricingFixtures extends Command
                     'cost_per_m2' => round($scenario['material']->costPerSquareMeter(), 10),
                     'thickness_mm' => $scenario['material']->thickness_mm,
                 ],
-                'settings' => $scenario['settings']->only([
-                    'energy_tariff_per_kwh', 'machine_hour_rate', 'machine_power_kw',
-                    'labor_hour_rate', 'overhead_percent', 'tax_percent',
-                ]),
+                'settings' => [
+                    ...$scenario['settings']->only([
+                        'energy_tariff_per_kwh', 'machine_hour_rate', 'machine_power_kw',
+                        'labor_hour_rate', 'overhead_percent', 'tax_percent',
+                    ]),
+
+                    /*
+                     * O modo hora-empresa chega ao TS pelas configurações, e não
+                     * pela spec, porque é decisão da EMPRESA e não do orçamento.
+                     * `company_minute_cost` já vem resolvido — o motor local não
+                     * soma despesas fixas, ele consome o número que a API somou.
+                     */
+                    'use_company_hour' => $scenario['companyMinuteCost'] !== null,
+                    'company_minute_cost' => $scenario['companyMinuteCost'],
+                ],
                 'spec' => [
                     'box_model' => $scenario['boxModel']->value,
                     'width_mm' => $scenario['widthMm'],
@@ -83,6 +98,11 @@ class ExportPricingFixtures extends Command
                     'lid_width_mm' => $scenario['lidWidthMm'],
                     'lid_depth_mm' => $scenario['lidDepthMm'],
                     'lid_height_mm' => $scenario['lidHeightMm'],
+
+                    // Lista de materiais: já normalizada, como a API entrega.
+                    'wrap_cost_per_m2' => $scenario['wrapCostPerM2'],
+                    'hardware' => $scenario['hardware'],
+                    'cradle' => $scenario['cradle'],
                 ],
                 'expected' => $engine->calculate($input)->toArray(),
             ];
@@ -98,6 +118,29 @@ class ExportPricingFixtures extends Command
         $this->info(count($cases).' casos exportados para '.realpath($path));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Monta a especificação de um berço, com os defaults do formulário.
+     *
+     * @return array<string, mixed>
+     */
+    private function cradle(
+        string $type,
+        float $costPerUnit,
+        int $rows = 1,
+        int $columns = 1,
+        float $heightRatio = 1.0,
+        float $stripThicknessMm = 0.0,
+    ): array {
+        return [
+            'type' => $type,
+            'cost_per_unit' => $costPerUnit,
+            'rows' => $rows,
+            'columns' => $columns,
+            'height_ratio' => $heightRatio,
+            'strip_thickness_mm' => $stripThicknessMm,
+        ];
     }
 
     /**
@@ -127,11 +170,218 @@ class ExportPricingFixtures extends Command
             'lidWidthMm' => $o['lidWidthMm'] ?? null,
             'lidDepthMm' => $o['lidDepthMm'] ?? null,
             'lidHeightMm' => $o['lidHeightMm'] ?? null,
+
+            // null = regime de estimativa (labor_hour_rate + overhead_percent).
+            'companyMinuteCost' => $o['companyMinuteCost'] ?? null,
+
+            // Lista de materiais: null/vazio = material único, sem ferragem.
+            'wrapCostPerM2' => $o['wrapCostPerM2'] ?? null,
+            'hardware' => $o['hardware'] ?? [],
+
+            // null = caixa vazia, sem berço.
+            'cradle' => $o['cradle'] ?? null,
         ];
 
         $scenarios = [
             'rsc-padrao' => $base(),
             'modo-margin' => $base(['pricingMode' => 'margin']),
+
+            /*
+             * Modo hora-empresa: a mão de obra sai do custo do minuto e o
+             * rateio percentual é ignorado.
+             *
+             * O caso 'hora-empresa-com-rateio-ignorado' é o que importa: manda
+             * overhead_percent alto JUNTO com o modo ligado, e o resultado
+             * esperado tem overhead_cost zerado. Se algum dia alguém somar os
+             * dois regimes — em qualquer uma das duas linguagens — é este caso
+             * que denuncia.
+             */
+            'hora-empresa' => $base(['companyMinuteCost' => 0.9803]),
+            'hora-empresa-com-rateio-ignorado' => $base([
+                'companyMinuteCost' => 0.9803,
+                'settings' => ['overhead_percent' => 35.0],
+            ]),
+            'hora-empresa-com-imposto' => $base([
+                'companyMinuteCost' => 1.1112,
+                'settings' => ['tax_percent' => 8.0],
+            ]),
+            'hora-empresa-tempo-zero' => $base([
+                'companyMinuteCost' => 0.9803,
+                'productionMinutes' => 0.0,
+            ]),
+            'hora-empresa-minuto-caro' => $base([
+                'companyMinuteCost' => 12.5,
+                'productionMinutes' => 8.0,
+            ]),
+            'hora-empresa-modo-margin' => $base([
+                'companyMinuteCost' => 0.8333,
+                'pricingMode' => 'margin',
+            ]),
+
+            /*
+             * Cartonagem rígida: tampa solta telescópica.
+             *
+             * O caso 'rigida-sem-revestimento' é o que protege a fórmula: mesmo
+             * modelo, mesmo blank de cinza, revestimento null. Se algum dia
+             * alguém somar a área do revestimento à da estrutura — em qualquer
+             * uma das duas linguagens — este caso e o de baixo deixam de ter a
+             * mesma `area_m2_per_unit` e a paridade acusa.
+             */
+            'rigida-sem-revestimento' => $base(['boxModel' => BoxModel::RigidTelescopic]),
+            'rigida-revestida' => $base([
+                'boxModel' => BoxModel::RigidTelescopic,
+                'wrapCostPerM2' => 22.50,
+            ]),
+            'rigida-revestida-espessa' => $base([
+                'boxModel' => BoxModel::RigidTelescopic,
+                'material' => ['thickness_mm' => 2.5],
+                'wrapCostPerM2' => 22.50,
+            ]),
+            'rigida-tampa-manual' => $base([
+                'boxModel' => BoxModel::RigidTelescopic,
+                'wrapCostPerM2' => 22.50,
+                'lidWidthMm' => 340.0, 'lidDepthMm' => 190.0, 'lidHeightMm' => 120.0,
+            ]),
+            'rigida-com-imas' => $base([
+                'boxModel' => BoxModel::RigidTelescopic,
+                'wrapCostPerM2' => 22.50,
+                'hardware' => [['cost_per_piece' => 0.42, 'quantity' => 4]],
+            ]),
+            // Duas linhas de ferragem: ímãs e fita de cetim, como uma caixa
+            // ímã real leva. Prova que a soma percorre a lista inteira.
+            'rigida-ferragem-multipla' => $base([
+                'boxModel' => BoxModel::RigidTelescopic,
+                'wrapCostPerM2' => 22.50,
+                'hardware' => [
+                    ['cost_per_piece' => 0.42, 'quantity' => 4],
+                    ['cost_per_piece' => 1.85, 'quantity' => 1],
+                ],
+            ]),
+            // Ferragem sem cartonagem rígida: um RSC com fecho. O motor não
+            // deve exigir revestimento para aceitar ferragem.
+            'ferragem-em-modelo-dobrado' => $base([
+                'hardware' => [['cost_per_piece' => 2.10, 'quantity' => 2]],
+            ]),
+            /*
+             * Caixa livro. O par sem-aba / com-aba é o que protege a canaleta:
+             * a variação com aba tem UM painel e UMA dobradiça a mais, então o
+             * cinza e o revestimento precisam subir em proporções DIFERENTES —
+             * o cinza só pelo painel, o papel pelo painel e pelo vão. Quem
+             * somar a canaleta no cinza faz os dois subirem igual, e o par
+             * denuncia.
+             */
+            'livro' => $base(['boxModel' => BoxModel::RigidBook, 'wrapCostPerM2' => 22.50]),
+            'livro-com-aba' => $base([
+                'boxModel' => BoxModel::RigidBookFlap,
+                'wrapCostPerM2' => 22.50,
+            ]),
+            'livro-espesso' => $base([
+                'boxModel' => BoxModel::RigidBook,
+                'material' => ['thickness_mm' => 2.5],
+                'wrapCostPerM2' => 22.50,
+            ]),
+            // Espessura zero: a canaleta vira zero junto, e o modelo não pode
+            // degenerar nem dividir por nada.
+            'livro-sem-espessura' => $base([
+                'boxModel' => BoxModel::RigidBook,
+                'material' => ['thickness_mm' => 0.0],
+                'wrapCostPerM2' => 22.50,
+            ]),
+            'livro-raso' => $base([
+                'boxModel' => BoxModel::RigidBookFlap,
+                'heightMm' => 25.0,
+                'wrapCostPerM2' => 22.50,
+            ]),
+            'livro-com-imas' => $base([
+                'boxModel' => BoxModel::RigidBookFlap,
+                'wrapCostPerM2' => 22.50,
+                'hardware' => [['cost_per_piece' => 0.42, 'quantity' => 4]],
+            ]),
+
+            /*
+             * Caixa ímã. O trio prova que as três variações são GEOMÉTRICAS: a
+             * aba envolvente consome mais capa que a simples, e as laterais
+             * acrescentam painéis próprios com virada nas quatro bordas. Se
+             * alguém as reduzir ao mesmo blank, os três casos convergem e a
+             * paridade não acusa — mas os testes PHP acusam.
+             */
+            'ima' => $base(['boxModel' => BoxModel::RigidMagnet, 'wrapCostPerM2' => 22.50]),
+            'ima-laterais' => $base([
+                'boxModel' => BoxModel::RigidMagnetSide,
+                'wrapCostPerM2' => 22.50,
+                'hardware' => [['cost_per_piece' => 0.42, 'quantity' => 4]],
+            ]),
+            'ima-envolvente' => $base([
+                'boxModel' => BoxModel::RigidMagnetWrap,
+                'wrapCostPerM2' => 22.50,
+                'hardware' => [['cost_per_piece' => 0.42, 'quantity' => 2]],
+            ]),
+            'ima-espesso' => $base([
+                'boxModel' => BoxModel::RigidMagnetSide,
+                'material' => ['thickness_mm' => 2.5],
+                'wrapCostPerM2' => 22.50,
+            ]),
+            // Caixa rasa: a aba envolvente vira a maior fração da capa, e é
+            // onde a razão de avanço sob o fundo mais pesa.
+            'ima-envolvente-raso' => $base([
+                'boxModel' => BoxModel::RigidMagnetWrap,
+                'heightMm' => 25.0,
+                'wrapCostPerM2' => 22.50,
+            ]),
+
+            /*
+             * Berços. Um caso por tipo, para que cada fórmula tenha seu próprio
+             * ponto fixo, mais as bordas onde a grade degenera.
+             *
+             * `berco-espuma` é o único volumétrico: se alguém tratá-lo como
+             * área em qualquer uma das duas linguagens, o custo muda de ordem
+             * de grandeza e este caso denuncia na primeira comparação.
+             */
+            'berco-espuma' => $base([
+                'cradle' => $this->cradle('foam', costPerUnit: 850.00),
+            ]),
+            'berco-nicho-cartonagem' => $base([
+                'cradle' => $this->cradle('board_niche', costPerUnit: 5.00),
+            ]),
+            'berco-nicho-papel' => $base([
+                'cradle' => $this->cradle('paper_niche', costPerUnit: 3.20),
+            ]),
+            'berco-papel-dobrado' => $base([
+                'cradle' => $this->cradle('paper_fold', costPerUnit: 3.20),
+            ]),
+            'berco-grade-3x4' => $base([
+                'cradle' => $this->cradle('divider_grid', costPerUnit: 5.00, rows: 3, columns: 4),
+            ]),
+            // Grade 1×1 é "sem divisória": zero tiras, custo zero, e nada pode
+            // estourar por dividir a caixa em uma parte só.
+            'berco-grade-degenerada' => $base([
+                'cradle' => $this->cradle('divider_grid', costPerUnit: 5.00, rows: 1, columns: 1),
+            ]),
+            // Grade densa numa caixa estreita: as tiras que se cruzam podem
+            // consumir a largura inteira, e o comprimento não pode ir a negativo.
+            'berco-grade-densa-em-caixa-estreita' => $base([
+                'widthMm' => 60.0, 'depthMm' => 60.0,
+                'cradle' => $this->cradle('divider_grid', costPerUnit: 5.00, rows: 8, columns: 8,
+                    stripThicknessMm: 3.0),
+            ]),
+            'berco-meia-altura' => $base([
+                'cradle' => $this->cradle('board_niche', costPerUnit: 5.00, heightRatio: 0.5),
+            ]),
+            // Berço numa caixa rígida com revestimento e ferragem: o caso
+            // completo, onde todas as linhas da BOM coexistem.
+            'berco-em-caixa-rigida-completa' => $base([
+                'boxModel' => BoxModel::RigidMagnetSide,
+                'wrapCostPerM2' => 22.50,
+                'hardware' => [['cost_per_piece' => 0.42, 'quantity' => 4]],
+                'cradle' => $this->cradle('foam', costPerUnit: 850.00),
+            ]),
+
+            'rigida-quantidade-alta' => $base([
+                'boxModel' => BoxModel::RigidTelescopic,
+                'wrapCostPerM2' => 22.50,
+                'hardware' => [['cost_per_piece' => 0.42, 'quantity' => 4]],
+                'quantity' => 5000,
+            ]),
             'margem-zero' => $base(['marginPercent' => 0.0]),
             'margem-alta-markup' => $base(['marginPercent' => 250.0]),
             'margem-99-margin' => $base(['marginPercent' => 99.0, 'pricingMode' => 'margin']),

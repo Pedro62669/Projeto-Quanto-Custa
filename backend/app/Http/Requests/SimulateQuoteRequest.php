@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Enums\BoxModel;
+use App\Enums\ComponentRole;
+use App\Enums\CradleType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -56,6 +58,39 @@ class SimulateQuoteRequest extends FormRequest
             'lid_width_mm' => ['nullable', 'numeric', 'min:10', 'max:3200', 'gte:width_mm'],
             'lid_depth_mm' => ['nullable', 'numeric', 'min:10', 'max:3200', 'gte:depth_mm'],
             'lid_height_mm' => ['nullable', 'numeric', 'min:1', 'max:3000'],
+
+            /*
+             * Lista de materiais — cartonagem rígida e ferragem.
+             *
+             * `material_id` acima continua sendo a ESTRUTURA (o papelão cinza),
+             * e não virou uma linha da lista: manter o campo onde estava é o
+             * que permite que todo orçamento, formulário e teste anterior
+             * continuem válidos sem uma linha de mudança.
+             *
+             * A quantidade só faz sentido em ferragem — revestimento é área, e
+             * pedir "quantos revestimentos" seria uma pergunta sem resposta.
+             */
+            'components' => ['nullable', 'array', 'max:20'],
+            'components.*.material_id' => [
+                'required', 'integer',
+                Rule::exists('materials', 'id')->where('is_active', true),
+            ],
+            'components.*.role' => ['required', Rule::enum(ComponentRole::class)],
+            'components.*.quantity' => ['nullable', 'numeric', 'min:0', 'max:10000'],
+
+            /*
+             * Parâmetros do berço, quando houver um componente com papel
+             * `cradle`. Vivem fora da lista porque descrevem a CONSTRUÇÃO, não
+             * o material: a mesma espuma serve a berços de alturas diferentes,
+             * e a grade não é propriedade do papelão.
+             */
+            'cradle_type' => ['nullable', Rule::enum(CradleType::class)],
+            'cradle_rows' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'cradle_columns' => ['nullable', 'integer', 'min:1', 'max:20'],
+
+            // Fração da altura interna. Abaixo de 10% o berço não segura nada;
+            // acima de 100% ele não cabe na caixa.
+            'cradle_height_ratio' => ['nullable', 'numeric', 'min:0.1', 'max:1'],
         ];
     }
 
@@ -64,6 +99,8 @@ class SimulateQuoteRequest extends FormRequest
     {
         return [
             'material_id.exists' => 'A matéria-prima selecionada não existe ou está inativa.',
+            'components.*.material_id.exists' => 'Um dos materiais da lista não existe ou está inativo.',
+            'components.*.role.enum' => 'O papel do material deve ser estrutura, revestimento ou ferragem.',
             'lid_width_mm.gte' => 'A tampa encaixa por fora: sua largura não pode ser menor que a da caixa.',
             'lid_depth_mm.gte' => 'A tampa encaixa por fora: sua profundidade não pode ser menor que a da caixa.',
             '*.min' => 'O campo :attribute está abaixo do mínimo permitido.',

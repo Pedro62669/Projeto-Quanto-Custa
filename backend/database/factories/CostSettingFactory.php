@@ -22,6 +22,7 @@ class CostSettingFactory extends Factory
     public function definition(): array
     {
         return [
+            'tenant_id' => fn () => TenantFactory::daSuite(),
             'energy_tariff_per_kwh' => 1.00,
             'machine_hour_rate' => 60.00,
             'machine_power_kw' => 10.00,

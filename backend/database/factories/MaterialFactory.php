@@ -18,6 +18,7 @@ class MaterialFactory extends Factory
     public function definition(): array
     {
         return [
+            'tenant_id' => fn () => TenantFactory::daSuite(),
             'name' => fake()->unique()->words(3, true),
             'type' => MaterialType::Cardboard,
             'cost_unit' => MaterialUnit::SquareMeter,

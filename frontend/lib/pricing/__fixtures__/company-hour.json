@@ -1,0 +1,1094 @@
+{
+    "engine_version": "1.3.0",
+    "generated_at": "2026-08-10T00:11:52+00:00",
+    "cases": [
+        {
+            "name": "jornada-padrao",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": false,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": false,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 0,
+                    "total": 8800
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 0,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 149.6,
+                    "hour_cost": 58.82,
+                    "minute_cost": 0.9803
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 50,
+                        "minute_cost": 0.8333
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 58.82,
+                        "minute_cost": 0.9803
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 66.67,
+                        "minute_cost": 1.1112
+                    }
+                ]
+            }
+        },
+        {
+            "name": "cenario-otimista",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 100,
+                "include_depreciation": false,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 100,
+                    "include_depreciation": false,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 0,
+                    "total": 8800
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 0,
+                "active_scenario": {
+                    "efficiency_percent": 100,
+                    "label": "Sem eficiência (otimista)",
+                    "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                    "productive_hours": 176,
+                    "hour_cost": 50,
+                    "minute_cost": 0.8333
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 50,
+                        "minute_cost": 0.8333
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 58.82,
+                        "minute_cost": 0.9803
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 66.67,
+                        "minute_cost": 1.1112
+                    }
+                ]
+            }
+        },
+        {
+            "name": "cenario-conservador",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 75,
+                "include_depreciation": false,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 75,
+                    "include_depreciation": false,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 0,
+                    "total": 8800
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 0,
+                "active_scenario": {
+                    "efficiency_percent": 75,
+                    "label": "Conservador (muitos imprevistos)",
+                    "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                    "productive_hours": 132,
+                    "hour_cost": 66.67,
+                    "minute_cost": 1.1112
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 50,
+                        "minute_cost": 0.8333
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 58.82,
+                        "minute_cost": 0.9803
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 66.67,
+                        "minute_cost": 1.1112
+                    }
+                ]
+            }
+        },
+        {
+            "name": "sem-despesa",
+            "fixed_cost_amounts": [],
+            "equipment": [],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": false,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": false,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 0,
+                    "depreciation": 0,
+                    "total": 0
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 0,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 149.6,
+                    "hour_cost": 0,
+                    "minute_cost": 0
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 0,
+                        "minute_cost": 0
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 0,
+                        "minute_cost": 0
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 0,
+                        "minute_cost": 0
+                    }
+                ]
+            }
+        },
+        {
+            "name": "varias-despesas",
+            "fixed_cost_amounts": [
+                3500,
+                1200.5,
+                890.33,
+                2100.17,
+                1109
+            ],
+            "equipment": [],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": false,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": false,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 0,
+                    "total": 8800
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 0,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 149.6,
+                    "hour_cost": 58.82,
+                    "minute_cost": 0.9803
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 50,
+                        "minute_cost": 0.8333
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 58.82,
+                        "minute_cost": 0.9803
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 66.67,
+                        "minute_cost": 1.1112
+                    }
+                ]
+            }
+        },
+        {
+            "name": "com-depreciacao",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [
+                {
+                    "purchase_value": 12000,
+                    "useful_life_months": 60
+                },
+                {
+                    "purchase_value": 39000,
+                    "useful_life_months": 60
+                }
+            ],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": true,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": true,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 850,
+                    "total": 9650
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 11.3333,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 149.6,
+                    "hour_cost": 64.51,
+                    "minute_cost": 1.0752
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 54.83,
+                        "minute_cost": 0.9138
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 64.51,
+                        "minute_cost": 1.0752
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 73.11,
+                        "minute_cost": 1.2185
+                    }
+                ]
+            }
+        },
+        {
+            "name": "depreciacao-desligada",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [
+                {
+                    "purchase_value": 12000,
+                    "useful_life_months": 60
+                },
+                {
+                    "purchase_value": 39000,
+                    "useful_life_months": 60
+                }
+            ],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": false,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": false,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 0,
+                    "total": 8800
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 11.3333,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 149.6,
+                    "hour_cost": 58.82,
+                    "minute_cost": 0.9803
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 50,
+                        "minute_cost": 0.8333
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 58.82,
+                        "minute_cost": 0.9803
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 66.67,
+                        "minute_cost": 1.1112
+                    }
+                ]
+            }
+        },
+        {
+            "name": "depreciacao-com-dizima",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [
+                {
+                    "purchase_value": 10000,
+                    "useful_life_months": 60
+                },
+                {
+                    "purchase_value": 10000,
+                    "useful_life_months": 60
+                },
+                {
+                    "purchase_value": 10000,
+                    "useful_life_months": 60
+                }
+            ],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": true,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": true,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 500.01,
+                    "total": 9300.01
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 6.6668,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 149.6,
+                    "hour_cost": 62.17,
+                    "minute_cost": 1.0362
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 52.84,
+                        "minute_cost": 0.8807
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 62.17,
+                        "minute_cost": 1.0362
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 70.45,
+                        "minute_cost": 1.1742
+                    }
+                ]
+            }
+        },
+        {
+            "name": "maquina-com-vida-util-zero",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [
+                {
+                    "purchase_value": 5000,
+                    "useful_life_months": 0
+                }
+            ],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": true,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": true,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 0,
+                    "total": 8800
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 0,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 149.6,
+                    "hour_cost": 58.82,
+                    "minute_cost": 0.9803
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 50,
+                        "minute_cost": 0.8333
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 58.82,
+                        "minute_cost": 0.9803
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 66.67,
+                        "minute_cost": 1.1112
+                    }
+                ]
+            }
+        },
+        {
+            "name": "jornada-meio-periodo",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [],
+            "params": {
+                "hours_per_day": 4,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": false,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 4,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": false,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 0,
+                    "total": 8800
+                },
+                "monthly_hours": 88,
+                "depreciation_per_unit": 0,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 74.8,
+                    "hour_cost": 117.65,
+                    "minute_cost": 1.9608
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 88,
+                        "hour_cost": 100,
+                        "minute_cost": 1.6667
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 74.8,
+                        "hour_cost": 117.65,
+                        "minute_cost": 1.9608
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 66,
+                        "hour_cost": 133.33,
+                        "minute_cost": 2.2222
+                    }
+                ]
+            }
+        },
+        {
+            "name": "jornada-fracionada",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [],
+            "params": {
+                "hours_per_day": 7.5,
+                "days_per_month": 21.5,
+                "efficiency_percent": 85,
+                "include_depreciation": false,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 7.5,
+                    "days_per_month": 21.5,
+                    "efficiency_percent": 85,
+                    "include_depreciation": false,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 0,
+                    "total": 8800
+                },
+                "monthly_hours": 161.25,
+                "depreciation_per_unit": 0,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 137.06,
+                    "hour_cost": 64.2,
+                    "minute_cost": 1.07
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 161.25,
+                        "hour_cost": 54.57,
+                        "minute_cost": 0.9095
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 137.06,
+                        "hour_cost": 64.2,
+                        "minute_cost": 1.07
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 120.94,
+                        "hour_cost": 72.76,
+                        "minute_cost": 1.2127
+                    }
+                ]
+            }
+        },
+        {
+            "name": "jornada-intensa",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [],
+            "params": {
+                "hours_per_day": 12,
+                "days_per_month": 26,
+                "efficiency_percent": 85,
+                "include_depreciation": false,
+                "monthly_production_volume": 75
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 12,
+                    "days_per_month": 26,
+                    "efficiency_percent": 85,
+                    "include_depreciation": false,
+                    "monthly_production_volume": 75
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 0,
+                    "total": 8800
+                },
+                "monthly_hours": 312,
+                "depreciation_per_unit": 0,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 265.2,
+                    "hour_cost": 33.18,
+                    "minute_cost": 0.553
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 312,
+                        "hour_cost": 28.21,
+                        "minute_cost": 0.4702
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 265.2,
+                        "hour_cost": 33.18,
+                        "minute_cost": 0.553
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 234,
+                        "hour_cost": 37.61,
+                        "minute_cost": 0.6268
+                    }
+                ]
+            }
+        },
+        {
+            "name": "producao-alta",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [
+                {
+                    "purchase_value": 12000,
+                    "useful_life_months": 60
+                }
+            ],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": true,
+                "monthly_production_volume": 5000
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": true,
+                    "monthly_production_volume": 5000
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 200,
+                    "total": 9000
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 0.04,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 149.6,
+                    "hour_cost": 60.16,
+                    "minute_cost": 1.0027
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 51.14,
+                        "minute_cost": 0.8523
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 60.16,
+                        "minute_cost": 1.0027
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 68.18,
+                        "minute_cost": 1.1363
+                    }
+                ]
+            }
+        },
+        {
+            "name": "producao-baixa",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [
+                {
+                    "purchase_value": 12000,
+                    "useful_life_months": 60
+                }
+            ],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": true,
+                "monthly_production_volume": 12
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": true,
+                    "monthly_production_volume": 12
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 200,
+                    "total": 9000
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 16.6667,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 149.6,
+                    "hour_cost": 60.16,
+                    "minute_cost": 1.0027
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 51.14,
+                        "minute_cost": 0.8523
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 60.16,
+                        "minute_cost": 1.0027
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 68.18,
+                        "minute_cost": 1.1363
+                    }
+                ]
+            }
+        },
+        {
+            "name": "producao-nao-declarada",
+            "fixed_cost_amounts": [
+                8800
+            ],
+            "equipment": [
+                {
+                    "purchase_value": 12000,
+                    "useful_life_months": 60
+                }
+            ],
+            "params": {
+                "hours_per_day": 8,
+                "days_per_month": 22,
+                "efficiency_percent": 85,
+                "include_depreciation": true,
+                "monthly_production_volume": 0
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 8,
+                    "days_per_month": 22,
+                    "efficiency_percent": 85,
+                    "include_depreciation": true,
+                    "monthly_production_volume": 0
+                },
+                "cost_base": {
+                    "fixed_costs": 8800,
+                    "depreciation": 200,
+                    "total": 9000
+                },
+                "monthly_hours": 176,
+                "depreciation_per_unit": 0,
+                "active_scenario": {
+                    "efficiency_percent": 85,
+                    "label": "Recomendado (equilibrado)",
+                    "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                    "productive_hours": 149.6,
+                    "hour_cost": 60.16,
+                    "minute_cost": 1.0027
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 176,
+                        "hour_cost": 51.14,
+                        "minute_cost": 0.8523
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 149.6,
+                        "hour_cost": 60.16,
+                        "minute_cost": 1.0027
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 132,
+                        "hour_cost": 68.18,
+                        "minute_cost": 1.1363
+                    }
+                ]
+            }
+        },
+        {
+            "name": "tudo-combinado",
+            "fixed_cost_amounts": [
+                3500,
+                1200.5,
+                890.33
+            ],
+            "equipment": [
+                {
+                    "purchase_value": 12000,
+                    "useful_life_months": 60
+                },
+                {
+                    "purchase_value": 39000,
+                    "useful_life_months": 60
+                }
+            ],
+            "params": {
+                "hours_per_day": 7.5,
+                "days_per_month": 21.5,
+                "efficiency_percent": 75,
+                "include_depreciation": true,
+                "monthly_production_volume": 340
+            },
+            "expected": {
+                "parameters": {
+                    "hours_per_day": 7.5,
+                    "days_per_month": 21.5,
+                    "efficiency_percent": 75,
+                    "include_depreciation": true,
+                    "monthly_production_volume": 340
+                },
+                "cost_base": {
+                    "fixed_costs": 5590.83,
+                    "depreciation": 850,
+                    "total": 6440.83
+                },
+                "monthly_hours": 161.25,
+                "depreciation_per_unit": 2.5,
+                "active_scenario": {
+                    "efficiency_percent": 75,
+                    "label": "Conservador (muitos imprevistos)",
+                    "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                    "productive_hours": 120.94,
+                    "hour_cost": 53.26,
+                    "minute_cost": 0.8877
+                },
+                "comparison": [
+                    {
+                        "efficiency_percent": 100,
+                        "label": "Sem eficiência (otimista)",
+                        "description": "Considera que toda hora paga é hora produzida. Subestima o custo.",
+                        "productive_hours": 161.25,
+                        "hour_cost": 39.94,
+                        "minute_cost": 0.6657
+                    },
+                    {
+                        "efficiency_percent": 85,
+                        "label": "Recomendado (equilibrado)",
+                        "description": "Reserva 15% para setup, ajustes e imprevistos do dia a dia.",
+                        "productive_hours": 137.06,
+                        "hour_cost": 46.99,
+                        "minute_cost": 0.7832
+                    },
+                    {
+                        "efficiency_percent": 75,
+                        "label": "Conservador (muitos imprevistos)",
+                        "description": "Para operações com muita troca de pedido, retrabalho ou atendimento.",
+                        "productive_hours": 120.94,
+                        "hour_cost": 53.26,
+                        "minute_cost": 0.8877
+                    }
+                ]
+            }
+        }
+    ]
+}

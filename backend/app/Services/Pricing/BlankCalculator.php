@@ -33,6 +33,73 @@ final class BlankCalculator
     /** Margem de selagem de sacos/envelopes, em mm. */
     private const SEAL_MM = 10.0;
 
+    /**
+     * Virada do revestimento sobre as bordas, em mm — cartonagem rígida.
+     *
+     * ⚠️  Espelha TURN_IN_MM em frontend/lib/pricing/engine.ts.
+     *
+     * O papel não para na quina: dobra por cima dela e cola no lado de dentro.
+     * 15mm é a virada de ofício — o suficiente para o papel não descolar e
+     * pouco o bastante para não aparecer no vão da tampa. Ela entra DUAS vezes
+     * por eixo (uma borda de cada lado), e é a razão de o revestimento sempre
+     * consumir mais chapa que o cinza que ele cobre.
+     */
+    private const TURN_IN_MM = 15.0;
+
+    /**
+     * Sobra de esquadrejo do papelão cinza, em mm.
+     *
+     * O cinza não vinca: cada painel é cortado separado e colado em esquadro.
+     * A guilhotina precisa de pega, e o corte final refila as bordas — sem esta
+     * folga o cálculo assume aproveitamento perfeito de chapa, que não existe
+     * em nenhuma cartonagem.
+     */
+    private const RIGID_TRIM_MM = 8.0;
+
+    /**
+     * Canaleta entre os painéis da capa, em múltiplos da espessura.
+     *
+     * ⚠️  Espelha HINGE_GAP_RATIO em frontend/lib/pricing/engine.ts.
+     *
+     * É a fenda que permite a capa dobrar. Vazia de propósito: quem une os
+     * painéis é o papel de revestimento, que atravessa o vão e vira a
+     * dobradiça. 1,5 espessura é a razão de ofício — menos que isso e o papel
+     * rasga na primeira abertura, mais e a capa fica frouxa.
+     *
+     * Consequência que decide as duas áreas deste modelo: a canaleta NÃO
+     * consome papelão (é vazio), mas consome revestimento (que a cobre).
+     */
+    private const HINGE_GAP_RATIO = 1.5;
+
+    /**
+     * Quanto a aba envolvente avança sob o fundo, em fração da profundidade.
+     *
+     * ⚠️  Espelha MAGNET_WRAP_UNDER_RATIO em frontend/lib/pricing/engine.ts.
+     *
+     * Um quarto da profundidade: o suficiente para a aba prender sob a caixa e
+     * dar a superfície contínua que o modelo vende, sem chegar ao meio do fundo
+     * (onde ela se encontraria com a contracapa e criaria uma quarta camada de
+     * cinza sob a peça, que balança quando apoiada).
+     */
+    private const MAGNET_WRAP_UNDER_RATIO = 0.25;
+
+    /**
+     * Pad de assentamento do ímã na ponta da aba, em mm.
+     *
+     * ⚠️  Espelha MAGNET_PAD_MM em frontend/lib/pricing/engine.ts.
+     *
+     * A aba do fecho magnético não para na altura da parede: ela avança sobre a
+     * FACE FRONTAL para que o ímã dela encontre o par embutido no berço. Esses
+     * 12mm são a área de encontro — sem eles os ímãs ficariam na quina, onde a
+     * força de atração é mínima e a caixa abre sozinha.
+     *
+     * É também o que separa esta aba da aba de fechamento do livro, que apenas
+     * cobre a parede e se recolhe por atrito. Uma medida em MILÍMETROS, e não
+     * em múltiplos de espessura, porque o ímã tem tamanho próprio: um papelão
+     * mais fino não faz o ímã encolher.
+     */
+    private const MAGNET_PAD_MM = 12.0;
+
     /*
      * As razões da faca da mailer.
      *
@@ -198,6 +265,23 @@ final class BlankCalculator
             // Mailer box: peça única die-cut, tampa articulada, sem cola.
             BoxModel::Mailer => $this->mailerBlank($widthMm, $heightMm, $depthMm, $t),
 
+            // Cartonagem rígida: o blank aqui é o do PAPELÃO CINZA. O
+            // revestimento tem área própria — ver wrapAreaInSquareMeters().
+            BoxModel::RigidTelescopic => $this->rigidTelescopicBlank(
+                $widthMm,
+                $heightMm,
+                $depthMm,
+                $t,
+                $lidMm ?? $this->defaultLidDimensions($model, $widthMm, $heightMm, $depthMm),
+            ),
+
+            // Família da capa rígida: livro e ímã compartilham a construção.
+            BoxModel::RigidBook,
+            BoxModel::RigidBookFlap,
+            BoxModel::RigidMagnet,
+            BoxModel::RigidMagnetSide,
+            BoxModel::RigidMagnetWrap => $this->bookBlank($model, $widthMm, $heightMm, $depthMm, $t),
+
             // Tubo cilíndrico: a largura é o DIÂMETRO; a profundidade é ignorada.
             BoxModel::Tube => $this->tubeBlank(
                 $widthMm,
@@ -278,6 +362,255 @@ final class BlankCalculator
             'depth' => $overrides['depth'] ?? $default['depth'],
             'height' => $overrides['height'] ?? $default['height'],
         ];
+    }
+
+    /**
+     * Área do REVESTIMENTO, em m² — só nos modelos de cartonagem rígida.
+     *
+     * Devolve 0.0 nos demais: numa caixa dobrada o material é um só, e o papel
+     * impresso (quando existe) já está laminado na chapa que o blank mede.
+     *
+     * A conta é a mesma planificação do cinza acrescida da virada em todas as
+     * bordas — mais a espessura, porque o papel percorre a lateral do painel
+     * antes de dobrar. É a área que mais custa na peça: revestimento bom passa
+     * de R$ 20/m² onde o cinza fica em R$ 5.
+     */
+    public function wrapAreaInSquareMeters(
+        BoxModel $model,
+        float $widthMm,
+        float $heightMm,
+        float $depthMm,
+        ?array $lidMm = null,
+    ): float {
+        if (! $model->isRigid()) {
+            return 0.0;
+        }
+
+        $t = $this->thicknessMm;
+
+        if ($model->isBook()) {
+            return $this->bookWrapArea($model, $widthMm, $heightMm, $depthMm, $t)
+                / self::MM2_PER_M2;
+        }
+
+        $lid = $lidMm ?? $this->defaultLidDimensions($model, $widthMm, $heightMm, $depthMm);
+
+        $area = $this->rigidWrapPanel($widthMm, $heightMm, $depthMm, $t)
+            + $this->rigidWrapPanel($lid['width'], $lid['height'], $lid['depth'], $t);
+
+        return $area / self::MM2_PER_M2;
+    }
+
+    /**
+     * Caixa tampa solta rígida = base + tampa, ambas em papelão cinza.
+     *
+     * Cada peça é uma cruz: o fundo com as quatro paredes ao redor. Diferente
+     * da bandeja dobrada, aqui a cruz não é vincada — é o desenho de corte de
+     * cinco painéis que serão colados em esquadro. Para o consumo de chapa dá
+     * no mesmo: é o retângulo que a guilhotina precisa liberar, e os quatro
+     * cantos vazios são apara já coberta pelo desperdício.
+     *
+     * As paredes entram DUAS vezes por eixo (uma de cada lado), que é o
+     * "+ 2 × altura" da fórmula clássica. A espessura entra porque o painel do
+     * fundo fica ENTRE as paredes, e não sob elas: cada parede empurra a
+     * medida externa em uma espessura.
+     *
+     * @param  array{width: float, depth: float, height: float}  $lid
+     * @return array{width: float, height: float}
+     */
+    private function rigidTelescopicBlank(float $w, float $h, float $d, float $t, array $lid): array
+    {
+        $baseW = $w + 2 * $h + 2 * $t + self::RIGID_TRIM_MM;
+        $baseH = $d + 2 * $h + 2 * $t + self::RIGID_TRIM_MM;
+
+        $lidW = $lid['width'] + 2 * $lid['height'] + 2 * $t + self::RIGID_TRIM_MM;
+        $lidH = $lid['depth'] + 2 * $lid['height'] + 2 * $t + self::RIGID_TRIM_MM;
+
+        // As duas peças saem da mesma chapa: soma das áreas, largura da maior.
+        // Mesma convenção da bandeja e da gaveta — o retângulo equivalente.
+        $totalArea = ($baseW * $baseH) + ($lidW * $lidH);
+        $width = max($baseW, $lidW);
+
+        return [
+            'width' => $width,
+            'height' => $totalArea / $width,
+        ];
+    }
+
+    /**
+     * Geometria da caixa livro, em mm — a fonte única dos dois blanks e do 3D.
+     *
+     * ⚠️  Espelha bookLayout() em frontend/lib/pricing/engine.ts, de onde o
+     * renderizador lê os MESMOS números para desenhar a peça.
+     *
+     * As medidas informadas são as INTERNAS do berço (o espaço útil). Tudo o
+     * mais é derivado: o berço veste as paredes, a capa veste o berço, e a
+     * lombada precisa vencer a altura do berço MAIS as duas capas que ela une —
+     * é o erro clássico do modelo, uma lombada curta deixa a caixa arqueada e
+     * sem fechar.
+     *
+     * @return array<string, float>
+     */
+    public function bookLayout(BoxModel $model, float $w, float $h, float $d, float $t): array
+    {
+        // Berço montado: as paredes empurram a medida externa em uma espessura
+        // de cada lado; o fundo empurra a altura em uma.
+        $bercoW = $w + 2 * $t;
+        $bercoD = $d + 2 * $t;
+        $bercoH = $h + $t;
+
+        // A capa veste o berço com folga, senão ele não entra e a tampa não
+        // encosta. Mesma folga de encaixe da tampa telescópica.
+        $capaW = $bercoW + 2 * self::LID_CLEARANCE_MM;
+        $capaD = $bercoD + 2 * self::LID_CLEARANCE_MM;
+
+        // Lombada = altura do berço + as duas capas que ela articula.
+        $lombada = $bercoH + 2 * $t;
+
+        $canaleta = self::HINGE_GAP_RATIO * $t;
+
+        /*
+         * Aba de fechamento: desce sobre a lateral aberta, então precisa vencer
+         * a altura do berço e a espessura da própria contracapa. Zero na
+         * variação sem aba — e o `null` de canaleta junto, senão a variação
+         * simples pagaria uma dobradiça que não tem.
+         */
+        $aba = $model->hasClosingFlap() ? $bercoH + $t : 0.0;
+
+        /*
+         * Aba do fecho magnético — a assinatura da família ímã.
+         *
+         * Ela desce da tampa sobre a parede frontal, então precisa vencer a
+         * altura do berço mais a espessura da própria tampa. A variação
+         * envolvente vai além: dobra sob o fundo, e o quanto ela avança é o que
+         * a separa das outras duas.
+         */
+        $magnetFlap = match (true) {
+            $model === BoxModel::RigidMagnetWrap => $bercoH + $t + self::MAGNET_PAD_MM
+                + self::MAGNET_WRAP_UNDER_RATIO * $capaD,
+            $model->isMagnet() => $bercoH + $t + self::MAGNET_PAD_MM,
+            default => 0.0,
+        };
+
+        /*
+         * Abas laterais: descem pelas laterais e se recolhem para dentro.
+         *
+         * Correm ao longo da PROFUNDIDADE da capa (não da largura), e por isso
+         * entram na área como painéis à parte em vez de esticar a capa corrida.
+         */
+        $sideFlap = $model === BoxModel::RigidMagnetSide ? $bercoH + $t : 0.0;
+        $sideFlapCount = $model === BoxModel::RigidMagnetSide ? 2 : 0;
+
+        /*
+         * Dobradiças no REVESTIMENTO: contracapa↔lombada, lombada↔tampa, e uma
+         * por aba articulada. Cada uma é uma canaleta que o papel atravessa —
+         * e que o papelão não paga.
+         */
+        $dobradicas = 2
+            + ($model->hasClosingFlap() ? 1 : 0)
+            + ($magnetFlap > 0 ? 1 : 0)
+            + $sideFlapCount;
+
+        return [
+            'bercoW' => $bercoW,
+            'bercoD' => $bercoD,
+            'bercoH' => $bercoH,
+            'capaW' => $capaW,
+            'capaD' => $capaD,
+            'lombada' => $lombada,
+            'aba' => $aba,
+            'magnetFlap' => $magnetFlap,
+            'sideFlap' => $sideFlap,
+            'sideFlapCount' => (float) $sideFlapCount,
+            'canaleta' => $canaleta,
+            'dobradicas' => (float) $dobradicas,
+        ];
+    }
+
+    /**
+     * Caixa livro = capa de painéis + berço de quatro paredes, em papelão cinza.
+     *
+     * A CANALETA NÃO ENTRA AQUI, e é o ponto que separa este modelo dos
+     * demais: os painéis da capa são cortados separados, e o vão entre eles é
+     * ar — papelão que ninguém compra. Somá-lo cobraria do cliente o espaço
+     * vazio da dobradiça. Ele reaparece em bookWrapArea(), onde é real: o papel
+     * atravessa a fenda inteira.
+     *
+     * @return array{width: float, height: float}
+     */
+    private function bookBlank(BoxModel $model, float $w, float $h, float $d, float $t): array
+    {
+        $l = $this->bookLayout($model, $w, $h, $d, $t);
+
+        // Capa: contracapa + lombada + tampa (+ abas), lado a lado, sem os vãos.
+        $capaCorrida = 2 * $l['capaW'] + $l['lombada'] + $l['aba'] + $l['magnetFlap']
+            + self::RIGID_TRIM_MM;
+        $capaAltura = $l['capaD'] + self::RIGID_TRIM_MM;
+
+        // Abas laterais correm ao longo da profundidade: painéis à parte, e não
+        // um prolongamento da capa corrida.
+        $areaLaterais = $l['sideFlapCount'] * ($l['sideFlap'] * $l['capaD']);
+
+        // Berço: a mesma cruz da tampa solta — fundo com as quatro paredes.
+        $bercoCruzW = $w + 2 * $h + 2 * $t + self::RIGID_TRIM_MM;
+        $bercoCruzH = $d + 2 * $h + 2 * $t + self::RIGID_TRIM_MM;
+
+        $totalArea = ($capaCorrida * $capaAltura) + $areaLaterais
+            + ($bercoCruzW * $bercoCruzH);
+
+        $width = max($capaCorrida, $bercoCruzW);
+
+        return [
+            'width' => $width,
+            'height' => $totalArea / $width,
+        ];
+    }
+
+    /**
+     * Revestimento da caixa livro, em mm² — capa aberta + berço.
+     *
+     * AQUI a canaleta conta. O papel é uma folha só que cobre os três painéis E
+     * os vãos entre eles: é ele que vira a dobradiça. Descontar a canaleta
+     * daria uma folha curta demais para colar, e a caixa sairia da produção sem
+     * a articulação que a define.
+     */
+    private function bookWrapArea(BoxModel $model, float $w, float $h, float $d, float $t): float
+    {
+        $l = $this->bookLayout($model, $w, $h, $d, $t);
+
+        $capaAberta = 2 * $l['capaW'] + $l['lombada'] + $l['aba'] + $l['magnetFlap']
+            + $l['dobradicas'] * $l['canaleta'];
+
+        $capa = ($capaAberta + 2 * self::TURN_IN_MM) * ($l['capaD'] + 2 * self::TURN_IN_MM);
+
+        // Cada aba lateral é revestida como painel próprio, com virada nas
+        // quatro bordas: ela fica exposta pelos dois lados ao abrir a caixa.
+        $laterais = $l['sideFlapCount']
+            * (($l['sideFlap'] + 2 * self::TURN_IN_MM) * ($l['capaD'] + 2 * self::TURN_IN_MM));
+
+        // O berço é revestido por dentro pela mesma cruz da tampa solta.
+        $berco = $this->rigidWrapPanel($w, $h, $d, $t);
+
+        return $capa + $laterais + $berco;
+    }
+
+    /**
+     * Retângulo de revestimento de UMA peça rígida, em mm².
+     *
+     * A cruz do cinza mais a virada nas quatro bordas. A espessura entra duas
+     * vezes por eixo pelo mesmo motivo do cinza (o papel sobe a lateral do
+     * painel), e a virada entra outras duas — uma por borda.
+     *
+     * Não se desconta o vazio dos cantos: o revestimento é cortado em retângulo
+     * inteiro e os cantos são recortados DEPOIS, já colado. A apara existe de
+     * qualquer jeito.
+     */
+    private function rigidWrapPanel(float $w, float $h, float $d, float $t): float
+    {
+        $largura = $w + 2 * $h + 2 * $t + 2 * self::TURN_IN_MM;
+        $altura = $d + 2 * $h + 2 * $t + 2 * self::TURN_IN_MM;
+
+        return $largura * $altura;
     }
 
     /**

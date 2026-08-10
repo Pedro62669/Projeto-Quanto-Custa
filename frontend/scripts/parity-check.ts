@@ -14,14 +14,21 @@
  * Uso: npm run test:parity
  */
 
-import { calculatePricing, ENGINE_VERSION } from "../lib/pricing/engine";
+import {
+  calculateCompanyHour,
+  calculatePricing,
+  ENGINE_VERSION,
+} from "../lib/pricing/engine";
 import type {
+  CompanyHourBreakdown,
+  CompanyHourParams,
   CostSettings,
   Material,
   PricingBreakdown,
   QuoteSpecification,
 } from "../lib/pricing/types";
 import fixtures from "../lib/pricing/__fixtures__/parity.json";
+import hourFixtures from "../lib/pricing/__fixtures__/company-hour.json";
 
 interface ParityCase {
   name: string;
@@ -156,4 +163,118 @@ function run(): number {
   return 0;
 }
 
-process.exit(run());
+/* ────────────────────────────────────────────────────────────────────────────
+ * Hora-empresa (Fase 2)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+interface HourParityCase {
+  name: string;
+  fixed_cost_amounts: number[];
+  equipment: { purchase_value: number; useful_life_months: number }[];
+  params: CompanyHourParams;
+  expected: CompanyHourBreakdown;
+}
+
+/**
+ * Achata a estrutura aninhada em caminho → valor.
+ *
+ * O resultado da hora-empresa não é plano como o do preço: tem `cost_base`,
+ * `active_scenario` e um array `comparison` com três cenários. Comparar objeto
+ * com objeto por igualdade estrutural diria apenas "divergiu"; achatar diz
+ * `comparison.2.hour_cost: PHP=66.67 TS=66.66`, que é o que permite corrigir.
+ */
+function flatten(value: unknown, prefix = ""): Map<string, unknown> {
+  const out = new Map<string, unknown>();
+
+  if (value === null || typeof value !== "object") {
+    out.set(prefix, value);
+    return out;
+  }
+
+  for (const [key, inner] of Object.entries(value)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    for (const [k, v] of flatten(inner, path)) out.set(k, v);
+  }
+
+  return out;
+}
+
+function runCompanyHour(): number {
+  const data = hourFixtures as unknown as {
+    engine_version: string;
+    cases: HourParityCase[];
+  };
+
+  if (data.engine_version !== ENGINE_VERSION) {
+    console.error(
+      `${RED}✗ Versões divergentes (hora-empresa):${RESET} fixture=${data.engine_version} ` +
+        `motor TS=${ENGINE_VERSION}\n` +
+        `  Regenere com: php artisan pricing:export-hour-fixtures`,
+    );
+    return 1;
+  }
+
+  let failures = 0;
+  let comparisons = 0;
+
+  for (const testCase of data.cases) {
+    const actual = calculateCompanyHour({
+      fixedCostAmounts: testCase.fixed_cost_amounts,
+      equipment: testCase.equipment,
+      params: testCase.params,
+    });
+
+    const esperado = flatten(testCase.expected);
+    const obtido = flatten(actual);
+
+    const diffs: string[] = [];
+
+    for (const [path, expectedValue] of esperado) {
+      const actualValue = obtido.get(path);
+      comparisons++;
+
+      const numerico =
+        typeof expectedValue === "number" && typeof actualValue === "number";
+
+      const divergiu = numerico
+        ? Math.abs(actualValue - expectedValue) > TOLERANCE
+        : actualValue !== expectedValue;
+
+      if (divergiu) {
+        diffs.push(`    ${path}: PHP=${expectedValue}  TS=${actualValue}`);
+      }
+    }
+
+    if (diffs.length > 0) {
+      failures++;
+      console.error(`${RED}✗ hora/${testCase.name}${RESET}`);
+      diffs.forEach((d) => console.error(d));
+    } else {
+      console.log(`${GREEN}✓${RESET} hora/${testCase.name}`);
+    }
+  }
+
+  console.log(
+    `\n${DIM}${data.cases.length} casos de hora-empresa · ${comparisons} campos comparados${RESET}`,
+  );
+
+  if (failures > 0) {
+    console.error(
+      `\n${RED}Paridade da hora-empresa quebrada em ${failures} caso(s).${RESET}\n` +
+        `A tela de custos mostraria uma hora e o motor de preço cobraria outra —\n` +
+        `e o erro só apareceria meses depois, como margem que nunca fechou.`,
+    );
+    return 1;
+  }
+
+  console.log(`${GREEN}Paridade da hora-empresa confirmada.${RESET}`);
+  return 0;
+}
+
+// Os dois rodam SEMPRE, mesmo com o primeiro falhando: ver as duas listas de
+// divergência de uma vez economiza um ciclo inteiro de correção.
+const falhouPreco = run();
+console.log("");
+const falhouHora = runCompanyHour();
+
+process.exit(falhouPreco || falhouHora);
