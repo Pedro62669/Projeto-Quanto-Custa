@@ -11,6 +11,7 @@ use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -72,9 +73,26 @@ class Material extends Model
         ];
     }
 
+    /**
+     * A chave do pivô nunca vai para a resposta.
+     *
+     * Quando o material chega carregado por `Supplier::materials()`, o Eloquent
+     * anexa um objeto `pivot` a cada linha. Aqui ele não carrega informação
+     * nenhuma — a tabela só tem as duas chaves estrangeiras —, e o que ele faz é
+     * poluir o JSON de toda listagem de fornecedor com um campo que a interface
+     * ignora e que a próxima pessoa vai tentar entender.
+     */
+    protected $hidden = ['pivot'];
+
     public function quotes(): HasMany
     {
         return $this->hasMany(Quote::class);
+    }
+
+    /** Quem vende este material. O outro lado de Supplier::materials(). */
+    public function suppliers(): BelongsToMany
+    {
+        return $this->belongsToMany(Supplier::class)->orderBy('suppliers.name');
     }
 
     public function scopeActive(Builder $query): Builder
