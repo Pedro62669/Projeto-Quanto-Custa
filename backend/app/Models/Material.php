@@ -168,10 +168,13 @@ class Material extends Model
          * cálculo de área e produza um preço absurdo sem ninguém perceber.
          */
         if (! $this->cost_unit->isAreaBased()) {
-            throw new \DomainException(
-                "Material #{$this->id} ({$this->name}) é cotado por peça e não tem custo por m². "
-                .'Use-o como ferragem na lista de materiais.'
-            );
+            // A unidade entra na mensagem: dizer "é cotado por peça" para um
+            // bloco de espuma mandava o usuário procurar um erro que não existe.
+            throw new \DomainException(sprintf(
+                'Material #%d (%s) é cotado em %s e não tem custo por m². '
+                .'Ferragem entra na lista de materiais; espuma e EVA, como berço.',
+                $this->id, $this->name, mb_strtolower($this->cost_unit->label()),
+            ));
         }
 
         $custoDoItem = $this->lotUnitCost();

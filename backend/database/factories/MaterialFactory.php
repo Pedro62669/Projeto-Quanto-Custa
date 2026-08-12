@@ -41,6 +41,22 @@ class MaterialFactory extends Factory
         ]);
     }
 
+    /**
+     * Ferragem: ímã, fecho, rebite. Comprada por peça, sem área.
+     *
+     * É o material que faz `costPerSquareMeter()` lançar exceção — e por isso o
+     * que precisa aparecer nos testes de listagem, onde um material sem área
+     * convive com os que têm.
+     */
+    public function hardware(float $costPerPiece = 0.85): static
+    {
+        return $this->state([
+            'type' => MaterialType::Hardware,
+            'cost_unit' => MaterialUnit::Piece,
+            'cost_per_unit' => $costPerPiece,
+        ]);
+    }
+
     public function inactive(): static
     {
         return $this->state(['is_active' => false]);

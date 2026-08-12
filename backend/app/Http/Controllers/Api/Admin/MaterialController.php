@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Enums\GrainDirection;
 use App\Enums\MaterialType;
 use App\Enums\MaterialUnit;
 use App\Http\Controllers\Controller;
@@ -109,6 +110,17 @@ class MaterialController extends Controller
                 'nullable', 'integer', 'min:1', 'max:5000',
                 'required_with:sheet_width_mm',
             ],
+
+            /*
+             * Sentido da fibra.
+             *
+             * A coluna e o enum existem desde o plano de corte, e o nesting os
+             * consulta para decidir se uma peça pode girar 90° — mas nenhuma
+             * regra aqui os aceitava, então o valor ficava preso no padrão
+             * ("sem fibra") e o arranjo girava peça de papelão que na bancada
+             * empena depois de colada.
+             */
+            'grain_direction' => ['nullable', Rule::enum(GrainDirection::class)],
 
             // min:1 e não min:0 — lote de zero itens estouraria a divisão.
             'lot_quantity' => [

@@ -274,7 +274,16 @@ class RigidBoxPricingTest extends TestCase
                 'components' => [['material_id' => $this->ima->id, 'role' => 'wrap']],
             ]))
             ->assertUnprocessable()
-            ->assertJsonPath('errors.pricing.0', fn ($m) => str_contains($m, 'por peça'));
+            /*
+             * A mensagem NOMEIA a unidade cadastrada ("cotado em peça"), e não
+             * uma genérica: dizer "é cotado por peça" para um bloco de espuma
+             * mandava o usuário procurar um erro que não existia.
+             */
+            ->assertJsonPath(
+                'errors.pricing.0',
+                fn ($m) => str_contains($m, 'cotado em peça')
+                    && str_contains($m, 'não tem custo por m²'),
+            );
     }
 
     #[Test]

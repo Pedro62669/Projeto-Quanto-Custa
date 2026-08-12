@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\MaterialType;
+use App\Enums\MaterialUnit;
 use App\Enums\UserRole;
 use App\Models\CostSetting;
 use App\Models\Material;
@@ -128,6 +130,99 @@ class AdminApiTest extends TestCase
         // Admin: vê a negociação com o fornecedor.
         $adminResponse = $this->actingAs($this->admin())->getJson('/api/admin/materials');
         $this->assertArrayHasKey('cost_per_unit', $adminResponse->json('data.0'));
+    }
+
+    #[Test]
+    public function o_cadastro_de_material_devolve_tudo_que_aceita(): void
+    {
+        /*
+         * Assimetria entre escrita e leitura destrói dado.
+         *
+         * O formulário de edição preenche os campos com o que a API devolve. Um
+         * campo aceito no PUT e ausente no GET chega vazio à tela, e o próximo
+         * "salvar" — mesmo sem ninguém tocar nele — grava null por cima do que
+         * existia. Foi o que acontecia com o lote e a medida da folha: o custo
+         * por m² mudava junto, porque o lote tem precedência no cálculo.
+         *
+         * Este teste percorre o ciclo inteiro: grava, relê, e exige que cada
+         * campo enviado volte igual.
+         */
+        $enviado = [
+            'name' => 'Papelão ondulado B',
+            'type' => MaterialType::Cardboard->value,
+            'cost_unit' => MaterialUnit::SquareMeter->value,
+            'cost_per_unit' => 4.20,
+            'default_waste_percent' => 12.0,
+            'thickness_mm' => 3.0,
+            'sheet_width_mm' => 1000,
+            'sheet_length_mm' => 800,
+            'grain_direction' => 'length',
+            'lot_quantity' => 250,
+            'lot_purchase_cost' => 890.0,
+            'lot_freight_cost' => 60.0,
+            'color_hex' => '#B0B0B0',
+        ];
+
+        $criado = $this->actingAs($this->admin())
+            ->postJson('/api/admin/materials', $enviado)
+            ->assertCreated();
+
+        $id = $criado->json('data.id');
+
+        $lido = $this->actingAs($this->admin())
+            ->getJson("/api/admin/materials/{$id}")
+            ->assertOk();
+
+        foreach ($enviado as $campo => $valor) {
+            $this->assertEquals(
+                $valor,
+                $lido->json("data.{$campo}"),
+                "O campo '{$campo}' é aceito na escrita e não volta igual na leitura."
+            );
+        }
+
+        // O custo do lote com frete tem precedência: (890 + 60) / 250 folhas,
+        // divididos pela área de 0,8 m² da folha.
+        $this->assertSame(4.75, $lido->json('data.cost_per_m2'));
+    }
+
+    #[Test]
+    public function a_lista_de_materiais_sobrevive_a_ferragem_e_a_espuma(): void
+    {
+        /*
+         * Um ímã e um bloco de espuma não têm custo por m² — `costPerSquareMeter()`
+         * RECUSA convertê-los, e com razão. O recurso chamava o método em todos os
+         * materiais: bastava a empresa cadastrar uma ferragem para GET /materials
+         * responder 500 e a calculadora inteira parar de abrir.
+         */
+        Material::factory()->create(['name' => 'Papelão cinza 1,9mm']);
+        Material::factory()->hardware()->create(['name' => 'Ima de neodimio']);
+        Material::factory()->create([
+            'name' => 'Espuma EVA',
+            'type' => MaterialType::Other,
+            'cost_unit' => MaterialUnit::CubicMeter,
+            'cost_per_unit' => 320.0,
+        ]);
+
+        $response = $this->actingAs(User::factory()->create())->getJson('/api/materials');
+
+        $response->assertOk()->assertJsonCount(3, 'data');
+
+        $porNome = collect($response->json('data'))->keyBy('name');
+
+        // O que tem área continua entregando o número que o motor consome.
+        $this->assertSame(3.2, $porNome['Papelão cinza 1,9mm']['cost_per_m2']);
+        $this->assertTrue($porNome['Papelão cinza 1,9mm']['is_area_based']);
+
+        /*
+         * Null, e não zero: zero é um custo, e um custo de zero precificaria a
+         * caixa como se o material fosse de graça. Null diz "esta grandeza não
+         * existe aqui" — e é o que a tela usa para não oferecer ferragem onde se
+         * pede uma peça medida em milímetros.
+         */
+        $this->assertNull($porNome['Ima de neodimio']['cost_per_m2']);
+        $this->assertFalse($porNome['Ima de neodimio']['is_area_based']);
+        $this->assertNull($porNome['Espuma EVA']['cost_per_m2']);
     }
 
     /* ── Custos fixos ──────────────────────────────────────────────────── */
