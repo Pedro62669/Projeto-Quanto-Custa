@@ -96,7 +96,7 @@ class QuoteController extends Controller
     public function store(StoreQuoteRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $result = $this->calculateFrom($data, $material, $settings);
+        $result = $this->calculateFrom($data, $material, $settings, $bom);
 
         // Resolvidas uma vez e reaproveitadas nos dois destinos: as linhas de
         // `quote_custom_parts` e a fotografia dentro do snapshot.
@@ -105,6 +105,12 @@ class QuoteController extends Controller
         $quote = DB::transaction(fn () => tap(Quote::create([
             'user_id' => $request->user()->id,
             'material_id' => $material->id,
+
+            // Null fora da cartonagem rígida, e null também quando o usuário não
+            // escolheu revestimento nenhum — caso em que o motor já cobra zero
+            // por ele. Ver PricingEngine.
+            'wrap_material_id' => $bom['wrap_material_id'],
+
             'cost_setting_id' => $settings->id,
 
             'client_name' => $data['client_name'],
@@ -234,13 +240,22 @@ class QuoteController extends Controller
     /**
      * Monta a entrada e roda o motor.
      *
-     * $material e $settings saem por referência porque o chamador precisa deles
-     * para persistir e montar a resposta — evita duas consultas ao banco.
+     * $material, $settings e $bom saem por referência porque o chamador precisa
+     * deles para persistir e montar a resposta — evita repetir consultas ao
+     * banco. O $bom entrou na lista quando o orçamento passou a gravar o id do
+     * revestimento: resolvê-lo de novo em `store()` custaria uma segunda rodada
+     * de buscas por material, e as duas poderiam divergir se alguém alterasse
+     * uma delas.
      *
      * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>|null  $bom
      */
-    private function calculateFrom(array $data, ?Material &$material, ?CostSetting &$settings): PricingResult
-    {
+    private function calculateFrom(
+        array $data,
+        ?Material &$material,
+        ?CostSetting &$settings,
+        ?array &$bom = null,
+    ): PricingResult {
         $material = Material::active()->findOrFail($data['material_id']);
         $settings = CostSetting::current();
 
@@ -335,7 +350,7 @@ class QuoteController extends Controller
      */
     private function resolveComponents(array $components, array $data = []): array
     {
-        $wrapCostPerM2 = null;
+        $wrapMaterial = null;
         $hardware = [];
         $cradleMaterial = null;
 
@@ -349,8 +364,12 @@ class QuoteController extends Controller
                  * Uma peça tem UMA pele; receber duas é a interface trocando a
                  * seleção, não o usuário pedindo duas camadas — e derrubar a
                  * simulação por isso seria hostil no meio da digitação.
+                 *
+                 * Guarda o MODELO, e não só o custo, como já se fazia com o
+                 * berço: o orçamento precisa gravar qual papel é, senão a ficha
+                 * técnica não tem como saber a medida da folha dele.
                  */
-                ComponentRole::Wrap => $wrapCostPerM2 = $material->costPerSquareMeter(),
+                ComponentRole::Wrap => $wrapMaterial = $material,
 
                 ComponentRole::Hardware => $hardware[] = [
                     'cost_per_piece' => $material->costPerPiece(),
@@ -372,7 +391,8 @@ class QuoteController extends Controller
         }
 
         return [
-            'wrap_cost_per_m2' => $wrapCostPerM2,
+            'wrap_cost_per_m2' => $wrapMaterial?->costPerSquareMeter(),
+            'wrap_material_id' => $wrapMaterial?->id,
             'hardware' => $hardware,
             'cradle' => $this->resolveCradle($cradleMaterial, $data),
         ];

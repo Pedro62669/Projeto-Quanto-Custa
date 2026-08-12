@@ -31,6 +31,11 @@ class TechnicalSheetController extends Controller
         // ver a ficha, que carrega as mesmas medidas e o mesmo cliente.
         $this->authorize('view', $quote);
 
+        // Os dois materiais da cartonagem rígida, numa consulta cada: o plano de
+        // corte lê a folha dos dois, e sem isto o revestimento viria por lazy
+        // load no meio do laço.
+        $quote->loadMissing(['material', 'wrapMaterial']);
+
         $snapshot = $quote->pricing_snapshot ?? [];
 
         /*
@@ -134,6 +139,27 @@ class TechnicalSheetController extends Controller
 
         $planos = [];
         $avisos = [];
+
+        /*
+         * Caixa que PEDE revestimento e foi orçada sem escolher nenhum.
+         *
+         * O aviso vale mais pelo que diz do PREÇO do que do plano: sem material
+         * de revestimento o motor cobra zero por ele (ver PricingEngine), então
+         * a proposta saiu com o papel de graça. Quem lê a ficha na bancada é
+         * quem descobre — e é melhor descobrir aqui do que no fim do mês.
+         *
+         * Não vale para orçamentos antigos apenas: `wrap_material_id` nasceu
+         * nula em tudo que já existia, e a mensagem serve igualmente bem para
+         * eles — o papel realmente não foi cobrado.
+         */
+        if (! $quote->box_model->isFree()
+            && ($gabarito['wrap'] ?? []) !== []
+            && $quote->wrapMaterial === null
+        ) {
+            $avisos[] = 'Este orçamento não tem revestimento escolhido: o papel não entra no plano '
+                .'de corte e também não foi cobrado no preço. Refaça o orçamento escolhendo o '
+                .'material de revestimento.';
+        }
 
         foreach ($grupos as $grupo) {
             $material = $grupo['material'];
@@ -262,34 +288,57 @@ class TechnicalSheetController extends Controller
     }
 
     /**
-     * Modelos com geometria: a estrutura sai do material principal do orçamento.
+     * Modelos com geometria: duas camadas, dois materiais, dois planos.
      *
-     * O revestimento fica de fora por ora, e a razão é honesta: o orçamento
-     * grava `material_id` da estrutura, mas o material do revestimento entra
-     * como componente e só o CUSTO dele é persistido — não o id. Sem o id não
-     * há folha, e sem folha não há plano. Inventar uma medida seria pior que
-     * omitir.
+     * A cartonagem rígida corta em DUAS chapas diferentes — o papelão cinza da
+     * estrutura e o papel do revestimento —, e por muito tempo só a primeira
+     * aparecia aqui. O motivo era de banco: o orçamento gravava o custo do
+     * revestimento e não o id do material, então não havia como descobrir a
+     * medida da folha dele. Sem folha, não há plano.
+     *
+     * A coluna `wrap_material_id` fechou esse buraco, e o que ela destrava é
+     * justamente o material mais caro da caixa: revestimento passa de R$ 20/m²
+     * onde o cinza fica em R$ 5. É nele que a perda de canto dói.
      *
      * @param  array<string, mixed>  $gabarito
      * @return list<array{material: ?Material, parts: list<array<string, mixed>>}>
      */
     private function gruposComGeometria(Quote $quote, array $gabarito): array
     {
-        $pecas = array_map(fn (array $p): array => [
-            'name' => $p['name'],
-            'width_mm' => (float) $p['width_mm'],
+        $grupos = [];
 
-            // O gabarito chama de `height_mm` o que o nesting chama de
-            // comprimento: são o mesmo eixo da peça deitada na folha.
-            'length_mm' => (float) $p['height_mm'],
-            'quantity' => (int) $p['quantity'],
-        ], $gabarito['structure'] ?? []);
+        $estrutura = $this->comoPecasDeCorte($gabarito['structure'] ?? []);
 
-        if ($pecas === []) {
-            return [];
+        if ($estrutura !== []) {
+            $grupos[] = ['material' => $quote->material, 'parts' => $estrutura];
         }
 
-        return [['material' => $quote->material, 'parts' => $pecas]];
+        $revestimento = $this->comoPecasDeCorte($gabarito['wrap'] ?? []);
+
+        if ($revestimento !== [] && $quote->wrapMaterial !== null) {
+            $grupos[] = ['material' => $quote->wrapMaterial, 'parts' => $revestimento];
+        }
+
+        return $grupos;
+    }
+
+    /**
+     * Traduz peças do gabarito para o vocabulário do nesting.
+     *
+     * O gabarito chama de `height_mm` o que o nesting chama de comprimento: são
+     * o mesmo eixo da peça deitada na folha.
+     *
+     * @param  list<array<string, mixed>>  $pecas
+     * @return list<array{name: string, width_mm: float, length_mm: float, quantity: int}>
+     */
+    private function comoPecasDeCorte(array $pecas): array
+    {
+        return array_map(fn (array $p): array => [
+            'name' => (string) $p['name'],
+            'width_mm' => (float) $p['width_mm'],
+            'length_mm' => (float) $p['height_mm'],
+            'quantity' => (int) $p['quantity'],
+        ], $pecas);
     }
 
     /**

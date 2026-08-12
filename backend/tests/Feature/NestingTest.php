@@ -356,4 +356,164 @@ class NestingTest extends TestCase
             collect($notas)->contains(fn ($n) => str_contains($n, 'NÃO altera o preço')),
         );
     }
+
+    /* ── O revestimento entrou no plano ────────────────────────────────── */
+
+    #[Test]
+    public function a_caixa_rigida_ganha_um_plano_para_cada_camada(): void
+    {
+        /*
+         * Cartonagem rígida corta em DUAS chapas: o cinza da estrutura e o
+         * papel que a reveste. Por muito tempo só a primeira aparecia, porque o
+         * orçamento gravava o custo do revestimento e não o id do material — e
+         * sem o id não se descobre a medida da folha dele.
+         *
+         * O papel é o material mais caro da caixa. Deixá-lo fora do plano era
+         * esconder justamente a perda que dói.
+         */
+        CostSetting::factory()->create();
+        $usuario = User::factory()->create();
+
+        $cinza = Material::factory()->create([
+            'name' => 'Papelão cinza 1,9mm',
+            'cost_unit' => MaterialUnit::SquareMeter,
+            'cost_per_unit' => 5.00,
+            'thickness_mm' => 0.0,
+            'sheet_width_mm' => 1000,
+            'sheet_length_mm' => 1000,
+            'grain_direction' => GrainDirection::None,
+        ]);
+
+        $papel = Material::factory()->create([
+            'name' => 'Papel color plus',
+            'cost_unit' => MaterialUnit::SquareMeter,
+            'cost_per_unit' => 22.00,
+            'thickness_mm' => 0.0,
+            'sheet_width_mm' => 660,
+            'sheet_length_mm' => 960,
+            'grain_direction' => GrainDirection::None,
+        ]);
+
+        $this->actingAs($usuario)->postJson('/api/quotes', [
+            'material_id' => $cinza->id,
+            'box_model' => 'rigid_telescopic',
+            'width_mm' => 300, 'height_mm' => 100, 'depth_mm' => 200,
+            'quantity' => 5,
+            'production_minutes_per_unit' => 0,
+            'profit_margin_percent' => 0,
+            'client_name' => 'Ana',
+            'components' => [
+                ['material_id' => $papel->id, 'role' => 'wrap'],
+            ],
+        ])->assertCreated();
+
+        $quote = Quote::latest('id')->first();
+
+        // O id ficou gravado: é ele que destrava tudo o que vem depois.
+        $this->assertSame($papel->id, $quote->wrap_material_id);
+
+        $planos = $this->actingAs($usuario)
+            ->getJson("/api/quotes/{$quote->id}/technical-sheet")
+            ->assertOk()
+            ->json('data.cutting_plan.by_material');
+
+        $this->assertCount(2, $planos, 'Estrutura e revestimento devem ter planos separados.');
+
+        $porMaterial = collect($planos)->keyBy(fn (array $p) => $p['material']['name']);
+
+        // Cada camada na SUA folha — e as folhas são diferentes, que é a razão
+        // de os dois planos não poderem ser um só.
+        $this->assertSame(1000.0, (float) $porMaterial['Papelão cinza 1,9mm']['sheet']['width_mm']);
+        $this->assertSame(660.0, (float) $porMaterial['Papel color plus']['sheet']['width_mm']);
+
+        // E o revestimento tem peças de verdade encaixadas, não uma lista vazia.
+        $this->assertNotEmpty($porMaterial['Papel color plus']['layouts'][0]['parts']);
+    }
+
+    #[Test]
+    public function caixa_rigida_sem_revestimento_escolhido_denuncia_o_furo_de_preco(): void
+    {
+        /*
+         * O aviso vale mais pelo que diz do PREÇO do que do plano.
+         *
+         * Sem material de revestimento o motor cobra ZERO por ele — a proposta
+         * saiu com o papel de graça. É um furo silencioso: o orçamento fecha,
+         * a caixa é produzida, e o papel some do custo. Quem abre a ficha na
+         * bancada é quem descobre, e é melhor lá do que no fim do mês.
+         */
+        CostSetting::factory()->create();
+        $usuario = User::factory()->create();
+
+        $cinza = Material::factory()->create([
+            'cost_unit' => MaterialUnit::SquareMeter,
+            'cost_per_unit' => 5.00,
+            'thickness_mm' => 0.0,
+            'sheet_width_mm' => 1000,
+            'sheet_length_mm' => 1000,
+        ]);
+
+        $this->actingAs($usuario)->postJson('/api/quotes', [
+            'material_id' => $cinza->id,
+            'box_model' => 'rigid_telescopic',
+            'width_mm' => 300, 'height_mm' => 100, 'depth_mm' => 200,
+            'quantity' => 5,
+            'production_minutes_per_unit' => 0,
+            'profit_margin_percent' => 0,
+            'client_name' => 'Ana',
+        ])->assertCreated();
+
+        $quote = Quote::latest('id')->first();
+
+        $this->assertNull($quote->wrap_material_id);
+        $this->assertSame(0.0, (float) $quote->wrap_cost, 'O motor não cobrou pelo revestimento.');
+
+        $avisos = $this->actingAs($usuario)
+            ->getJson("/api/quotes/{$quote->id}/technical-sheet")
+            ->assertOk()
+            ->json('data.cutting_plan.warnings');
+
+        $this->assertTrue(
+            collect($avisos)->contains(fn ($a) => str_contains($a, 'não foi cobrado no preço')),
+        );
+    }
+
+    #[Test]
+    public function cartonagem_dobrada_continua_com_um_plano_so(): void
+    {
+        /*
+         * A guarda do outro lado: um RSC não tem revestimento, e o aviso acima
+         * não pode aparecer para ele. Uma caixa dobrada é uma chapa só, vincada
+         * — não há papel faltando para reclamar.
+         */
+        CostSetting::factory()->create();
+        $usuario = User::factory()->create();
+
+        $material = Material::factory()->create([
+            'cost_unit' => MaterialUnit::SquareMeter,
+            'cost_per_unit' => 5.00,
+            'thickness_mm' => 0.0,
+            'sheet_width_mm' => 1000,
+            'sheet_length_mm' => 1000,
+        ]);
+
+        $this->actingAs($usuario)->postJson('/api/quotes', [
+            'material_id' => $material->id,
+            'box_model' => 'rsc',
+            'width_mm' => 300, 'height_mm' => 200, 'depth_mm' => 150,
+            'quantity' => 10,
+            'production_minutes_per_unit' => 0,
+            'profit_margin_percent' => 0,
+            'client_name' => 'Ana',
+        ])->assertCreated();
+
+        $quote = Quote::latest('id')->first();
+
+        $plano = $this->actingAs($usuario)
+            ->getJson("/api/quotes/{$quote->id}/technical-sheet")
+            ->assertOk()
+            ->json('data.cutting_plan');
+
+        $this->assertCount(1, $plano['by_material']);
+        $this->assertSame([], $plano['warnings']);
+    }
 }

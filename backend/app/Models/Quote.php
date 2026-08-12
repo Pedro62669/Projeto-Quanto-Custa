@@ -77,6 +77,19 @@ class Quote extends Model
         return $this->belongsTo(Material::class);
     }
 
+    /**
+     * O papel que reveste a caixa rígida.
+     *
+     * Nullable por dois motivos diferentes, e a tela precisa saber distinguir:
+     * cartonagem dobrada não tem revestimento, e caixa rígida orçada sem
+     * escolher papel também fica sem — nesse segundo caso o motor cobra zero
+     * pelo revestimento, o que é um furo de preço que a ficha técnica denuncia.
+     */
+    public function wrapMaterial(): BelongsTo
+    {
+        return $this->belongsTo(Material::class, 'wrap_material_id');
+    }
+
     public function costSetting(): BelongsTo
     {
         return $this->belongsTo(CostSetting::class);
