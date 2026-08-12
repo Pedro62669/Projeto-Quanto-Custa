@@ -102,4 +102,43 @@ enum PlanType: string
     {
         return $this !== self::Free;
     }
+
+    /**
+     * O plano como a API o descreve.
+     *
+     * Existe porque DUAS telas mostram preço: a página pública, para quem ainda
+     * está decidindo, e a de assinatura, para quem já é cliente. Descrever o
+     * plano em cada uma delas é escrever a mensalidade duas vezes — e, no dia do
+     * reajuste, a que fica desatualizada é sempre a que o visitante lê antes de
+     * assinar. O compromisso errado é o que gera reclamação no Procon.
+     *
+     * @return array{tipo: string, rotulo: string, mensalidade: float, pago: bool, limites: array{materiais: int|null, clientes: int|null, orcamentos_por_mes: int|null}}
+     */
+    public function toArray(): array
+    {
+        return [
+            'tipo' => $this->value,
+            'rotulo' => $this->label(),
+            'mensalidade' => $this->monthlyPrice(),
+            'pago' => $this->isPaid(),
+
+            // Null = ilimitado, o mesmo contrato do resumo de cotas.
+            'limites' => [
+                'materiais' => $this->maxMaterials(),
+                'clientes' => $this->maxClients(),
+                'orcamentos_por_mes' => $this->maxQuotesPerMonth(),
+            ],
+        ];
+    }
+
+    /**
+     * A tabela de preços inteira, na ordem em que os planos foram declarados —
+     * do grátis ao completo, que é como se lê uma tabela de preços.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function catalogo(): array
+    {
+        return array_map(static fn (self $plano): array => $plano->toArray(), self::cases());
+    }
 }

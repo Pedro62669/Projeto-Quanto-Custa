@@ -49,6 +49,86 @@ class SubscriptionTest extends TestCase
         ]);
     }
 
+    #[Test]
+    public function a_vitrine_mostra_a_tabela_de_precos_sem_exigir_conta(): void
+    {
+        /*
+         * A página inicial é lida por quem ainda não se cadastrou — logo, sem
+         * token. Se este endpoint exigisse autenticação, a landing precisaria
+         * escrever a mensalidade no HTML, e voltaríamos ao defeito que o teste
+         * abaixo cobre: dois lugares dizendo preços diferentes.
+         */
+        $resposta = $this->getJson('/api/plans')->assertOk();
+
+        $planos = collect($resposta->json('data.planos'))->keyBy('tipo');
+
+        $this->assertSame(79.90, $planos['basic']['mensalidade']);
+        $this->assertSame(149.90, $planos['pro']['mensalidade']);
+        $this->assertNull($planos['pro']['limites']['orcamentos_por_mes']);
+
+        // As duas promessas que a vitrine anuncia em texto grande. Vêm do
+        // servidor porque é o servidor quem as cumpre.
+        $this->assertSame(
+            config('billing.dias_de_teste'),
+            $resposta->json('data.dias_de_teste'),
+        );
+
+        $this->assertSame(
+            config('billing.dias_de_arrependimento'),
+            $resposta->json('data.dias_de_arrependimento'),
+        );
+    }
+
+    #[Test]
+    public function a_vitrine_e_a_tela_de_assinatura_cobram_o_mesmo_preco(): void
+    {
+        /*
+         * O visitante lê /api/plans; o assinante lê /api/subscription. Se as
+         * duas listas divergirem, alguém contrata por um valor e é cobrado por
+         * outro — e a diferença só aparece na fatura.
+         */
+        $vitrine = $this->getJson('/api/plans')->json('data.planos');
+
+        $painel = $this->actingAs($this->admin)
+            ->getJson('/api/subscription')
+            ->json('data.planos_disponiveis');
+
+        $this->assertSame($vitrine, $painel);
+    }
+
+    #[Test]
+    public function a_tela_de_assinatura_recebe_os_precos_do_servidor(): void
+    {
+        /*
+         * O preço mostrado tem que ser o preço cobrado.
+         *
+         * A interface mantinha a própria tabela de planos e chegou a exibir
+         * R$ 99,90 num cartão enquanto o cabeçalho da MESMA página mostrava
+         * R$ 149,90 — este último vindo de `PlanType::monthlyPrice()`. Quem
+         * decidisse pelo cartão contrataria acreditando num valor que a
+         * cobrança não pratica.
+         */
+        $resposta = $this->actingAs($this->admin)->getJson('/api/subscription')->assertOk();
+
+        $planos = collect($resposta->json('data.planos_disponiveis'))->keyBy('tipo');
+
+        $this->assertEquals(0.0, $planos['free']['mensalidade']);
+        $this->assertSame(79.90, $planos['basic']['mensalidade']);
+        $this->assertSame(149.90, $planos['pro']['mensalidade']);
+
+        // Os limites vão junto: sem eles o cartão vende um plano sem dizer o
+        // que ele entrega.
+        $this->assertSame(60, $planos['basic']['limites']['materiais']);
+        $this->assertNull($planos['pro']['limites']['materiais']);
+
+        // E o preço do plano VIGENTE bate com o da lista — era exatamente essa
+        // igualdade que a tela quebrava.
+        $this->assertSame(
+            $resposta->json('data.plano.mensalidade'),
+            $planos[$resposta->json('data.plano.tipo')]['mensalidade'],
+        );
+    }
+
     private function assinatura(bool $foraDoPrazo = false): Subscription
     {
         $factory = Subscription::factory()->state(['tenant_id' => $this->empresa->id]);

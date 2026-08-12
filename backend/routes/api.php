@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\InstallmentController;
 use App\Http\Controllers\Api\MaterialController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\Platform\PlatformDashboardController;
 use App\Http\Controllers\Api\Platform\PlatformTenantController;
 use App\Http\Controllers\Api\Platform\PlatformUserController;
@@ -68,6 +69,17 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:20
  * O e-mail de confirmação sai daqui, mas não trava nada: ver RegisterController.
  */
 Route::post('/register', RegisterController::class)->middleware('throttle:5,1');
+
+/*
+ * Tabela de preços.
+ *
+ * Pública porque é a vitrine: a página inicial a lê para montar os cartões de
+ * plano, e ninguém que ainda está decidindo tem token para apresentar.
+ *
+ * Throttle folgado — a resposta não toca o banco e o frontend a guarda em cache
+ * por hora, então 60/min por IP só existe para conter script bobo.
+ */
+Route::get('/plans', PlanController::class)->middleware('throttle:60,1');
 
 /*
  * "Esqueci minha senha".

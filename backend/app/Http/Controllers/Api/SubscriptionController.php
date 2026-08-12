@@ -84,6 +84,20 @@ class SubscriptionController extends Controller
                         ->toIso8601String(),
                 ],
                 'cotas' => $quotas->resumo($tenant),
+
+                /*
+                 * Os planos oferecidos, com preço e limites.
+                 *
+                 * Vão daqui, e não de uma tabela escrita na interface, porque
+                 * preço de assinatura é informação do servidor. Enquanto a tela
+                 * mantinha a própria lista, ela mostrou R$ 99,90 num cartão e
+                 * R$ 149,90 no cabeçalho da MESMA página — o segundo vindo do
+                 * `monthlyPrice()` real. Um cliente que decide pelo cartão
+                 * contrata acreditando num valor que a cobrança não pratica.
+                 */
+                // A mesma tabela que a página pública de preços mostra. Ver
+                // PlanType::catalogo() para o porquê de não estar escrita aqui.
+                'planos_disponiveis' => PlanType::catalogo(),
             ],
         ]);
     }
