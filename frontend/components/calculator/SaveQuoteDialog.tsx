@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import { useQuoteStore } from "@/store/useQuoteStore";
  */
 export function SaveQuoteDialog({ disabled }: { disabled?: boolean }) {
   const spec = useQuoteStore((s) => s.spec);
+  const router = useRouter();
 
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,10 +44,17 @@ export function SaveQuoteDialog({ disabled }: { disabled?: boolean }) {
     setFieldErrors({});
 
     try {
-      const quote = await api.saveQuote(spec, form);
+      const quote = await api.quotes.create(spec, form);
 
+      // O atalho para o registro recém-criado, e não só um aviso: o orçamento
+      // acabou de ganhar ficha técnica, PDF e aprovação — e a hora de usá-los é
+      // agora, com o trabalho fresco, não depois de procurá-lo na lista.
       toast.success(`Orçamento ${quote.reference} salvo`, {
-        description: "Disponível no histórico.",
+        description: "Ficha técnica, PDF e aprovação já estão disponíveis.",
+        action: {
+          label: "Abrir",
+          onClick: () => router.push(`/orcamentos/${quote.id}`),
+        },
       });
 
       setOpen(false);

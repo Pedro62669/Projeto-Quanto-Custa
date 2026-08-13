@@ -88,6 +88,7 @@ function run(): number {
       type: "cardboard",
       type_label: "Papelão",
       cost_per_m2: testCase.material.cost_per_m2,
+      is_area_based: true,
       default_waste_percent: 0,
       thickness_mm: testCase.material.thickness_mm,
       color_hex: "#000000",

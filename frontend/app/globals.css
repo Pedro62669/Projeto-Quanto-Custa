@@ -7,8 +7,33 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  /*
+   * Helvetica, com as escadas de sempre.
+   *
+   * Aqui morava `--font-sans: var(--font-sans)` — a variável apontando para si
+   * mesma. Nada a definia (o layout declarava `--font-geist-sans`), então
+   * `font-family: var(--font-sans)` era inválida e o navegador caía no padrão
+   * DELE, que é serifado. O sistema inteiro vinha sendo lido em Times enquanto
+   * baixava uma fonte que nunca aplicava.
+   *
+   * A ordem cobre os três sistemas: "Helvetica Neue" no macOS, Helvetica onde
+   * ela existe de verdade, e Arial no Windows — que não traz Helvetica, mas
+   * traz uma fonte metricamente idêntica a ela, desenhada para substituí-la.
+   * Nenhuma é baixada: são todas locais, e a página pinta o texto no primeiro
+   * quadro, sem o lampejo de fonte trocando.
+   */
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /*
+   * O mono continua sendo o Geist: ele é quem desenha os NÚMEROS.
+   *
+   * Preço, medida e área usam `tabular-nums` para que a coluna não dance a cada
+   * dígito, e Helvetica não tem versão monoespaçada. Trocar por um mono
+   * genérico devolveria o desalinhamento que a tabela de custos existe para
+   * evitar.
+   */
   --font-mono: var(--font-geist-mono);
+
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -126,5 +151,47 @@
   }
   html {
     @apply font-sans;
+  }
+}
+/**
+ * Impressão.
+ *
+ * Existe por causa da ficha técnica, que é o único documento do sistema feito
+ * para sair da tela: ela vai para a bancada, ao lado da guilhotina. O que se
+ * apaga aqui é a navegação — cabeçalho, barra lateral e botões —, porque numa
+ * folha impressa eles são tinta gasta e ainda roubam a largura útil do plano de
+ * corte.
+ *
+ * `print:hidden` continua disponível para casos pontuais dentro das páginas.
+ */
+@media print {
+  header[data-slot="app-header"],
+  aside[data-slot="app-sidebar"] {
+    display: none !important;
+  }
+
+  /* Sem a altura travada da casca: no papel, o conteúdo flui por quantas
+     páginas precisar, em vez de rolar dentro de uma caixa de altura fixa. */
+  [data-slot="app-shell"],
+  [data-slot="app-main"] {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  /* Fundo branco e traço preto: economiza tinta e sobrevive a impressora
+     monocromática, que é o que existe num galpão. */
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  /* Uma folha do plano de corte não deve ser partida ao meio pela quebra de
+     página — metade do arranjo em cada lado não se confere. */
+  figure,
+  table {
+    break-inside: avoid;
   }
 }

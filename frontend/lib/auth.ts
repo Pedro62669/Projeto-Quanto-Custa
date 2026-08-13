@@ -52,12 +52,24 @@ export const session = {
   },
 
   async login(email: string, password: string): Promise<SessionUser> {
-    const { token, user } = await api.login(email, password);
+    const { token, user } = await api.auth.login(email, password);
 
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    this.adopt(token, user);
 
     return user;
+  },
+
+  /**
+   * Adota uma sessão que o servidor já emitiu.
+   *
+   * O cadastro público devolve o token junto com a conta criada: mandar a
+   * pessoa para o login logo depois de ela ter digitado a senha seria pedir a
+   * mesma coisa duas vezes. A gravação passa por aqui, e não pelo localStorage
+   * direto na página, para as chaves ficarem definidas num lugar só.
+   */
+  adopt(token: string, user: SessionUser): void {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
   },
 
   async logout(): Promise<void> {
@@ -65,7 +77,7 @@ export const session = {
     // (offline, token já expirado), a sessão local é apagada mesmo assim —
     // deixar o usuário preso numa tela por causa da rede seria pior.
     try {
-      await api.logout();
+      await api.auth.logout();
     } finally {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);

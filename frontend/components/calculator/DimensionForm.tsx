@@ -24,7 +24,13 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import { useQuoteStore } from "@/store/useQuoteStore";
-import { defaultLidDimensions, hasSeparateLid, isCylindrical } from "@/lib/pricing/engine";
+import { CustomPartsEditor } from "@/components/calculator/CustomPartsEditor";
+import {
+  defaultLidDimensions,
+  hasSeparateLid,
+  isCylindrical,
+  isFree,
+} from "@/lib/pricing/engine";
 import type { BoxModel, PricingMode } from "@/lib/pricing/types";
 
 const BOX_MODELS: Array<{ value: BoxModel; label: string }> = [
@@ -35,6 +41,10 @@ const BOX_MODELS: Array<{ value: BoxModel; label: string }> = [
   { value: "tube", label: "Tubo / lata cilíndrica" },
   { value: "drawer", label: "Caixa gaveta" },
   { value: "mailer", label: "Mailer box (e-commerce)" },
+
+  // Por último, e separado por um traço na lista: não é mais um formato, é a
+  // saída para quando nenhum formato serve.
+  { value: "free", label: "Modelo livre (peças medidas)" },
 ];
 
 /**
@@ -46,65 +56,71 @@ const BOX_MODELS: Array<{ value: BoxModel; label: string }> = [
  * transformariam a tela numa planilha e afogariam o que importa.
  */
 export function DimensionForm() {
-  const { spec, materials, updateSpec, selectMaterial } = useQuoteStore(
+  const { spec, materials, updateSpec, selectMaterial, selectBoxModel } = useQuoteStore(
     useShallow((s) => ({
       spec: s.spec,
       materials: s.materials,
       updateSpec: s.updateSpec,
       selectMaterial: s.selectMaterial,
+      selectBoxModel: s.selectBoxModel,
     })),
   );
 
   const cilindrico = isCylindrical(spec.box_model);
+  const modeloLivre = isFree(spec.box_model);
 
   return (
     <div className="space-y-6">
-      {/* ── Dimensões ──────────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <header className="flex items-center gap-2">
-          <Box className="size-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold">Dimensões internas</h2>
-          <span className="ml-auto text-xs text-muted-foreground">mm</span>
-        </header>
+      {/* ── Dimensões, ou as peças ─────────────────────────────────────── */}
+      {modeloLivre ? (
+        <CustomPartsEditor />
+      ) : (
+        <section className="space-y-3">
+          <header className="flex items-center gap-2">
+            <Box className="size-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">Dimensões internas</h2>
+            <span className="ml-auto text-xs text-muted-foreground">mm</span>
+          </header>
 
-        {/*
-          Um cilindro não tem largura e profundidade independentes: tem
-          diâmetro. Mostrar três campos pediria ao usuário um dado que não
-          existe — e que o motor ignoraria em silêncio.
-        */}
-        <div
-          className={
-            cilindrico ? "grid grid-cols-2 gap-3" : "grid grid-cols-3 gap-3"
-          }
-        >
-          <DimensionInput
-            id="width"
-            label={cilindrico ? "Diâmetro" : "Largura"}
-            value={spec.width_mm}
-            onChange={(width_mm) =>
-              updateSpec(
-                // Profundidade acompanha o diâmetro: para um cilindro, ambas
-                // SÃO a mesma medida (é a caixa envolvente da peça).
-                cilindrico ? { width_mm, depth_mm: width_mm } : { width_mm },
-              )
+          {/*
+            Um cilindro não tem largura e profundidade independentes: tem
+            diâmetro. Mostrar três campos pediria ao usuário um dado que não
+            existe — e que o motor ignoraria em silêncio.
+          */}
+          <div
+            className={
+              cilindrico ? "grid grid-cols-2 gap-3" : "grid grid-cols-3 gap-3"
             }
-          />
-          <DimensionInput
-            id="height"
-            label="Altura"
-            value={spec.height_mm}
-            onChange={(height_mm) => updateSpec({ height_mm })}
-          />
-          {!cilindrico && (
+          >
             <DimensionInput
-              id="depth"
-              label="Profundidade"
-              value={spec.depth_mm}
-              onChange={(depth_mm) => updateSpec({ depth_mm })}
+              id="width"
+              label={cilindrico ? "Diâmetro" : "Largura"}
+              value={spec.width_mm}
+              onChange={(width_mm) =>
+                updateSpec(
+                  // Profundidade acompanha o diâmetro: para um cilindro, ambas
+                  // SÃO a mesma medida (é a caixa envolvente da peça).
+                  cilindrico ? { width_mm, depth_mm: width_mm } : { width_mm },
+                )
+              }
             />
-          )}
-        </div>
-      </section>
+            <DimensionInput
+              id="height"
+              label="Altura"
+              value={spec.height_mm}
+              onChange={(height_mm) => updateSpec({ height_mm })}
+            />
+            {!cilindrico && (
+              <DimensionInput
+                id="depth"
+                label="Profundidade"
+                value={spec.depth_mm}
+                onChange={(depth_mm) => updateSpec({ depth_mm })}
+              />
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ── Material e modelo ──────────────────────────────────────────── */}
       <section className="space-y-3">
@@ -114,12 +130,17 @@ export function DimensionForm() {
         </header>
 
         <div className="space-y-2">
-          <Label htmlFor="material">Matéria-prima</Label>
+          <Label htmlFor="material">
+            {modeloLivre ? "Matéria-prima de referência" : "Matéria-prima"}
+          </Label>
           <Select
             value={spec.material_id?.toString() ?? ""}
             onValueChange={(value) => selectMaterial(Number(value))}
           >
-            <SelectTrigger id="material">
+            {/* w-full: o gatilho do shadcn nasce `w-fit` e cresce com o texto.
+                Num campo de largura livre isso só deixava a caixa desalinhada;
+                dentro de uma grade, passava por cima do campo ao lado. */}
+            <SelectTrigger id="material" className="w-full">
               <SelectValue placeholder="Selecione o material" />
             </SelectTrigger>
             <SelectContent>
@@ -142,16 +163,31 @@ export function DimensionForm() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* No modelo livre o custo vem do material DE CADA PEÇA. Este campo
+              continua sendo gravado no orçamento, e dizer o que ele faz aqui
+              evita que alguém o troque esperando ver o preço mudar. */}
+          {modeloLivre && (
+            <p className="text-xs text-muted-foreground">
+              No modelo livre o preço sai do material de cada peça. Este fica
+              registrado no orçamento como a matéria-prima principal do projeto.
+            </p>
+          )}
         </div>
 
+        {/*
+          `min-w-0` nas duas células: item de grid se recusa a encolher abaixo
+          do próprio conteúdo, e "Modelo livre (peças medidas)" é largo o
+          bastante para empurrar a quantidade para debaixo de si.
+        */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <Label htmlFor="box-model">Modelo</Label>
             <Select
               value={spec.box_model}
-              onValueChange={(value) => updateSpec({ box_model: value as BoxModel })}
+              onValueChange={(value) => selectBoxModel(value as BoxModel)}
             >
-              <SelectTrigger id="box-model">
+              <SelectTrigger id="box-model" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -164,7 +200,7 @@ export function DimensionForm() {
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <Label htmlFor="quantity">Quantidade</Label>
             <Input
               id="quantity"
@@ -242,25 +278,76 @@ export function DimensionForm() {
           </AccordionTrigger>
 
           <AccordionContent className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="waste">Desperdício / perda</Label>
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                  {spec.waste_percent}%
-                </span>
+            {modeloLivre ? (
+              /*
+               * Duas coisas mudam de lugar no modelo livre.
+               *
+               * A perda sai: ela é do MATERIAL de cada peça, e um percentual
+               * único aqui não tem onde ser aplicado — o motor o ignora. Deixar
+               * o controle na tela seria oferecer uma alavanca desligada.
+               *
+               * As medidas externas entram: continuam sendo gravadas no
+               * orçamento e a API as exige, então escondê-las mandaria ao
+               * servidor um número que ninguém viu. Aqui elas aparecem pelo que
+               * são — referência, não base de cálculo.
+               */
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm">Medidas externas de referência</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Não entram no preço: quem o define são as peças. Servem para
+                    identificar a caixa na proposta e na ficha de produção.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <DimensionInput
+                    id="width"
+                    label="Largura"
+                    value={spec.width_mm}
+                    onChange={(width_mm) => updateSpec({ width_mm })}
+                  />
+                  <DimensionInput
+                    id="height"
+                    label="Altura"
+                    value={spec.height_mm}
+                    onChange={(height_mm) => updateSpec({ height_mm })}
+                  />
+                  <DimensionInput
+                    id="depth"
+                    label="Profundidade"
+                    value={spec.depth_mm}
+                    onChange={(depth_mm) => updateSpec({ depth_mm })}
+                  />
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  A perda de cada peça vem do material dela — papelão, kraft e
+                  tecido desperdiçam percentuais diferentes, e cada linha aplica
+                  o seu.
+                </p>
               </div>
-              <Slider
-                id="waste"
-                value={[spec.waste_percent]}
-                onValueChange={([waste_percent]) => updateSpec({ waste_percent })}
-                min={0}
-                max={50}
-                step={0.5}
-              />
-              <p className="text-xs text-muted-foreground">
-                Aparas, refile e perdas de acerto de máquina.
-              </p>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="waste">Desperdício / perda</Label>
+                  <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                    {spec.waste_percent}%
+                  </span>
+                </div>
+                <Slider
+                  id="waste"
+                  value={[spec.waste_percent]}
+                  onValueChange={([waste_percent]) => updateSpec({ waste_percent })}
+                  min={0}
+                  max={50}
+                  step={0.5}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Aparas, refile e perdas de acerto de máquina.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="minutes">Tempo de produção por unidade (min)</Label>

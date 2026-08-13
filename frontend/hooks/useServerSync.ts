@@ -10,7 +10,7 @@ import { useQuoteStore } from "@/store/useQuoteStore";
  * O debounce é o que torna viável recalcular a cada tecla: sem ele, digitar
  * "1500" dispararia quatro requisições, três delas descartáveis.
  */
-export function useServerSync(delayMs = 400) {
+export function useServerSync(delayMs = 500) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {

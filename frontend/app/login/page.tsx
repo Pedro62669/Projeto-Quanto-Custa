@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Package } from "lucide-react";
 
@@ -33,7 +34,7 @@ export default function LoginPage() {
 
     try {
       await session.login(email, password);
-      router.push("/calculadora");
+      router.push("/painel");
     } catch (err) {
       // A API devolve uma mensagem genérica de propósito (não distingue
       // "e-mail inexistente" de "senha errada"); apenas a repassamos.
@@ -102,6 +103,25 @@ export default function LoginPage() {
             </form>
           </CardContent>
         </Card>
+
+        {/* As duas saídas que faltavam: quem esqueceu a senha ficava sem
+            caminho, e quem ainda não tem empresa não tinha por onde criar uma. */}
+        <div className="space-y-2 text-center text-sm">
+          <p>
+            <Link
+              href="/recuperar-senha"
+              className="text-muted-foreground underline-offset-4 hover:underline"
+            >
+              Esqueci minha senha
+            </Link>
+          </p>
+          <p className="text-muted-foreground">
+            Ainda não tem conta?{" "}
+            <Link href="/cadastro" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Cadastre sua empresa
+            </Link>
+          </p>
+        </div>
       </div>
     </main>
   );

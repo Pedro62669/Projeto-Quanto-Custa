@@ -78,8 +78,19 @@ export interface Material {
   name: string;
   type: string;
   type_label: string;
-  /** Custo já normalizado para R$/m² pelo backend. */
-  cost_per_m2: number;
+
+  /**
+   * Custo já normalizado para R$/m² pelo backend.
+   *
+   * Null quando o material NÃO se mede por área: ímã é contado, espuma é
+   * comprada em bloco. Zero seria pior que null — zero é um custo, e um custo
+   * de zero precifica a caixa como se o material fosse de graça.
+   */
+  cost_per_m2: number | null;
+
+  /** Falso em ferragem e em bloco. Filtra quem pode virar peça medida em mm. */
+  is_area_based: boolean;
+
   default_waste_percent: number;
   thickness_mm: number | null;
   color_hex: string;
@@ -218,7 +229,7 @@ export interface QuoteSpecification {
    * somaria a planificação calculada MAIS os retângulos digitados, cobrando o
    * material duas vezes. O erro sairia plausível, que é o pior tipo.
    */
-  custom_parts?: CustomPartLine[];
+  custom_parts?: CustomPartInput[];
 }
 
 /**
@@ -239,6 +250,31 @@ export interface CustomPartLine {
   length_mm: number;
   /** Peças iguais POR CAIXA, não pelo lote. */
   quantity: number;
+}
+
+/**
+ * A mesma peça, do lado de cá: o que o formulário edita e o que viaja à API.
+ *
+ * Estende a linha do motor em vez de substituí-la porque as duas têm públicos
+ * diferentes. O motor consome números — custo e perda — e não sabe o que é um
+ * material; a API consome `material_id` e RESOLVE o custo de novo no servidor,
+ * ignorando o que vier daqui. É por isso que enviar os dois campos calculados
+ * não abre brecha: o preço gravado nunca sai do navegador.
+ *
+ * Os números resolvidos localmente saem de GET /materials, já normalizados pelo
+ * backend. O front não reimplementa a conversão por gramatura nem o custo do
+ * lote — ele lê o resultado.
+ */
+export interface CustomPartInput extends CustomPartLine {
+  /**
+   * Identidade só do cliente (crypto.randomUUID()), descartada pela API.
+   *
+   * Existe para o React: sem chave estável, remover a peça #2 de uma lista de
+   * quatro faria o cursor pular para outra linha no meio da digitação.
+   */
+  id: string;
+  name: string;
+  material_id: number;
 }
 
 /** Saída do cálculo — idêntica ao PricingResult do PHP. */

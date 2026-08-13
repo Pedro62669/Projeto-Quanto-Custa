@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
+/**
+ * Só o monoespaçado é baixado.
+ *
+ * O texto corrido usa Helvetica (Arial no Windows), que já está na máquina —
+ * ver `--font-sans` em globals.css. O Geist Sans vinha sendo baixado a cada
+ * visita e nunca chegava à tela, porque a variável que o aplicaria estava
+ * quebrada: peso de rede em troca de nada.
+ *
+ * O mono fica porque desenha os números com largura fixa, e disso a tela
+ * depende — é o que mantém a coluna de preços alinhada dígito a dígito.
+ */
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
@@ -27,7 +33,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}
