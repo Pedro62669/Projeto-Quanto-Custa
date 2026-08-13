@@ -19,6 +19,7 @@ import {
   hasSeparateLid,
   isBook,
   bookLayout,
+  mailerLayout,
   suggestedMagnets,
 } from "@/lib/pricing/engine";
 
@@ -91,10 +92,11 @@ export interface BoxMeshProps extends BoxDimensions {
  *
  * A geometria segue o domínio: um saco é fechado, uma luva é um tubo aberto
  * nas duas pontas, e uma bandeja é justamente a caixa SEM TAMPA — aberta em
- * cima. O RSC aparece com as abas superiores abertas porque o que interessa
- * ao usuário é enxergar o volume interno que vai embalar o produto.
+ * cima.
  */
 const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
+  // O RSC é desenhado por componente próprio (CaixaEnvioMesh, com as oito
+  // abas); a entrada existe para o mapa continuar exaustivo.
   rsc: { topo: true, fundo: false },
   tray: { topo: true, fundo: false },
   sleeve: { topo: true, fundo: true },
@@ -142,17 +144,22 @@ const APERTURAS: Record<BoxModel, { topo: boolean; fundo: boolean }> = {
  * Modelos que têm peça móvel — e portanto uma abertura para animar.
  *
  * Vive aqui, e não no motor de precificação, de propósito: é uma pergunta
- * sobre o DESENHO ("esta peça se move?"), não sobre o custo. O RSC, a luva e o
- * saco não têm o que abrir; oferecer um slider inerte para eles seria um
- * controle que mente sobre o que faz.
+ * sobre o DESENHO ("esta peça se move?"), não sobre o custo. A luva e o saco
+ * não têm o que abrir; oferecer um slider inerte para eles seria um controle
+ * que mente sobre o que faz.
  */
 export function hasAperture(model: BoxModel): boolean {
   // A caixa livro entra porque a capa é articulada: o slider percorre o giro
   // da tampa em torno da lombada, que é a peça móvel do modelo.
+  //
+  // O RSC entrou junto com o modelo do Blender: enquanto era desenhado sem
+  // abas, não havia peça móvel nenhuma e o slider teria sido inerte. Agora ele
+  // percorre as oito abas fechando.
   return (
     hasSeparateLid(model) ||
     model === "drawer" ||
     model === "mailer" ||
+    model === "rsc" ||
     isBook(model)
   );
 }
@@ -265,12 +272,42 @@ export function assemblyHeightMm(props: BoxMeshProps): number {
 /** Altura do conjunto já convertida para unidades de cena (≤ SCENE_MAX_UNITS). */
 export function assemblyHeightUnits(props: BoxMeshProps): number {
   const alturaMm = assemblyHeightMm(props);
+
+  return (alturaMm * SCENE_MAX_UNITS) / maiorAresta(props);
+}
+
+/**
+ * Raio da esfera que envolve o conjunto, em unidades de cena.
+ *
+ * É o que a câmera precisa para enquadrar: a normalização já garante que a
+ * MAIOR aresta ocupe SCENE_MAX_UNITS, mas não que a peça preencha o quadro. Um
+ * cubo tem raio ~1,73; uma bandeja rasa e larga, ~1,41; uma coluna estreita,
+ * ~1,03. Com distância fixa, a mesma câmera que emoldura o cubo deixa a coluna
+ * pequena no meio de um vazio — e é justamente a peça estreita que o usuário
+ * precisa examinar de perto.
+ *
+ * Exportada em vez de recalculada no BoxViewer para que a normalização viva num
+ * lugar só: enquadrar com um fator diferente do que desenha daria uma câmera
+ * que erra por um múltiplo, e o erro só apareceria em medidas extremas.
+ */
+export function assemblyRadiusUnits(props: BoxMeshProps): number {
+  const cilindro = isCylindrical(props.boxModel ?? "rsc");
+  const fator = SCENE_MAX_UNITS / maiorAresta(props);
+
+  const meiaLargura = (props.widthMm * fator) / 2;
+  const meiaProfundidade = ((cilindro ? props.widthMm : props.depthMm) * fator) / 2;
+  const meiaAltura = (assemblyHeightMm(props) * fator) / 2;
+
+  return Math.hypot(meiaLargura, meiaProfundidade, meiaAltura);
+}
+
+/** A aresta que serve de referência para a normalização. Nunca zero. */
+function maiorAresta(props: BoxMeshProps): number {
   const profundidade = isCylindrical(props.boxModel ?? "rsc")
     ? props.widthMm
     : props.depthMm;
-  const largest = Math.max(props.widthMm, profundidade, alturaMm, 1);
 
-  return (alturaMm * SCENE_MAX_UNITS) / largest;
+  return Math.max(props.widthMm, profundidade, assemblyHeightMm(props), 1);
 }
 
 /**
@@ -672,6 +709,242 @@ function GavetaMesh({
   );
 }
 
+/* ── Caixa de envio (RSC) ─────────────────────────────────────────────── */
+
+/**
+ * Ângulo das abas de cima, medido a partir da parede (0 = a aba continua a
+ * parede para cima), positivo para FORA.
+ *
+ * Os dois valores vêm de `caixa-envio/caixa-envio.blend`, que é a peça
+ * modelada: −90° é a aba deitada fechando a caixa, e +120° é a pose em que ela
+ * passa da horizontal e cai um pouco para fora — o escancarado que faz uma
+ * caixa de envio ser reconhecida à primeira vista.
+ */
+const ABA_FECHADA = -Math.PI / 2;
+const ABA_ABERTA = (120 * Math.PI) / 180;
+
+/**
+ * A ordem da dobra: as MENORES fecham primeiro.
+ *
+ * Uma caixa americana não fecha as quatro abas de uma vez. As abas internas —
+ * as das paredes curtas — deitam primeiro, e as externas pousam por cima delas.
+ * É o que a fita sela depois, e é a única ordem possível: invertida, a aba de
+ * baixo teria que atravessar a de cima para chegar ao lugar.
+ *
+ * A ordem vem do `.blend`, das chaves de `Hinge_TopFlap_*`. Abrindo, as externas
+ * saem primeiro (quadros 1→20) e só então as internas (20→40); fechando é o
+ * inverso, que é a sequência de quem monta a caixa.
+ *
+ * As faixas aqui NÃO são as do arquivo. Lá as externas gastam os primeiros 21%
+ * da janela e depois nada acontece por mais da metade dela — bom para uma
+ * animação que roda sozinha, ruim para um slider, onde metade do curso ficaria
+ * morta. Os dois trechos abaixo repartem o curso inteiro e se cruzam de leve no
+ * meio, para o movimento não parar seco na passagem de um par para o outro.
+ */
+const CURSO_EXTERNA = [0, 0.6] as const;
+const CURSO_INTERNA = [0.4, 1] as const;
+
+/** Onde `valor` está dentro do trecho, de 0 a 1. Fora dele, grudado na ponta. */
+function trecho(valor: number, [inicio, fim]: readonly [number, number]): number {
+  return Math.min(Math.max((valor - inicio) / (fim - inicio), 0), 1);
+}
+
+/**
+ * Caixa de envio — a americana (RSC, FEFCO 0201).
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * Por que DESENHADA e não carregada do Blender, ao contrário da mailer
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * O modelo assado chegou a entrar aqui e teve de sair: a caixa se deformava
+ * durante a dobra.
+ *
+ * A causa é a escala por eixo. O arquivo tem UMA medida (2000 × 1800 × 2000) e
+ * a tela o estica até a que o usuário digitou — numa caixa 300 × 80 × 250 isso
+ * é [0,15 · 0,044 · 0,125]. Enquanto cada painel está alinhado aos eixos,
+ * esticar funciona. Painel GIRADO, não: escalar mais um eixo que o outro o
+ * cisalha, e o retângulo vira um paralelogramo. A mailer convive com isso
+ * porque só a tampa gira; aqui giram as oito abas ao mesmo tempo, e na pose
+ * aberta as quatro de cima ficam permanentemente tortas.
+ *
+ * Um RSC, porém, são doze retângulos. Desenhá-lo custa esta função e resolve o
+ * problema pela raiz: cada painel nasce com a medida certa, a espessura é a
+ * mesma nos quatro lados, e nada cisalha em ângulo nenhum.
+ *
+ * O .blend continua sendo a fonte: dele vieram a construção (quatro paredes,
+ * quatro abas em cima, quatro embaixo), a ordem das dobras e os dois ângulos
+ * acima. O que não veio foi o arquivo.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * O comprimento da aba é METADE DA PROFUNDIDADE nas oito, e não metade da
+ * parede de cada uma. É o que o motor de preço cobra — o blank tem altura
+ * `heightMm + depthMm`, ou seja, parede mais duas abas de D/2 (ver
+ * BlankCalculator::Rsc). Desenhar diferente do que se cobra seria a tela
+ * mentindo sobre a peça que vai ser cortada.
+ *
+ * Consequência visível e correta: só as abas das paredes LONGAS se encontram no
+ * meio. As das paredes curtas ficam com um vão entre si — é por ele que passa a
+ * fita, e é assim numa caixa de verdade.
+ */
+function CaixaEnvioMesh({
+  widthMm,
+  heightMm,
+  depthMm,
+  espessuraMm,
+  abertura,
+  material,
+  showEdges,
+}: {
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+  espessuraMm: number;
+  abertura: number;
+  material: ReactNode;
+  showEdges: boolean;
+}) {
+  const abaMm = depthMm / 2;
+
+  /*
+   * A aba aberta não pode furar o chão.
+   *
+   * A 120° a ponta desce `aba × |cos 120°|` abaixo do vinco — meia aba. Numa
+   * caixa rasa e funda (40mm de altura, 400 de profundidade) isso passa do
+   * fundo e a peça atravessa o piso da cena. O limite abre o quanto der até a
+   * ponta raspar o chão, e só então para.
+   */
+  const anguloAberto = Math.min(
+    ABA_ABERTA,
+    Math.acos(-Math.min(1, abaMm > 0 ? heightMm / abaMm : 1)),
+  );
+
+  /*
+   * Normaliza pela pose TOTALMENTE ABERTA, nunca pela atual — se o fator
+   * acompanhasse o slider, a caixa mudaria de tamanho enquanto o usuário a
+   * fecha, e pareceria que as medidas mudaram junto.
+   */
+  const abaLateralMm = Math.min(abaMm, widthMm / 2);
+  const alcance = Math.sin(anguloAberto);
+
+  const fator =
+    SCENE_MAX_UNITS /
+    Math.max(
+      widthMm + 2 * abaLateralMm * alcance,
+      depthMm + 2 * abaMm * alcance,
+      heightMm,
+      1,
+    );
+
+  const w = widthMm * fator;
+  const h = heightMm * fator;
+  const d = depthMm * fator;
+  const aba = abaMm * fator;
+
+  // Mesma guarda de espessura da gaveta: papel de 0,4mm numa caixa de 300
+  // sumiria, e uma espessura grande demais faria as paredes se atravessarem.
+  const t = Math.min(Math.max(espessuraMm * fator, MIN_WALL_UNITS), w / 6, h / 6, d / 6);
+
+  /*
+   * A aba das paredes curtas é limitada à metade da largura.
+   *
+   * Numa caixa mais funda que larga, duas abas de D/2 se sobrepõem no meio — e
+   * duas caixas coplanares no mesmo lugar brigam pelo z-buffer, produzindo o
+   * cintilar que parece defeito de vídeo. O corte é só do DESENHO: o preço
+   * continua cobrando a aba inteira, que é o que se corta de fato.
+   */
+  const abaLateral = Math.min(aba, w / 2);
+
+  // As abas de frente/trás pousam sobre as laterais, como numa caixa montada.
+  // Daí as duas camadas, embaixo e em cima.
+  const camadaBaixa = t / 2;
+  const camadaAlta = t + t / 2;
+
+  const frente = useRef<THREE.Group>(null);
+  const tras = useRef<THREE.Group>(null);
+  const esquerda = useRef<THREE.Group>(null);
+  const direita = useRef<THREE.Group>(null);
+
+  const suave = useAberturaSuave(abertura);
+
+  useFrame(() => {
+    const curso = (faixa: readonly [number, number]) =>
+      ABA_FECHADA + (anguloAberto - ABA_FECHADA) * trecho(suave.current, faixa);
+
+    /*
+     * Dois tempos, não um.
+     *
+     * As externas (frente e trás) percorrem o começo do curso; as internas
+     * (esquerda e direita), o fim. Fechando — o slider indo para zero — as
+     * internas chegam deitadas antes de as externas começarem a descer, que é
+     * a ordem de quem monta a caixa.
+     */
+    const externa = curso(CURSO_EXTERNA);
+    const interna = curso(CURSO_INTERNA);
+
+    // Cada parede dobra para o SEU lado de fora: o sinal é o que diferencia a
+    // frente da trás e a esquerda da direita.
+    if (frente.current) frente.current.rotation.x = externa;
+    if (tras.current) tras.current.rotation.x = -externa;
+    if (esquerda.current) esquerda.current.rotation.z = interna;
+    if (direita.current) direita.current.rotation.z = -interna;
+  });
+
+  const painel = (
+    escala: [number, number, number],
+    posicao: [number, number, number],
+    key: string,
+  ) => (
+    <mesh key={key} scale={escala} position={posicao} castShadow receiveShadow>
+      <boxGeometry args={[1, 1, 1]} />
+      {material}
+      {showEdges && <Edges threshold={15} color="#00000030" />}
+    </mesh>
+  );
+
+  /** Uma aba articulada: nasce continuando a parede para cima e gira no vinco. */
+  const abaMovel = (
+    ref: React.RefObject<THREE.Group | null>,
+    escala: [number, number, number],
+    posicao: [number, number, number],
+    key: string,
+  ) => (
+    <group key={key} ref={ref} position={posicao}>
+      {painel(escala, [0, escala[1] / 2, 0], `${key}-painel`)}
+    </group>
+  );
+
+  const larguraFrente = w - 2 * t;
+
+  return (
+    <group>
+      {/* ── Fundo: as quatro abas de baixo, fechadas e em duas camadas ──── */}
+      {painel([abaLateral, t, d], [-(w - abaLateral) / 2, camadaBaixa, 0], "fundo-esq")}
+      {painel([abaLateral, t, d], [(w - abaLateral) / 2, camadaBaixa, 0], "fundo-dir")}
+      {painel([w, t, aba], [0, camadaAlta, (d - aba) / 2], "fundo-frente")}
+      {painel([w, t, aba], [0, camadaAlta, -(d - aba) / 2], "fundo-tras")}
+
+      {/* ── As quatro paredes ─────────────────────────────────────────────── */}
+      {painel([t, h, d], [-(w - t) / 2, h / 2, 0], "parede-esq")}
+      {painel([t, h, d], [(w - t) / 2, h / 2, 0], "parede-dir")}
+      {painel([larguraFrente, h, t], [0, h / 2, (d - t) / 2], "parede-frente")}
+      {painel([larguraFrente, h, t], [0, h / 2, -(d - t) / 2], "parede-tras")}
+
+      {/*
+        ── As quatro abas de cima ────────────────────────────────────────────
+        As laterais dobram primeiro e ficam por baixo (vinco em h); as de
+        frente e trás pousam sobre elas (vinco em h + t). É a ordem de quem
+        monta a caixa, e é o que faz as duas camadas não se atravessarem
+        quando fechadas.
+      */}
+      {abaMovel(esquerda, [t, abaLateral, d], [-(w - t) / 2, h, 0], "aba-esq")}
+      {abaMovel(direita, [t, abaLateral, d], [(w - t) / 2, h, 0], "aba-dir")}
+      {abaMovel(frente, [larguraFrente, aba, t], [0, h + t, (d - t) / 2], "aba-frente")}
+      {abaMovel(tras, [larguraFrente, aba, t], [0, h + t, -(d - t) / 2], "aba-tras")}
+    </group>
+  );
+}
+
 /**
  * Inclinação da tampa aberta em relação à horizontal, em radianos (~68°).
  *
@@ -724,14 +997,27 @@ function mailerAlturaMontada(heightMm: number, depthMm: number): number {
  *    script. Fonte única ainda, só que em dois estágios: o motor recalcula os
  *    painéis para qualquer medida, o desenho mostra a peça assada.
  */
+/**
+ * Uma peça modelada no Blender e trazida pronta.
+ *
+ * O descritor existe porque já são DUAS — a mailer e a caixa de envio —, e a
+ * diferença entre elas cabe em quatro campos. Sem ele, o segundo modelo teria
+ * copiado duzentas linhas de carregamento, clonagem, textura, vincos e
+ * medição, e a correção de qualquer uma delas passaria a valer só para metade
+ * dos modelos.
+ */
 const MAILER_MODELO = "/models/mailer.glb";
 
 /**
- * A caixa que o modelo representa, em mm — é o `interno_mm` que o script
- * reporta, e a referência para escalar até as medidas digitadas (que também
- * são internas, ver mailerLayout).
+ * A caixa que o arquivo representa, em mm (medidas INTERNAS, como as digitadas).
+ *
+ * É o `interno_mm` que `mailer/mailer.py` reporta, e daqui sai a planta do
+ * modelo — o denominador de todas as razões abaixo.
  */
-const MAILER_MODELO_INTERNO = { largura: 285, altura: 80, profundidade: 247 };
+const MAILER_INTERNO = { largura: 285, altura: 80, profundidade: 247 };
+
+/** Espessura com que o arquivo foi gerado, em mm. */
+const MAILER_ESPESSURA = 3;
 
 /**
  * Os dois instantes da timeline do Blender que o slider interpola, em segundos
@@ -739,8 +1025,7 @@ const MAILER_MODELO_INTERNO = { largura: 285, altura: 80, profundidade: 247 };
  *
  * Não é a animação inteira: os quadros 1–200 montam a chapa (paredes, rolo,
  * linguetas) e isso a caixa já vem pronta na tela. O trecho útil é o fecho —
- * tampa desce, barbatanas dobram, língua entra —, que é justamente o que o
- * comprador precisa entender do modelo.
+ * tampa desce, barbatanas dobram, língua entra.
  */
 const MAILER_T_ABERTA = 220 / 24;
 const MAILER_T_FECHADA = 312 / 24;
@@ -748,10 +1033,281 @@ const MAILER_T_FECHADA = 312 / 24;
 /** Opacidade dos vincos realçados. */
 const MAILER_VINCO_OPACIDADE = 0.19;
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * O modelo é CARREGADO, e redimensionado PAINEL A PAINEL
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `mailer/box-mailer.blend` é a peça que o cliente modelou; `export_gltf.py` a
+ * converte. Vem tudo junto: a hierarquia de vincos, a espessura já aplicada e
+ * a animação de dobra quadro a quadro. Desenhá-la à mão foi tentado duas vezes
+ * e, por mais fiel que a conta ficasse, o resultado não era a caixa dele.
+ *
+ * ── O defeito que este mapa existe para consertar ─────────────────────────
+ *
+ * A primeira versão escalava o GRUPO INTEIRO por eixo — largura/285,
+ * altura/80, profundidade/247 — e isso CISALHA.
+ *
+ * A conta é curta. Uma escala não uniforme aplicada por FORA de uma rotação
+ * mede cada painel por um fator diferente conforme o ângulo dele. A tampa gira
+ * no plano vertical, então o comprimento dela vale × (profundidade ÷ 247)
+ * deitada e × (altura ÷ 80) de pé — e passa continuamente de um para o outro
+ * enquanto abre. Ou seja: ESTICA no meio do movimento. Papelão dobra, não
+ * estica. Numa caixa 300 × 80 × 100 a tampa crescia 147%.
+ *
+ * ── A correção ───────────────────────────────────────────────────────────
+ *
+ * O `.glb` não é uma malha só: são 23 painéis, cada um filho do próprio vinco.
+ * Isso permite escalar cada painel DENTRO do espaço dele, onde ele está sempre
+ * alinhado aos eixos. Escala aplicada antes da rotação não cisalha nunca — é a
+ * ordem das transformações do nó (T · R · S, com o S mais interno).
+ *
+ * Então: o grupo recebe escala UNIFORME (que nunca deforma), e cada painel e
+ * cada vinco recebem a sua própria razão, tirada de `mailerLayout()` — o mesmo
+ * que o motor de preço usa. A malha continua sendo exatamente a do arquivo.
+ *
+ * ── Por que razões, e não medidas ────────────────────────────────────────
+ *
+ * O mapa abaixo diz apenas QUAL medida governa cada eixo de cada nó, nunca
+ * quanto ela vale. O valor sai de `atual → alvo`, sendo `atual` o que está no
+ * arquivo. Assim o `.blend` pode ter sido salvo numa versão ligeiramente
+ * diferente do script (e foi: a parede frontal mede 274mm onde o script diz
+ * 276) sem que nada aqui precise ser corrigido.
+ */
+type MedidaDoModelo =
+  | "largura"
+  | "profundidade"
+  | "parede"
+  | "espessura"
+  | "tampa"
+  | "abaTampa"
+  | "lingua"
+  | "abaParede"
+  | "trava";
+
+/**
+ * Que medida governa cada eixo local de cada nó do arquivo.
+ *
+ * Convenção do glTF exportado: em toda malha, X é a LARGURA do painel, Y a
+ * espessura e Z o COMPRIMENTO. Nos vincos (`V_*`), a componente não nula da
+ * translação é a distância até o vinco seguinte, no espaço do pai.
+ *
+ * Os nomes vêm de `mailer.py`. Mudou nome ou dividiu peça lá? Este mapa
+ * desatualiza — e por isso existe a conferência em `parametrizar()`, que
+ * reclama alto em vez de desenhar errado.
+ */
+interface RegraDoNo {
+  /** Medida que governa a largura do painel (X local). */
+  x?: MedidaDoModelo;
+  /** Medida que governa o comprimento do painel (Z local). */
+  z?: MedidaDoModelo;
+  /**
+   * Escala UNIFORME num vinco, para a subárvore inteira.
+   *
+   * A exceção à regra de "escala só nas malhas", e existe por causa da
+   * barbatana. Ela e o vinco dela têm mãos diferentes — a mesma geometria com
+   * rotações opostas —, e escalar a malha por eixo deixava de ser espelho: a
+   * asa esquerda se soltava e flutuava acima da direita.
+   *
+   * No vinco, e igual nos três eixos, é uma semelhança em torno do próprio
+   * ponto de dobra. Semelhança preserva qualquer simetria que o arranjo já
+   * tivesse, seja qual for a rotação da malha abaixo. E como a subárvore é uma
+   * peça só, não há escala de filho com que se multiplicar.
+   */
+  uniforme?: MedidaDoModelo;
+}
+
+const MAILER_EIXOS: Record<string, RegraDoNo> = {
+  // ── Fundo e paredes ────────────────────────────────────────────────────
+  Base: { x: "largura", z: "profundidade" },
+  V_ParedeFrente: { z: "profundidade" },
+  V_ParedeTras: { z: "profundidade" },
+  ParedeFrente: { x: "largura", z: "parede" },
+  ParedeTras: { x: "largura", z: "parede" },
+
+  // Abas laterais das paredes: entram no bolso do rolo. O X local delas corre
+  // na ALTURA da parede — elas são vincadas de lado.
+  V_AbaFrenteD: { x: "largura" },
+  V_AbaFrenteE: { x: "largura" },
+  V_AbaTrasD: { x: "largura" },
+  V_AbaTrasE: { x: "largura" },
+  AbaFrenteD: { x: "parede", z: "abaParede" },
+  AbaFrenteE: { x: "parede", z: "abaParede" },
+  AbaTrasD: { x: "parede", z: "abaParede" },
+  AbaTrasE: { x: "parede", z: "abaParede" },
+
+  // ── Tampa e o que pende dela ───────────────────────────────────────────
+  V_Tampa: { z: "parede" },
+  Tampa: { x: "largura", z: "tampa" },
+  V_AbaTampaD: { x: "largura" },
+  V_AbaTampaE: { x: "largura" },
+  // O X da aba corre ao longo da TAMPA (ela desce de lado), o Z é a descida.
+  AbaTampaD: { x: "tampa", z: "abaTampa" },
+  AbaTampaE: { x: "tampa", z: "abaTampa" },
+  V_FlapTampa: { z: "tampa" },
+  FlapTampa: { x: "largura", z: "lingua" },
+  V_BarbatanaD: { x: "largura", z: "lingua", uniforme: "lingua" },
+  V_BarbatanaE: { x: "largura", z: "lingua", uniforme: "lingua" },
+
+  // ── Rolo: as três camadas e as travas ──────────────────────────────────
+  //
+  // Aqui o painel está virado 90°: o X local dele corre na PROFUNDIDADE da
+  // caixa, não na largura. É a diferença que um mapa genérico não teria como
+  // adivinhar, e a razão de este arquivo existir.
+  V_RollExtD: { x: "largura" },
+  V_RollExtE: { x: "largura" },
+  RollExtD: { x: "profundidade", z: "parede" },
+  RollExtE: { x: "profundidade", z: "parede" },
+  V_RollPonteD: { z: "parede" },
+  V_RollPonteE: { z: "parede" },
+  RollPonteD: { x: "profundidade", z: "espessura" },
+  RollPonteE: { x: "profundidade", z: "espessura" },
+  V_RollIntD: { z: "espessura" },
+  V_RollIntE: { z: "espessura" },
+  RollIntD: { x: "profundidade", z: "parede" },
+  RollIntE: { x: "profundidade", z: "parede" },
+  V_TravaD0: { z: "parede" },
+  V_TravaD1: { z: "parede" },
+  V_TravaE0: { z: "parede" },
+  V_TravaE1: { z: "parede" },
+  TravaD0: { x: "profundidade", z: "trava" },
+  TravaD1: { x: "profundidade", z: "trava" },
+  TravaE0: { x: "profundidade", z: "trava" },
+  TravaE1: { x: "profundidade", z: "trava" },
+};
+
+/**
+ * As razões entre a caixa pedida e a do arquivo, medida a medida.
+ *
+ * Todas saem de `mailerLayout()`, que é o gêmeo em TS de
+ * `BlankCalculator::mailerLayout()` e tem paridade garantida por fixture. Não
+ * existe segunda descrição da peça: o que estica a malha é o mesmo número que
+ * a conta cobra.
+ */
+function razoesDoModelo(
+  widthMm: number,
+  heightMm: number,
+  depthMm: number,
+  espessuraMm: number,
+): Record<MedidaDoModelo, number> {
+  const modelo = mailerLayout(
+    MAILER_INTERNO.largura,
+    MAILER_INTERNO.altura,
+    MAILER_INTERNO.profundidade,
+    MAILER_ESPESSURA,
+  );
+
+  const alvo = mailerLayout(widthMm, heightMm, depthMm, espessuraMm);
+
+  // Guarda contra divisão por zero e contra encolher a peça até sumir: uma
+  // caixa de 1mm de altura não pode virar um painel de espessura negativa.
+  const razao = (a: number, b: number) => (b > 1e-6 ? Math.max(a / b, 1e-3) : 1);
+
+  return {
+    largura: razao(alvo.widthMm, modelo.widthMm),
+    profundidade: razao(alvo.depthMm, modelo.depthMm),
+    parede: razao(alvo.wallMm, modelo.wallMm),
+    espessura: razao(alvo.tMm, modelo.tMm),
+    tampa: razao(alvo.lidMm, modelo.lidMm),
+    abaTampa: razao(alvo.lidFlapMm, modelo.lidFlapMm),
+    lingua: razao(alvo.frontFlapMm, modelo.frontFlapMm),
+    abaParede: razao(alvo.wallTabMm, modelo.wallTabMm),
+    trava: razao(alvo.lockMm, modelo.lockMm),
+  };
+}
+
+/**
+ * Aplica as razões na árvore carregada — e RECLAMA se o arquivo mudou.
+ *
+ * A conferência não é zelo excessivo. O mapa acima grava, em TypeScript,
+ * conhecimento sobre a estrutura de um arquivo binário que vive em outro
+ * repositório mental: o do Blender. Renomear um vinco em `mailer.py` deixaria
+ * o painel correspondente sem escala nenhuma, e a caixa sairia com uma peça no
+ * tamanho errado — o tipo de defeito que passa despercebido por meses porque
+ * "quase" certo parece certo.
+ *
+ * Devolve false quando não reconhece a peça; quem chama cai para a escala por
+ * eixo de antes, que distorce mas ao menos respeita as medidas digitadas.
+ */
+function parametrizar(
+  raiz: THREE.Object3D,
+  razoes: Record<MedidaDoModelo, number>,
+): void {
+  raiz.traverse((obj) => {
+    const regra = MAILER_EIXOS[obj.name];
+    if (!regra) return;
+
+    const rx = regra.x ? razoes[regra.x] : 1;
+    const rz = regra.z ? razoes[regra.z] : 1;
+    const ry = razoes.espessura;
+
+    /*
+     * Escala só nas MALHAS, nunca nos vincos.
+     *
+     * Escala é herdada: posta num vinco, ela desce para toda a subárvore e se
+     * MULTIPLICA com a de cada painel abaixo. A tampa pendura em três vincos
+     * (parede traseira → tampa → painel), e com a escala em todos eles as
+     * razões se acumulavam — 0,40 × 0,98 × 0,40 = 0,16. Uma tampa de 100mm
+     * saía com 39, e a caixa aparecia sem tampa nenhuma.
+     *
+     * Na malha é seguro: ali a escala é o `S` de `T · R · S`, o mais interno
+     * da composição. Age no espaço da própria peça, antes de qualquer rotação
+     * da cadeia — que é justamente o que impede o cisalhamento —, e não tem
+     * filho nenhum para contaminar.
+     */
+    if (obj instanceof THREE.Mesh) {
+      obj.scale.set(rx, ry, rz);
+    } else if (regra.uniforme) {
+      obj.scale.setScalar(razoes[regra.uniforme]);
+    }
+
+    /*
+     * A translação acompanha, senão os painéis crescem e deixam de se
+     * encontrar nos vincos.
+     *
+     * Parte sempre da posição ORIGINAL, guardada no clone. Multiplicar a
+     * posição corrente seria acumular: cada tecla digitada na largura
+     * empilharia mais uma razão sobre a anterior, e a caixa fugiria para o
+     * infinito em poucos caracteres.
+     */
+    const origem = obj.userData.posicaoOriginal as THREE.Vector3 | undefined;
+    if (origem) obj.position.set(origem.x * rx, origem.y * ry, origem.z * rz);
+  });
+}
+
+/**
+ * O arquivo ainda é a peça que este mapa descreve?
+ *
+ * A conferência não é zelo excessivo. `MAILER_EIXOS` grava, em TypeScript,
+ * conhecimento sobre a estrutura de um arquivo binário que vive em outro
+ * repositório mental: o do Blender. Renomear um vinco em `mailer.py` deixaria
+ * o painel correspondente sem escala nenhuma, e a caixa sairia com uma peça no
+ * tamanho errado — o tipo de defeito que passa meses despercebido, porque
+ * "quase certo" parece certo.
+ */
+function reconhece(raiz: THREE.Object3D): boolean {
+  const encontrados = new Set<string>();
+  raiz.traverse((obj) => encontrados.add(obj.name));
+
+  const faltando = Object.keys(MAILER_EIXOS).filter((n) => !encontrados.has(n));
+
+  if (faltando.length === 0) return true;
+
+  console.error(
+    "[mailer] o modelo não bate com o mapa de medidas — sem estes nós não dá " +
+      "para redimensionar sem deformar: " +
+      faltando.join(", ") +
+      ". Regenere o .glb (mailer/export_gltf.py) ou atualize MAILER_EIXOS.",
+  );
+
+  return false;
+}
+
 function MailerMesh({
   widthMm,
   heightMm,
   depthMm,
+  espessuraMm,
   abertura,
   colorHex,
   textureUrl,
@@ -760,11 +1316,22 @@ function MailerMesh({
   widthMm: number;
   heightMm: number;
   depthMm: number;
+  espessuraMm: number;
   abertura: number;
   colorHex: string;
   textureUrl?: string | null;
   showEdges: boolean;
 }) {
+  const comuns = {
+    widthMm,
+    heightMm,
+    depthMm,
+    espessuraMm,
+    abertura,
+    colorHex,
+    showEdges,
+  };
+
   /*
    * A textura suspende no carregamento, e hook não pode ser condicional — daí
    * o mesmo desdobramento em dois componentes que TexturedMaterial já faz para
@@ -772,16 +1339,13 @@ function MailerMesh({
    */
   if (textureUrl) {
     return (
-      <Suspense fallback={<MailerModelo {...{ widthMm, heightMm, depthMm, abertura, colorHex, showEdges }} />}>
-        <MailerTexturado
-          url={textureUrl}
-          {...{ widthMm, heightMm, depthMm, abertura, colorHex, showEdges }}
-        />
+      <Suspense fallback={<MailerModelo {...comuns} />}>
+        <MailerTexturado url={textureUrl} {...comuns} />
       </Suspense>
     );
   }
 
-  return <MailerModelo {...{ widthMm, heightMm, depthMm, abertura, colorHex, showEdges }} />;
+  return <MailerModelo {...comuns} />;
 }
 
 function MailerTexturado({ url, ...resto }: { url: string } & MailerModeloProps) {
@@ -800,6 +1364,7 @@ interface MailerModeloProps {
   widthMm: number;
   heightMm: number;
   depthMm: number;
+  espessuraMm: number;
   abertura: number;
   colorHex: string;
   showEdges: boolean;
@@ -809,6 +1374,7 @@ function MailerModelo({
   widthMm,
   heightMm,
   depthMm,
+  espessuraMm,
   abertura,
   colorHex,
   showEdges,
@@ -834,17 +1400,33 @@ function MailerModelo({
     [colorHex, textura],
   );
 
+  const razoes = useMemo(
+    () => razoesDoModelo(widthMm, heightMm, depthMm, espessuraMm),
+    [widthMm, heightMm, depthMm, espessuraMm],
+  );
+
   /*
-   * Clone da cena carregada.
+   * Clone da cena carregada — UM só, para toda a vida do componente.
    *
-   * O useGLTF guarda o resultado em cache por URL: trocar material ou pose no
-   * objeto original vazaria para qualquer outro uso do mesmo arquivo. O clone
-   * preserva os nomes dos nós, que é como a animação se liga de volta.
+   * O useGLTF guarda o resultado em cache por URL: mexer em escala ou pose no
+   * objeto original vazaria para qualquer outro uso do mesmo arquivo — e aqui
+   * mexemos em todos os 23 nós. O clone preserva os nomes, que é como a
+   * animação se liga de volta e como o mapa de medidas encontra cada peça.
+   *
+   * NÃO depende das medidas digitadas, e essa dependência a mais custou caro:
+   * com ela, cada tecla criava um clone novo, e as ações de animação — ligadas
+   * aos nós do clone ANTERIOR — deixavam de posicionar a peça. A caixa ficava
+   * congelada na chapa plana e o enquadramento a desenhava minúscula. O
+   * redimensionamento mora no efeito abaixo, mutando este mesmo clone.
    */
   const peca = useMemo(() => {
     const copia = scene.clone(true);
 
     copia.traverse((obj) => {
+      // A posição de fábrica de cada nó, para o redimensionamento sempre
+      // partir dela em vez de se acumular sobre si mesmo.
+      obj.userData.posicaoOriginal = obj.position.clone();
+
       if (!(obj instanceof THREE.Mesh)) return;
 
       obj.castShadow = true;
@@ -869,6 +1451,19 @@ function MailerModelo({
 
     return copia;
   }, [scene]);
+
+  const parametrizado = useMemo(() => reconhece(peca), [peca]);
+
+  /*
+   * O redimensionamento: muta o clone existente a cada mudança de medida.
+   *
+   * Efeito de LAYOUT porque a medição logo abaixo depende dele: como
+   * `useEffect`, a peça seria medida com as razões antigas e o enquadramento
+   * ficaria um passo atrás de cada dígito.
+   */
+  useLayoutEffect(() => {
+    if (parametrizado) parametrizar(peca, razoes);
+  }, [peca, parametrizado, razoes]);
 
   // Materiais e visibilidade das arestas seguem os props sem reconstruir nada.
   useMemo(() => {
@@ -898,8 +1493,7 @@ function MailerModelo({
    * Cada vinco virou uma animação própria na exportação (são 22). Todas tocam
    * ao mesmo tempo e nenhuma avança sozinha: quem dita o instante é o slider,
    * pelo mixer.
-   */
-  /*
+   *
    * Efeito de LAYOUT, e antes da medição logo abaixo: o mixer só posiciona os
    * vincos depois que as ações tocam. Como useEffect, a medição rodava antes
    * disso e media a peça na pose de repouso — a chapa PLANA, quase o triplo do
@@ -920,65 +1514,74 @@ function MailerModelo({
   });
 
   /*
-   * Escala por eixo até as medidas digitadas: o modelo tem UMA medida, e é
-   * assim que a silhueta acompanha o que o usuário digita.
+   * A escala do grupo é UNIFORME — e é aí que mora o conserto.
    *
-   * O preço disso aparece na tampa ABERTA. Fechada, todo painel está alinhado
-   * aos eixos e a escala por eixo é exata; aberta, a tampa está girada, e
-   * esticar mais um eixo que o outro a CISALHA — numa caixa muito mais alta
-   * que o modelo ela sobe bem além do que subiria de verdade. É o custo de
-   * carregar um modelo assado em vez de redesenhar a peça a cada medida.
+   * Antes ela era por eixo, e cisalhava todo painel girado. Agora as medidas
+   * são resolvidas painel a painel em `parametrizar()`, e o que sobra para o
+   * grupo é só caber na cena: um fator igual nos três eixos, que nenhuma
+   * rotação consegue deformar.
+   *
+   * O caminho de trás continua aqui para o caso de o arquivo não bater com o
+   * mapa. Distorce, mas respeita as medidas digitadas — melhor que uma caixa
+   * de proporção inventada.
    */
-  const escalaEixo: [number, number, number] = [
-    widthMm / MAILER_MODELO_INTERNO.largura,
-    heightMm / MAILER_MODELO_INTERNO.altura,
-    depthMm / MAILER_MODELO_INTERNO.profundidade,
-  ];
+  const escalaEixo: [number, number, number] = parametrizado
+    ? [1, 1, 1]
+    : [
+        widthMm / MAILER_INTERNO.largura,
+        heightMm / MAILER_INTERNO.altura,
+        depthMm / MAILER_INTERNO.profundidade,
+      ];
 
   /*
-   * Por isso o enquadramento MEDE a peça em vez de estimá-la.
+   * O enquadramento MEDE a peça em vez de estimá-la.
    *
-   * A conta analítica (altura + braço da tampa) valia para o desenho
-   * procedural, onde a tampa girava rígida. Com o modelo esticado ela erra
-   * justamente nas proporções extremas, e a peça sai pelo topo do quadro. Uma
-   * medição na pose ABERTA resolve os dois casos de uma vez — e é na aberta,
-   * nunca na atual, senão a caixa mudaria de tamanho enquanto o usuário a
-   * fecha.
+   * A conta analítica valia para o desenho procedural, onde a tampa girava
+   * rígida. Uma medição na pose ABERTA resolve todos os casos de uma vez — e é
+   * na aberta, nunca na atual, senão a caixa mudaria de tamanho enquanto o
+   * usuário a fecha.
    */
-  const [modelo, setModelo] = useState<{ eixos: THREE.Vector3; piso: number } | null>(null);
+  const [medida, setMedida] = useState<{ eixos: THREE.Vector3; piso: number } | null>(
+    null,
+  );
 
   useLayoutEffect(() => {
     if (!grupo.current) return;
 
     mixer.setTime(MAILER_T_ABERTA);
+
+    /*
+     * Zera a transformação do grupo ANTES de medir, e é o que impede a conta de
+     * se realimentar.
+     *
+     * `setFromObject` percorre matrizes de MUNDO, então a medida sairia
+     * multiplicada pela escala que a própria medida anterior calculou. Enquanto
+     * o efeito rodava uma vez só, isso não aparecia; passou a aparecer quando
+     * ele começou a acompanhar as medidas digitadas — e cada tecla encolhia a
+     * caixa por um fator inteiro. React devolve a escala no render seguinte.
+     */
+    grupo.current.scale.set(1, 1, 1);
+    grupo.current.position.set(0, 0, 0);
     grupo.current.updateWorldMatrix(true, true);
 
     const caixa = new THREE.Box3().setFromObject(peca);
-    const tamanho = caixa.getSize(new THREE.Vector3());
 
-    setModelo({
-      // Desfaz a escala já aplicada: o que fica guardado é a peça em unidades
-      // do MODELO, eixo a eixo, e o resto da conta é analítico a cada mudança
-      // de medida.
-      eixos: tamanho.divide(new THREE.Vector3(...escalaEixo)),
-      piso: caixa.min.y / escalaEixo[1],
+
+    setMedida({
+      // Em unidades do MODELO: o resto da conta é analítico a cada mudança.
+      eixos: caixa.getSize(new THREE.Vector3()),
+      piso: caixa.min.y,
     });
-    // A medição não depende das medidas digitadas — só da peça carregada.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [peca, mixer]);
+    // `razoes` entra porque a peça MUDA DE TAMANHO com ela — sem isso o
+    // enquadramento ficaria preso na primeira medida digitada.
+  }, [peca, mixer, razoes]);
 
-  /*
-   * A maior aresta é a do PRODUTO eixo a eixo, não o produto dos máximos:
-   * numa caixa alta quem estoura é a altura da peça esticada, e usar
-   * max(eixos)×max(escala) superestima — a caixa saía desenhada pequena
-   * demais no meio do quadro.
-   */
-  const ajuste = modelo
+  const ajuste = medida
     ? SCENE_MAX_UNITS /
       Math.max(
-        modelo.eixos.x * escalaEixo[0],
-        modelo.eixos.y * escalaEixo[1],
-        modelo.eixos.z * escalaEixo[2],
+        medida.eixos.x * escalaEixo[0],
+        medida.eixos.y * escalaEixo[1],
+        medida.eixos.z * escalaEixo[2],
         1e-6,
       )
     : 1;
@@ -990,7 +1593,7 @@ function MailerModelo({
   ];
 
   return (
-    <group ref={grupo} scale={escala} position={[0, -(modelo?.piso ?? 0) * escala[1], 0]}>
+    <group ref={grupo} scale={escala} position={[0, -(medida?.piso ?? 0) * escala[1], 0]}>
       <primitive object={peca} />
     </group>
   );
@@ -1385,12 +1988,32 @@ export function BoxMesh({
     );
   }
 
+  /*
+   * A caixa de envio tem componente próprio: era desenhada como painéis
+   * planos, uma caixa aberta em cima SEM aba nenhuma, o que a deixava
+   * indistinguível da bandeja logo acima dela no seletor.
+   */
+  if (boxModel === "rsc") {
+    return (
+      <CaixaEnvioMesh
+        widthMm={widthMm}
+        heightMm={heightMm}
+        depthMm={depthMm}
+        espessuraMm={thicknessMm ?? 0}
+        abertura={abertura}
+        material={material}
+        showEdges={showEdges}
+      />
+    );
+  }
+
   if (boxModel === "mailer") {
     return (
       <MailerMesh
         widthMm={widthMm}
         heightMm={heightMm}
         depthMm={depthMm}
+        espessuraMm={thicknessMm ?? 0}
         abertura={abertura}
         colorHex={colorHex}
         textureUrl={textureUrl}
