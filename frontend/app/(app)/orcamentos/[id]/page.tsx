@@ -9,6 +9,7 @@ import {
   Download,
   FileText,
   Loader2,
+  Send,
   Trash2,
   UserPlus,
 } from "lucide-react";
@@ -30,12 +31,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { ErrorState } from "@/components/data/states";
 import { useApi, mensagemDeErro } from "@/hooks/useApi";
-import { api, baixarArquivo } from "@/lib/api";
+import { api, baixarArquivo, type QuoteStatusValue } from "@/lib/api";
 import { formatCurrency } from "@/lib/pricing/engine";
 import { ROTULO_MODELO, ROTULO_STATUS, TOM_STATUS, formatarData } from "@/lib/rotulos";
 
@@ -102,7 +111,16 @@ export default function OrcamentoPage() {
 
           <BotaoPdf id={id} referencia={q.reference} />
 
-          {!aprovado && <DialogoDeAprovacao id={id} onAprovado={orcamento.refetch} />}
+          {!aprovado && (
+            <>
+              <MudarSituacao
+                id={id}
+                atual={q.status}
+                onMudou={orcamento.refetch}
+              />
+              <DialogoDeAprovacao id={id} onAprovado={orcamento.refetch} />
+            </>
+          )}
         </div>
       </header>
 
@@ -346,6 +364,78 @@ function Linha({
  * cabeçalho numa navegação comum. O arquivo é buscado como blob e entregue por
  * um link temporário — ver `baixarArquivo()`.
  */
+/**
+ * Marcar como enviado ou recusado.
+ *
+ * A coluna `status` declara quatro estados desde a primeira migration e a
+ * interface só alcançava dois: dava para salvar rascunho e aprovar, e mais
+ * nada. A lista de orçamentos, enquanto isso, oferecia filtro pelos quatro —
+ * "Enviado" e "Recusado" sempre voltavam vazios, porque nada no sistema os
+ * produzia.
+ *
+ * `Aprovado` NÃO está aqui, e a ausência é a regra: aprovar lança a venda no
+ * caixa e gera as parcelas, então tem botão próprio e endpoint próprio. Trocar
+ * o rótulo e movimentar dinheiro não podem ser o mesmo gesto.
+ */
+function MudarSituacao({
+  id,
+  atual,
+  onMudou,
+}: {
+  id: number;
+  atual: QuoteStatusValue;
+  onMudou: () => void;
+}) {
+  const [salvando, setSalvando] = useState(false);
+
+  async function mudar(status: "draft" | "sent" | "rejected") {
+    setSalvando(true);
+
+    try {
+      await api.quotes.update(id, { status });
+      toast.success(`Marcado como ${ROTULO_STATUS[status].toLowerCase()}`);
+      onMudou();
+    } catch (erro) {
+      toast.error(mensagemDeErro(erro));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  // Só o que muda alguma coisa: oferecer "marcar como rascunho" a um rascunho
+  // é um item que não faz nada, e um menu com item inerte ensina a desconfiar
+  // dos outros.
+  const destinos = (["draft", "sent", "rejected"] as const).filter(
+    (s) => s !== atual,
+  );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" disabled={salvando}>
+          {salvando ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Send className="size-3.5" />
+          )}
+          Situação
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Marcar como</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+
+        {destinos.map((destino) => (
+          <DropdownMenuItem key={destino} onClick={() => mudar(destino)}>
+            {ROTULO_STATUS[destino]}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function BotaoPdf({ id, referencia }: { id: number; referencia: string }) {
   const [baixando, setBaixando] = useState(false);
 

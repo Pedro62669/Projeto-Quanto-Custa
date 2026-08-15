@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\ComponentRole;
 use App\Enums\CradleType;
+use App\Enums\QuoteStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SimulateQuoteRequest;
 use App\Http\Requests\StoreQuoteRequest;
@@ -277,14 +278,44 @@ class QuoteController extends Controller
      * Alterar dimensões ou material NÃO é editar: é outro orçamento. Isso
      * mantém a promessa de que um orçamento enviado ao cliente é imutável.
      */
-    public function update(Request $request, Quote $quote): QuoteResource
+    public function update(Request $request, Quote $quote): QuoteResource|JsonResponse
     {
         $this->authorize('update', $quote);
 
         $validated = $request->validate([
-            'status' => ['sometimes', 'in:draft,sent,approved,rejected'],
+            /*
+             * `approved` NÃO entra na lista, e a ausência é a correção de um
+             * furo: enquanto ele era aceito aqui, um PUT marcava o orçamento
+             * como aprovado sem passar pelo QuoteApprovalController — ou seja,
+             * sem lançar a venda no caixa e sem gerar parcela nenhuma. O
+             * faturamento do mês ficava menor que as vendas fechadas, e nada na
+             * tela denunciava.
+             *
+             * Aprovar tem endpoint próprio porque tem efeito colateral. Ver
+             * QuoteStatus::Approved.
+             */
+            'status' => ['sometimes', 'in:draft,sent,rejected'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ]);
+
+        /*
+         * De aprovado não se volta.
+         *
+         * A aprovação lançou a venda e gerou as parcelas; devolver o orçamento
+         * a rascunho deixaria o livro-caixa descrito por um documento que diz
+         * não ter sido aprovado. Quem errou tem caminho: estornar a parcela e
+         * excluir o lançamento, que são operações do financeiro e ficam
+         * registradas — ao contrário de um status revertido em silêncio.
+         */
+        if ($quote->status === QuoteStatus::Approved && isset($validated['status'])) {
+            return response()->json([
+                'message' => 'Orçamento aprovado não muda de situação.',
+                'errors' => ['status' => [
+                    'A aprovação já lançou a venda no caixa. Para desfazer, estorne '
+                    .'o lançamento no financeiro.',
+                ]],
+            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         $quote->update($validated);
 
