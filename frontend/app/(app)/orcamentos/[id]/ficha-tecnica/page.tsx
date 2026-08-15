@@ -141,7 +141,10 @@ export default function FichaTecnicaPage() {
                   </TableCell>
                   <TableCell className="font-mono text-xs">{linha.size}</TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {linha.per_unit}
+                    {/* Fracionário desde que ferragem entrou na lista: fita de
+                        cetim é comprada por peça e consumida em metro e meio.
+                        Sem a formatação pt-BR a bancada leria "1.5". */}
+                    {linha.per_unit.toLocaleString("pt-BR")}
                   </TableCell>
                   <TableCell className="text-right font-mono font-medium tabular-nums">
                     {linha.total.toLocaleString("pt-BR")}

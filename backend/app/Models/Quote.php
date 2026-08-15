@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\BoxModel;
+use App\Enums\CradleType;
 use App\Enums\QuoteStatus;
 use App\Models\Scopes\TenantScope;
 use App\Traits\BelongsToTenant;
@@ -48,6 +49,12 @@ class Quote extends Model
             'height_mm' => 'integer',
             'depth_mm' => 'integer',
             'quantity' => 'integer',
+
+            'cradle_type' => CradleType::class,
+            'cradle_rows' => 'integer',
+            'cradle_columns' => 'integer',
+            'cradle_height_ratio' => 'float',
+
             'waste_percent' => 'float',
             'production_minutes_per_unit' => 'float',
             'profit_margin_percent' => 'float',
@@ -124,6 +131,23 @@ class Quote extends Model
     public function customParts(): HasMany
     {
         return $this->hasMany(QuoteCustomPart::class)
+            ->orderBy('component_role')
+            ->orderBy('id');
+    }
+
+    /**
+     * Ferragem e berço — o que se compra e não se corta.
+     *
+     * Estrutura mora em `material_id` e revestimento em `wrap_material_id`; ver
+     * a migration de `quote_components` para a razão da assimetria.
+     *
+     * Ordenados por papel como as peças, e pelo mesmo motivo: quem separa o
+     * material na bancada lê uma lista agrupada, não a ordem em que o usuário
+     * clicou no formulário.
+     */
+    public function components(): HasMany
+    {
+        return $this->hasMany(QuoteComponent::class)
             ->orderBy('component_role')
             ->orderBy('id');
     }

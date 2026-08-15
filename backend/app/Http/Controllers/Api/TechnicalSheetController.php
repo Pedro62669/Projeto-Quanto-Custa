@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ComponentRole;
 use App\Http\Controllers\Controller;
 use App\Models\Material;
 use App\Models\Quote;
@@ -34,7 +35,7 @@ class TechnicalSheetController extends Controller
         // Os dois materiais da cartonagem rígida, numa consulta cada: o plano de
         // corte lê a folha dos dois, e sem isto o revestimento viria por lazy
         // load no meio do laço.
-        $quote->loadMissing(['material', 'wrapMaterial']);
+        $quote->loadMissing(['material', 'wrapMaterial', 'components.material']);
 
         $snapshot = $quote->pricing_snapshot ?? [];
 
@@ -364,6 +365,56 @@ class TechnicalSheetController extends Controller
             }
         }
 
+        /*
+         * Ferragem e berço — o que se compra e não se corta.
+         *
+         * Estavam FORA desta lista, e a ausência era cara: a produção recebia a
+         * folha do papelão e ia comprar ímã de memória. O gabarito não os
+         * mostra porque eles não têm planificação; a lista de separação mostra,
+         * porque ela responde "o que sai do estoque", e ímã sai.
+         */
+        foreach ($quote->components as $componente) {
+            $papel = $componente->component_role;
+
+            $linhas[] = [
+                'material_role' => $papel->value,
+                'material_label' => $papel->label(),
+                'piece' => $componente->material?->name ?? 'Material removido',
+
+                // O berço não se conta em peças: o que descreve o tamanho dele
+                // é a grade, e é ela que a bancada precisa ler.
+                'size' => $papel === ComponentRole::Cradle
+                    ? $this->descreveBerco($quote)
+                    : 'unidade',
+
+                /*
+                 * Um berço por caixa. A quantidade da ferragem vem do cadastro
+                 * do orçamento (quatro ímãs), e a fração existe porque fita de
+                 * cetim é comprada por peça e consumida em metro e meio.
+                 */
+                'per_unit' => $componente->quantity ?? 1.0,
+                'total' => ($componente->quantity ?? 1.0) * $quote->quantity,
+            ];
+        }
+
         return $linhas;
+    }
+
+    /** "Espuma · grade 3 × 4 · 65% da altura" — o berço como a bancada o monta. */
+    private function descreveBerco(Quote $quote): string
+    {
+        $partes = array_filter([
+            $quote->cradle_type?->label(),
+
+            $quote->cradle_rows !== null && $quote->cradle_columns !== null
+                ? sprintf('grade %d × %d', $quote->cradle_rows, $quote->cradle_columns)
+                : null,
+
+            $quote->cradle_height_ratio !== null
+                ? sprintf('%d%% da altura', (int) round($quote->cradle_height_ratio * 100))
+                : null,
+        ]);
+
+        return $partes === [] ? 'sem parâmetros' : implode(' · ', $partes);
     }
 }

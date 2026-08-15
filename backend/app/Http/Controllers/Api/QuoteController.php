@@ -111,6 +111,17 @@ class QuoteController extends Controller
             // por ele. Ver PricingEngine.
             'wrap_material_id' => $bom['wrap_material_id'],
 
+            /*
+             * Parâmetros de construção do berço, guardados como o usuário os
+             * informou. Sem eles um orçamento com berço reabria sem grade
+             * nenhuma — e a caixa que a produção montou não era a que a
+             * calculadora mostrou.
+             */
+            'cradle_type' => $data['cradle_type'] ?? null,
+            'cradle_rows' => $data['cradle_rows'] ?? null,
+            'cradle_columns' => $data['cradle_columns'] ?? null,
+            'cradle_height_ratio' => $data['cradle_height_ratio'] ?? null,
+
             'cost_setting_id' => $settings->id,
 
             'client_name' => $data['client_name'],
@@ -172,7 +183,20 @@ class QuoteController extends Controller
             ],
 
             'status' => 'draft',
-        ]), function (Quote $quote) use ($customParts): void {
+        ]), function (Quote $quote) use ($customParts, $bom): void {
+            /*
+             * Ferragem e berço viram linhas próprias pela mesma razão das peças
+             * logo abaixo: é o que a ficha técnica lê para dizer à produção o
+             * que separar, e o que permite reabrir o orçamento depois. Antes
+             * disto existia só `hardware_cost` — o número, sem os ímãs.
+             */
+            foreach ($bom['linhas'] as $linha) {
+                $quote->components()->create([
+                    'tenant_id' => $quote->tenant_id,
+                    ...$linha,
+                ]);
+            }
+
             /*
              * As peças viram linhas próprias além de entrarem no snapshot: é a
              * tabela que a ficha técnica consulta e que o usuário edita ao
@@ -354,9 +378,24 @@ class QuoteController extends Controller
         $hardware = [];
         $cradleMaterial = null;
 
+        /*
+         * A lista a GRAVAR, montada junto com o cálculo.
+         *
+         * Separada do `$hardware` acima porque as duas têm públicos diferentes:
+         * aquele alimenta o motor e carrega custo por peça já resolvido; este
+         * alimenta `quote_components` e carrega identidade. Derivar um do outro
+         * depois obrigaria a procurar o material de novo — e as duas buscas
+         * poderiam divergir se alguém mexesse numa delas.
+         */
+        $linhas = [];
+
         foreach ($components as $component) {
             $material = Material::active()->findOrFail($component['material_id']);
             $role = ComponentRole::from($component['role']);
+
+            // Sem quantidade explícita, uma peça: é o mínimo que faz sentido
+            // para quem acabou de arrastar um ímã para a lista.
+            $quantidade = (float) ($component['quantity'] ?? 1);
 
             match ($role) {
                 /*
@@ -373,9 +412,7 @@ class QuoteController extends Controller
 
                 ComponentRole::Hardware => $hardware[] = [
                     'cost_per_piece' => $material->costPerPiece(),
-                    // Sem quantidade explícita, uma peça: é o mínimo que faz
-                    // sentido para quem acabou de arrastar um ímã para a lista.
-                    'quantity' => (float) ($component['quantity'] ?? 1),
+                    'quantity' => $quantidade,
                 ],
 
                 /*
@@ -388,6 +425,23 @@ class QuoteController extends Controller
 
                 ComponentRole::Cradle => $cradleMaterial = $material,
             };
+
+            /*
+             * O que vai para `quote_components` segue a MESMA regra do cálculo
+             * logo acima: estrutura é redundante (já é `quotes.material_id`) e
+             * revestimento tem coluna própria. Gravar os quatro papéis aqui
+             * criaria duas fontes para os dois primeiros.
+             */
+            if (in_array($role, [ComponentRole::Hardware, ComponentRole::Cradle], true)) {
+                $linhas[] = [
+                    'material_id' => $material->id,
+                    'component_role' => $role,
+
+                    // Berço não se conta: a grade dele está nas colunas
+                    // `cradle_*` do orçamento, não numa quantidade de peças.
+                    'quantity' => $role === ComponentRole::Hardware ? $quantidade : null,
+                ];
+            }
         }
 
         return [
@@ -395,6 +449,10 @@ class QuoteController extends Controller
             'wrap_material_id' => $wrapMaterial?->id,
             'hardware' => $hardware,
             'cradle' => $this->resolveCradle($cradleMaterial, $data),
+
+            // A lista a gravar — ver `store()`. Fica fora de `hardware` porque
+            // aquele é entrada do motor, e este é o que vira linha no banco.
+            'linhas' => $linhas,
         ];
     }
 
