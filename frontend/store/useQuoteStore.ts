@@ -202,6 +202,9 @@ interface QuoteState {
   syncWithServer: () => Promise<void>;
   reset: () => void;
 
+  /** Reabre um orçamento gravado — duplicar e editar rascunho. */
+  carregarDe: (gravado: Partial<QuoteSpecification>) => void;
+
   /**
    * Troca de modelo. Existe como ação própria porque mudar para o modelo livre
    * não é só gravar um valor: sem peça alguma o motor recusa a especificação, e
@@ -500,6 +503,42 @@ export const useQuoteStore = create<QuoteState>()(
     reset() {
       inFlight?.abort();
       set({ spec: DEFAULT_SPEC, preview: null, confirmed: null, error: null });
+      get().updateSpec({});
+    },
+
+    /**
+     * Reabre um orçamento gravado na calculadora — duplicar e editar rascunho.
+     *
+     * Parte de DEFAULT_SPEC e não do que está na tela: reabrir um orçamento
+     * deve dar a caixa daquele orçamento, e herdar campos da simulação anterior
+     * produziria uma terceira caixa que não é nem uma nem outra.
+     *
+     * ⚠️ A lista de materiais (revestimento, ferragem, berço) NÃO volta, e a
+     * razão é que ela nunca foi editável aqui: a calculadora não tem campo para
+     * nenhum dos três, e `QuoteSpecification` guarda os custos já resolvidos
+     * pelo motor (`wrap_cost_per_m2`, `hardware`) em vez dos `components` que a
+     * API aceita. Enquanto essa tela não existir, reabrir um orçamento com ímãs
+     * devolve a caixa sem eles — melhor um campo ausente que um custo inventado.
+     */
+    carregarDe(gravado) {
+      inFlight?.abort();
+
+      /*
+       * `set` e não `updateSpec`, como em `reset()`.
+       *
+       * `updateSpec` MESCLA com o que está na tela, e a mescla não apaga chave
+       * ausente: duplicar um RSC logo depois de mexer no modelo livre carregaria
+       * as peças antigas junto, e o preço sairia com material que a caixa nova
+       * não tem.
+       */
+      set({
+        spec: { ...DEFAULT_SPEC, ...gravado },
+        preview: null,
+        confirmed: null,
+        error: null,
+      });
+
+      // Recalcula o preview local para a tela não abrir sem preço.
       get().updateSpec({});
     },
   })),

@@ -226,6 +226,16 @@ Route::middleware(['auth:sanctum', EnsureSubscriptionIsActive::class])->group(fu
     Route::get('quotes/{quote}/technical-sheet', TechnicalSheetController::class);
     Route::get('quotes/{quote}/download-pdf', QuotePdfController::class);
 
+    /*
+     * Reeditar o rascunho.
+     *
+     * URL própria porque o que ela substitui é a ESPECIFICAÇÃO inteira, e não
+     * um campo: o `update` do apiResource aceita status e observação soltos, e
+     * misturar os dois num método que adivinha a intenção pelo payload faria um
+     * PUT sem `components` apagar a ferragem em silêncio.
+     */
+    Route::put('quotes/{quote}/specification', [QuoteController::class, 'revise']);
+
     Route::post('quotes/{quote}/approve', QuoteApprovalController::class);
     Route::post('quotes/{quote}/promote-client', [QuoteApprovalController::class, 'promoteClient']);
 

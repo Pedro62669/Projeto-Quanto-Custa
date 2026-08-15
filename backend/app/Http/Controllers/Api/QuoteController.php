@@ -8,6 +8,7 @@ use App\Enums\ComponentRole;
 use App\Enums\CradleType;
 use App\Enums\QuoteStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ReviseQuoteRequest;
 use App\Http\Requests\SimulateQuoteRequest;
 use App\Http\Requests\StoreQuoteRequest;
 use App\Http\Resources\QuoteResource;
@@ -111,6 +112,36 @@ class QuoteController extends Controller
     public function store(StoreQuoteRequest $request): JsonResponse
     {
         $data = $request->validated();
+        $montado = $this->montaOrcamento($data);
+
+        $quote = DB::transaction(fn () => tap(
+            Quote::create([
+                'user_id' => $request->user()->id,
+                'status' => 'draft',
+                ...$montado['atributos'],
+            ]),
+            fn (Quote $quote) => $this->gravaLinhas($quote, $montado),
+        ));
+
+        return (new QuoteResource($quote->load('material')))
+            ->response()
+            ->setStatusCode(JsonResponse::HTTP_CREATED);
+    }
+
+    /**
+     * Roda o motor e devolve tudo que a gravação precisa, calculado uma vez.
+     *
+     * Existe porque `store()` e `revise()` precisam do MESMO resultado: um
+     * orçamento reeditado tem de sair idêntico a um orçamento criado com a
+     * mesma especificação. Duplicar noventa linhas entre os dois seria a
+     * garantia de que a segunda cópia envelheceria sozinha — e a divergência
+     * apareceria como dois preços diferentes para a mesma caixa.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{atributos: array<string, mixed>, bom: array<string, mixed>, custom_parts: list<array<string, mixed>>}
+     */
+    private function montaOrcamento(array $data): array
+    {
         $result = $this->calculateFrom($data, $material, $settings, $bom);
 
         // Resolvidas uma vez e reaproveitadas nos dois destinos: as linhas de
@@ -128,28 +159,14 @@ class QuoteController extends Controller
             ? Client::query()->findOrFail($data['client_id'])
             : null;
 
-        $quote = DB::transaction(fn () => tap(Quote::create([
-            'user_id' => $request->user()->id,
-            'material_id' => $material->id,
-
-            // Null fora da cartonagem rígida, e null também quando o usuário não
-            // escolheu revestimento nenhum — caso em que o motor já cobra zero
-            // por ele. Ver PricingEngine.
-            'wrap_material_id' => $bom['wrap_material_id'],
-
-            /*
-             * Parâmetros de construção do berço, guardados como o usuário os
-             * informou. Sem eles um orçamento com berço reabria sem grade
-             * nenhuma — e a caixa que a produção montou não era a que a
-             * calculadora mostrou.
-             */
-            'cradle_type' => $data['cradle_type'] ?? null,
-            'cradle_rows' => $data['cradle_rows'] ?? null,
-            'cradle_columns' => $data['cradle_columns'] ?? null,
-            'cradle_height_ratio' => $data['cradle_height_ratio'] ?? null,
-
-            'cost_setting_id' => $settings->id,
-
+        /*
+         * As colunas do cliente só entram quando o payload as traz.
+         *
+         * A reedição usa ReviseQuoteRequest, que não aceita cliente: corrigir
+         * uma medida não troca o destinatário. Ausentes daqui, o `update()`
+         * simplesmente não as toca e o orçamento mantém quem sempre teve.
+         */
+        $doCliente = array_key_exists('client_name', $data) ? [
             'client_id' => $client?->id,
 
             /*
@@ -166,99 +183,134 @@ class QuoteController extends Controller
             'client_name' => $client?->name ?? $data['client_name'],
             'client_email' => $client?->email ?? ($data['client_email'] ?? null),
             'client_document' => $client?->cpf_cnpj ?? ($data['client_document'] ?? null),
+        ] : [];
 
-            'notes' => $data['notes'] ?? null,
+        return [
+            'bom' => $bom,
+            'custom_parts' => $customParts,
+            'atributos' => [
+                ...$doCliente,
+                'material_id' => $material->id,
 
-            'width_mm' => (int) $data['width_mm'],
-            'height_mm' => (int) $data['height_mm'],
-            'depth_mm' => (int) $data['depth_mm'],
-            'box_model' => $data['box_model'] ?? 'rsc',
-            'quantity' => (int) ($data['quantity'] ?? 1),
-
-            // Null = tampa automática. Guardado como o usuário informou (e não
-            // como resolvido) para que o orçamento reabra no mesmo modo.
-            'lid_width_mm' => $data['lid_width_mm'] ?? null,
-            'lid_depth_mm' => $data['lid_depth_mm'] ?? null,
-            'lid_height_mm' => $data['lid_height_mm'] ?? null,
-
-            'waste_percent' => $data['waste_percent'] ?? $material->default_waste_percent,
-            'production_minutes_per_unit' => $data['production_minutes_per_unit'] ?? 0,
-            'profit_margin_percent' => $data['profit_margin_percent'] ?? $settings->default_profit_margin_percent,
-            'pricing_mode' => $data['pricing_mode'] ?? 'markup',
-
-            // Resultado materializado (as chaves de PricingResult casam com as colunas).
-            ...collect($result->toArray())
-                ->only([
-                    'area_m2_per_unit', 'area_m2_total', 'wrap_area_m2_per_unit',
-                    'material_cost', 'wrap_cost', 'hardware_cost',
-                    'labor_cost', 'machine_cost', 'energy_cost',
-                    'overhead_cost', 'unit_cost', 'unit_price',
-                    'total_cost', 'total_price', 'profit_amount',
-                ])
-                ->all(),
-
-            // Fotografia do contexto: torna o orçamento auditável mesmo depois
-            // de o material encarecer ou a tarifa de energia mudar.
-            'pricing_snapshot' => [
-                'engine_version' => PricingEngine::VERSION,
-                'calculated_at' => now()->toIso8601String(),
-                'material' => $material->only(['id', 'name', 'cost_unit', 'cost_per_unit', 'grammage_kg_per_m2', 'thickness_mm']),
-                'material_cost_per_m2' => $material->costPerSquareMeter(),
-                'cost_settings' => $settings->only([
-                    'energy_tariff_per_kwh', 'machine_hour_rate', 'machine_power_kw',
-                    'labor_hour_rate', 'overhead_percent', 'tax_percent',
-                ]),
-                'breakdown' => $result->toArray(),
+                // Null fora da cartonagem rígida, e null também quando o usuário não
+                // escolheu revestimento nenhum — caso em que o motor já cobra zero
+                // por ele. Ver PricingEngine.
+                'wrap_material_id' => $bom['wrap_material_id'],
 
                 /*
-                 * As peças CONGELADAS, e não só uma flag de "é modelo livre".
-                 *
-                 * Mesma razão do material e dos custos logo acima: se o usuário
-                 * corrigir uma medida ou o preço do papelão amanhã, o orçamento
-                 * que o cliente aprovou ontem não pode mudar de valor. As linhas
-                 * em `quote_custom_parts` continuam editáveis; esta cópia é o
-                 * que foi combinado.
+                 * Parâmetros de construção do berço, guardados como o usuário os
+                 * informou. Sem eles um orçamento com berço reabria sem grade
+                 * nenhuma — e a caixa que a produção montou não era a que a
+                 * calculadora mostrou.
                  */
-                'custom_parts' => $customParts,
+                'cradle_type' => $data['cradle_type'] ?? null,
+                'cradle_rows' => $data['cradle_rows'] ?? null,
+                'cradle_columns' => $data['cradle_columns'] ?? null,
+                'cradle_height_ratio' => $data['cradle_height_ratio'] ?? null,
+
+                'cost_setting_id' => $settings->id,
+
+                'notes' => $data['notes'] ?? null,
+
+                'width_mm' => (int) $data['width_mm'],
+                'height_mm' => (int) $data['height_mm'],
+                'depth_mm' => (int) $data['depth_mm'],
+                'box_model' => $data['box_model'] ?? 'rsc',
+                'quantity' => (int) ($data['quantity'] ?? 1),
+
+                // Null = tampa automática. Guardado como o usuário informou (e não
+                // como resolvido) para que o orçamento reabra no mesmo modo.
+                'lid_width_mm' => $data['lid_width_mm'] ?? null,
+                'lid_depth_mm' => $data['lid_depth_mm'] ?? null,
+                'lid_height_mm' => $data['lid_height_mm'] ?? null,
+
+                'waste_percent' => $data['waste_percent'] ?? $material->default_waste_percent,
+                'production_minutes_per_unit' => $data['production_minutes_per_unit'] ?? 0,
+                'profit_margin_percent' => $data['profit_margin_percent'] ?? $settings->default_profit_margin_percent,
+                'pricing_mode' => $data['pricing_mode'] ?? 'markup',
+
+                // Resultado materializado (as chaves de PricingResult casam com as colunas).
+                ...collect($result->toArray())
+                    ->only([
+                        'area_m2_per_unit', 'area_m2_total', 'wrap_area_m2_per_unit',
+                        'material_cost', 'wrap_cost', 'hardware_cost',
+                        'labor_cost', 'machine_cost', 'energy_cost',
+                        'overhead_cost', 'unit_cost', 'unit_price',
+                        'total_cost', 'total_price', 'profit_amount',
+                    ])
+                    ->all(),
+
+                // Fotografia do contexto: torna o orçamento auditável mesmo depois
+                // de o material encarecer ou a tarifa de energia mudar.
+                'pricing_snapshot' => [
+                    'engine_version' => PricingEngine::VERSION,
+                    'calculated_at' => now()->toIso8601String(),
+                    'material' => $material->only(['id', 'name', 'cost_unit', 'cost_per_unit', 'grammage_kg_per_m2', 'thickness_mm']),
+                    'material_cost_per_m2' => $material->costPerSquareMeter(),
+                    'cost_settings' => $settings->only([
+                        'energy_tariff_per_kwh', 'machine_hour_rate', 'machine_power_kw',
+                        'labor_hour_rate', 'overhead_percent', 'tax_percent',
+                    ]),
+                    'breakdown' => $result->toArray(),
+
+                    /*
+                     * As peças CONGELADAS, e não só uma flag de "é modelo livre".
+                     *
+                     * Mesma razão do material e dos custos logo acima: se o usuário
+                     * corrigir uma medida ou o preço do papelão amanhã, o orçamento
+                     * que o cliente aprovou ontem não pode mudar de valor. As linhas
+                     * em `quote_custom_parts` continuam editáveis; esta cópia é o
+                     * que foi combinado.
+                     */
+                    'custom_parts' => $customParts,
+                ],
             ],
+        ];
+    }
 
-            'status' => 'draft',
-        ]), function (Quote $quote) use ($customParts, $bom): void {
-            /*
-             * Ferragem e berço viram linhas próprias pela mesma razão das peças
-             * logo abaixo: é o que a ficha técnica lê para dizer à produção o
-             * que separar, e o que permite reabrir o orçamento depois. Antes
-             * disto existia só `hardware_cost` — o número, sem os ímãs.
-             */
-            foreach ($bom['linhas'] as $linha) {
-                $quote->components()->create([
-                    'tenant_id' => $quote->tenant_id,
-                    ...$linha,
-                ]);
-            }
+    /**
+     * Grava a lista de materiais e as peças, substituindo o que houver.
+     *
+     * O `delete()` antes do laço é o que torna a reedição possível: sem ele,
+     * corrigir a quantidade de ímãs de 4 para 2 deixaria as duas linhas no
+     * banco e a ficha técnica mandaria separar seis.
+     *
+     * @param  array{bom: array<string, mixed>, custom_parts: list<array<string, mixed>>}  $montado
+     */
+    private function gravaLinhas(Quote $quote, array $montado): void
+    {
+        $quote->components()->delete();
+        $quote->customParts()->delete();
 
-            /*
-             * As peças viram linhas próprias além de entrarem no snapshot: é a
-             * tabela que a ficha técnica consulta e que o usuário edita ao
-             * duplicar o orçamento. O snapshot é fotografia, não fonte de
-             * trabalho.
-             */
-            foreach ($customParts as $part) {
-                $quote->customParts()->create([
-                    'tenant_id' => $quote->tenant_id,
-                    'material_id' => $part['material_id'],
-                    'name' => $part['name'],
-                    'component_role' => $part['role'],
-                    'width_mm' => (int) $part['width_mm'],
-                    'length_mm' => (int) $part['length_mm'],
-                    'quantity' => $part['quantity'],
-                ]);
-            }
-        }));
+        /*
+         * Ferragem e berço viram linhas próprias pela mesma razão das peças
+         * logo abaixo: é o que a ficha técnica lê para dizer à produção o que
+         * separar, e o que permite reabrir o orçamento depois. Antes disto
+         * existia só `hardware_cost` — o número, sem os ímãs.
+         */
+        foreach ($montado['bom']['linhas'] as $linha) {
+            $quote->components()->create([
+                'tenant_id' => $quote->tenant_id,
+                ...$linha,
+            ]);
+        }
 
-        return (new QuoteResource($quote->load('material')))
-            ->response()
-            ->setStatusCode(JsonResponse::HTTP_CREATED);
+        /*
+         * As peças viram linhas próprias além de entrarem no snapshot: é a
+         * tabela que a ficha técnica consulta e que o usuário edita ao duplicar
+         * o orçamento. O snapshot é fotografia, não fonte de trabalho.
+         */
+        foreach ($montado['custom_parts'] as $part) {
+            $quote->customParts()->create([
+                'tenant_id' => $quote->tenant_id,
+                'material_id' => $part['material_id'],
+                'name' => $part['name'],
+                'component_role' => $part['role'],
+                'width_mm' => (int) $part['width_mm'],
+                'length_mm' => (int) $part['length_mm'],
+                'quantity' => $part['quantity'],
+            ]);
+        }
     }
 
     public function show(Quote $quote): QuoteResource
@@ -269,7 +321,12 @@ class QuoteController extends Controller
         // $this->middleware(), removido do Controller base no Laravel 11+.
         $this->authorize('view', $quote);
 
-        return new QuoteResource($quote->load(['material', 'user:id,name']));
+        // `components` e `customParts` só aqui: é a tela do orçamento que
+        // oferece duplicar e reeditar, e carregá-las na listagem seria payload
+        // que ninguém lê.
+        return new QuoteResource($quote->load([
+            'material', 'user:id,name', 'components', 'customParts',
+        ]));
     }
 
     /**
@@ -318,6 +375,51 @@ class QuoteController extends Controller
         }
 
         $quote->update($validated);
+
+        return new QuoteResource($quote->fresh('material'));
+    }
+
+    /**
+     * PUT /api/quotes/{quote}/specification — reeditar o RASCUNHO.
+     *
+     * A regra que `update()` registra continua valendo onde sempre valeu: um
+     * orçamento ENVIADO ao cliente é imutável, e mexer nas medidas dele seria
+     * outro orçamento. Rascunho é o caso que a regra nunca cobriu — ele não foi
+     * enviado a ninguém, e obrigar quem errou uma medida a refazer tudo do zero
+     * era uma punição sem beneficiário.
+     *
+     * O `pricing_snapshot` é REFEITO, e tem que ser: ele é a fotografia do que
+     * foi calculado, e um rascunho reeditado tem um cálculo novo. Manter o
+     * antigo faria a ficha técnica cortar a caixa velha.
+     *
+     * Endpoint próprio, e não um ramo dentro de `update()`: aquele aceita campo
+     * solto e este exige a especificação inteira. Misturar os dois num método
+     * que adivinha a intenção pelo payload é como um PUT sem `components`
+     * acabaria apagando a ferragem em silêncio.
+     */
+    public function revise(ReviseQuoteRequest $request, Quote $quote): QuoteResource|JsonResponse
+    {
+        $this->authorize('update', $quote);
+
+        if ($quote->status !== QuoteStatus::Draft) {
+            return response()->json([
+                'message' => 'Só rascunho pode ser reeditado.',
+                'errors' => ['status' => [
+                    'Este orçamento já saiu como proposta. Duplique-o para trabalhar '
+                    .'sobre uma cópia — o que o cliente recebeu não muda de valor.',
+                ]],
+            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $montado = $this->montaOrcamento($request->validated());
+
+        DB::transaction(function () use ($quote, $montado): void {
+            // `user_id`, `reference` e `status` ficam de fora: quem criou
+            // continua sendo quem criou, e a referência já foi para o papel.
+            $quote->update($montado['atributos']);
+
+            $this->gravaLinhas($quote, $montado);
+        });
 
         return new QuoteResource($quote->fresh('material'));
     }

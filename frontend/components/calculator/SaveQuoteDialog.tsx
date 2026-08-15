@@ -21,6 +21,7 @@ import { toast } from "sonner";
 
 import { api, ApiError } from "@/lib/api";
 import { SeletorDeCliente } from "@/components/cadastro/SeletorDeCliente";
+import type { Reabertura } from "@/hooks/useReabrirOrcamento";
 import { useQuoteStore } from "@/store/useQuoteStore";
 
 /**
@@ -44,9 +45,19 @@ const FORMULARIO_VAZIO = {
  * recalcula tudo antes de gravar, de modo que adulterar o payload no navegador
  * não altera o preço registrado.
  */
-export function SaveQuoteDialog({ disabled }: { disabled?: boolean }) {
+export function SaveQuoteDialog({
+  disabled,
+  reabertura,
+}: {
+  disabled?: boolean;
+  reabertura?: Reabertura | null;
+}) {
   const spec = useQuoteStore((s) => s.spec);
   const router = useRouter();
+
+  // Editar grava por cima e não pede o cliente de novo — ele já está no
+  // orçamento, e reapresentar o campo convidaria a trocá-lo por engano.
+  const editando = reabertura?.modo === "editar";
 
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,6 +70,24 @@ export function SaveQuoteDialog({ disabled }: { disabled?: boolean }) {
     setFieldErrors({});
 
     try {
+      /*
+       * Editar grava por cima e volta para o orçamento; duplicar e criar
+       * seguem pelo POST de sempre.
+       *
+       * A edição usa endpoint próprio (`/specification`) porque substitui a
+       * especificação INTEIRA — o `update` do recurso aceita campo solto, e um
+       * PUT sem `components` apagaria a ferragem em silêncio.
+       */
+      if (editando && reabertura) {
+        await api.quotes.revise(reabertura.id, spec);
+
+        toast.success(`Orçamento ${reabertura.referencia} atualizado`);
+        setOpen(false);
+        router.push(`/orcamentos/${reabertura.id}`);
+
+        return;
+      }
+
       const quote = await api.quotes.create(spec, form);
 
       // O atalho para o registro recém-criado, e não só um aviso: o orçamento
@@ -92,20 +121,28 @@ export function SaveQuoteDialog({ disabled }: { disabled?: boolean }) {
       <DialogTrigger asChild>
         <Button className="w-full" size="lg" disabled={disabled}>
           <Save className="size-4" />
-          Salvar orçamento
+          {editando ? "Gravar alterações" : "Salvar orçamento"}
         </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Salvar orçamento</DialogTitle>
+            <DialogTitle>
+              {editando
+                ? `Gravar sobre ${reabertura?.referencia}`
+                : "Salvar orçamento"}
+            </DialogTitle>
             <DialogDescription>
-              Os valores serão recalculados e congelados pelo servidor no momento
-              da gravação.
+              {editando
+                ? "O orçamento é recalculado e o valor anterior é substituído. Só rascunho pode ser editado."
+                : "Os valores serão recalculados e congelados pelo servidor no momento da gravação."}
             </DialogDescription>
           </DialogHeader>
 
+          {/* Editando, o cliente já está gravado no orçamento. Reapresentar os
+              campos convidaria a trocá-lo por engano ao corrigir uma medida. */}
+          {!editando && (
           <div className="space-y-4 py-4">
             <SeletorDeCliente
               clienteId={form.client_id}
@@ -140,14 +177,17 @@ export function SaveQuoteDialog({ disabled }: { disabled?: boolean }) {
               />
             </div>
           </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSaving || !form.client_name}>
+            {/* Sem cliente não há orçamento novo — mas editando o cliente já
+                está gravado, e exigi-lo travaria o botão para sempre. */}
+            <Button type="submit" disabled={isSaving || (!editando && !form.client_name)}>
               {isSaving && <Loader2 className="size-4 animate-spin" />}
-              Salvar
+              {editando ? "Gravar" : "Salvar"}
             </Button>
           </DialogFooter>
         </form>

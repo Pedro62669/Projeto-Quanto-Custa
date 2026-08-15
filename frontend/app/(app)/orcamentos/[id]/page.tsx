@@ -6,9 +6,11 @@ import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
+  Copy,
   Download,
   FileText,
   Loader2,
+  Pencil,
   Send,
   Trash2,
   UserPlus,
@@ -110,6 +112,25 @@ export default function OrcamentoPage() {
           </Button>
 
           <BotaoPdf id={id} referencia={q.reference} />
+
+          {/* Duplicar vale para QUALQUER estado — é justamente o que substitui a
+              edição do que já foi enviado. Editar só aparece no rascunho, e o
+              servidor recusa fora dele de qualquer forma. */}
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/calculadora?duplicar=${id}`}>
+              <Copy className="size-3.5" />
+              Duplicar
+            </Link>
+          </Button>
+
+          {q.status === "draft" && (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/calculadora?editar=${id}`}>
+                <Pencil className="size-3.5" />
+                Editar
+              </Link>
+            </Button>
+          )}
 
           {!aprovado && (
             <>

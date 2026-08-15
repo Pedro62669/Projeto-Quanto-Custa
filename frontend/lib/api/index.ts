@@ -173,6 +173,23 @@ export const api = {
       }).then((r) => r.data),
 
     /**
+     * Regrava a especificação de um RASCUNHO, recalculando o preço.
+     *
+     * URL própria, e não o `update` do recurso: aquele aceita status e
+     * observação soltos, e este substitui a especificação INTEIRA. Misturar os
+     * dois num método que adivinha a intenção pelo payload faria uma chamada
+     * sem `components` apagar a ferragem em silêncio.
+     *
+     * O servidor recusa com 422 fora de rascunho — a tela só oferece o botão
+     * onde ele funciona, mas a URL é digitável e a guarda de verdade está lá.
+     */
+    revise: (id: number, spec: QuoteSpecification) =>
+      request<{ data: QuoteListItem }>(`/quotes/${id}/specification`, {
+        method: "PUT",
+        body: JSON.stringify(spec),
+      }).then((r) => r.data),
+
+    /**
      * Aprovar gera as parcelas no livro-caixa — não é só mudar um rótulo.
      *
      * `client_id` é aceito pelo servidor desde a Fase 4 e não era enviado por

@@ -16,6 +16,7 @@ import { PriceSummary } from "@/components/calculator/PriceSummary";
 import { SaveQuoteDialog } from "@/components/calculator/SaveQuoteDialog";
 
 import { useServerSync } from "@/hooks/useServerSync";
+import { useReabrirOrcamento, type Reabertura } from "@/hooks/useReabrirOrcamento";
 import {
   useQuoteStore,
   selectDimensions,
@@ -77,6 +78,11 @@ export default function CalculadoraPage() {
     void bootstrap();
   }, [bootstrap]);
 
+  // `?duplicar=12` ou `?editar=12` reabrem um orçamento gravado. Depende do
+  // bootstrap: sem materiais carregados o formulário abriria sem o material
+  // selecionado.
+  const reabertura = useReabrirOrcamento(!isBootstrapping);
+
   // Mantém o servidor sincronizado em debounce a cada mudança da especificação.
   useServerSync();
 
@@ -130,7 +136,7 @@ export default function CalculadoraPage() {
           <>
             <PriceSummary />
             <Separator />
-            <ActionPanel disabled={!hasResult} />
+            <ActionPanel disabled={!hasResult} reabertura={reabertura} />
           </>
         )}
       </div>
@@ -145,12 +151,33 @@ export default function CalculadoraPage() {
  * destrutiva que apaga o que foi digitado, e não deve ter o mesmo peso do
  * botão que conclui o trabalho.
  */
-function ActionPanel({ disabled }: { disabled: boolean }) {
+function ActionPanel({
+  disabled,
+  reabertura,
+}: {
+  disabled: boolean;
+  reabertura: Reabertura | null;
+}) {
   const reset = useQuoteStore((s) => s.reset);
 
   return (
     <div className="space-y-2">
-      <SaveQuoteDialog disabled={disabled} />
+      {/* Que orçamento está aberto, e o que o botão vai fazer com ele. Sem este
+          aviso, "Salvar" numa edição parece criar mais um — e a pessoa acaba
+          com dois orçamentos quando queria corrigir um. */}
+      {reabertura && (
+        <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+          {reabertura.modo === "editar" ? "Editando " : "Cópia de "}
+          <span className="font-mono font-medium text-foreground">
+            {reabertura.referencia}
+          </span>
+          {reabertura.modo === "editar"
+            ? " — salvar grava por cima."
+            : " — salvar cria um orçamento novo."}
+        </p>
+      )}
+
+      <SaveQuoteDialog disabled={disabled} reabertura={reabertura} />
 
       <Button
         variant="ghost"

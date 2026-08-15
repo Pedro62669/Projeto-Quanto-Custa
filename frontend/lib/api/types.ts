@@ -285,14 +285,51 @@ export interface QuoteListItem {
     email: string | null;
     document: string | null;
   };
+  /**
+   * A geometria completa — o que faz a caixa ser aquela caixa.
+   *
+   * Reabrir um orçamento (duplicar, editar rascunho) junta TRÊS blocos:
+   * `specification`, `components` e `parameters`. Perda, minutos e margem ficam
+   * no segundo porque não descrevem a peça — a mesma caixa com outra margem
+   * continua a mesma caixa.
+   */
   specification: {
+    material_id: number;
     width_mm: number;
     height_mm: number;
     depth_mm: number;
     box_model: string;
     quantity: number;
+    lid_width_mm: number | null;
+    lid_depth_mm: number | null;
+    lid_height_mm: number | null;
+    cradle_type: string | null;
+    cradle_rows: number | null;
+    cradle_columns: number | null;
+    cradle_height_ratio: number | null;
     material?: { id: number; name: string; color_hex: string };
   };
+
+  /**
+   * Lista de materiais e peças — presentes só no `show`.
+   *
+   * A listagem não as carrega: cinquenta orçamentos com componentes seria
+   * payload que ninguém lê, e o índice nem oferece o botão de duplicar.
+   */
+  components?: Array<{
+    material_id: number;
+    role: string;
+    quantity: number | null;
+  }>;
+
+  custom_parts?: Array<{
+    material_id: number;
+    name: string;
+    role: string;
+    width_mm: number;
+    length_mm: number;
+    quantity: number;
+  }>;
   parameters: {
     waste_percent: number;
     production_minutes_per_unit: number;
