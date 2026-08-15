@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SimulateQuoteRequest;
 use App\Http\Requests\StoreQuoteRequest;
 use App\Http\Resources\QuoteResource;
+use App\Models\Client;
 use App\Models\CostSetting;
 use App\Models\Material;
 use App\Models\Quote;
@@ -78,6 +79,19 @@ class QuoteController extends Controller
             // é exclusivo do PostgreSQL e quebraria a suíte em qualquer outro
             // driver. O Laravel traduz para o operador nativo de cada banco.
             ->when($request->filled('client'), fn ($q) => $q->whereLike('client_name', "%{$request->string('client')}%", caseSensitive: false))
+
+            /*
+             * Filtro pelo cadastro, que é coisa diferente do filtro por nome
+             * logo acima.
+             *
+             * `?client=silva` procura texto e acha qualquer coisa escrita
+             * parecido; `?client_id=7` traz o histórico DAQUELE cliente, o que a
+             * ficha dele precisa. Os dois convivem porque o orçamento pode ter
+             * nascido sem cadastro — buscar por nome continua sendo o único
+             * caminho para esses.
+             */
+            ->when($request->filled('client_id'), fn ($q) => $q->where('client_id', $request->integer('client_id')))
+
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->latest()
             ->paginate($request->integer('per_page', 15));
@@ -102,6 +116,17 @@ class QuoteController extends Controller
         // `quote_custom_parts` e a fotografia dentro do snapshot.
         $customParts = $this->resolveCustomParts($data['custom_parts'] ?? []);
 
+        /*
+         * O cliente cadastrado, resolvido pelo MODEL ESCOPADO.
+         *
+         * Mesmo cuidado — e mesma razão — de QuoteApprovalController: `exists`
+         * na validação passaria por fora do TenantScope e gravaria o cliente da
+         * empresa vizinha. O findOrFail escopado devolve 404.
+         */
+        $client = isset($data['client_id'])
+            ? Client::query()->findOrFail($data['client_id'])
+            : null;
+
         $quote = DB::transaction(fn () => tap(Quote::create([
             'user_id' => $request->user()->id,
             'material_id' => $material->id,
@@ -124,9 +149,23 @@ class QuoteController extends Controller
 
             'cost_setting_id' => $settings->id,
 
-            'client_name' => $data['client_name'],
-            'client_email' => $data['client_email'] ?? null,
-            'client_document' => $data['client_document'] ?? null,
+            'client_id' => $client?->id,
+
+            /*
+             * Os campos de texto são a FOTOGRAFIA do que foi combinado, e quando
+             * há cadastro eles saem dele — não do que o navegador enviou.
+             *
+             * Os dois papéis convivem porque respondem a perguntas diferentes:
+             * `client_id` liga o orçamento ao histórico e sobrevive a uma
+             * correção de nome; `client_name` guarda o que estava escrito na
+             * proposta. Sem o id, "Papelaria Silva" digitada três vezes vira
+             * três clientes; sem o texto, renomear o cadastro reescreveria a
+             * proposta que o cliente assinou.
+             */
+            'client_name' => $client?->name ?? $data['client_name'],
+            'client_email' => $client?->email ?? ($data['client_email'] ?? null),
+            'client_document' => $client?->cpf_cnpj ?? ($data['client_document'] ?? null),
+
             'notes' => $data['notes'] ?? null,
 
             'width_mm' => (int) $data['width_mm'],

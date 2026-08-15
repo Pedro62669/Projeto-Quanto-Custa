@@ -20,7 +20,22 @@ import {
 import { toast } from "sonner";
 
 import { api, ApiError } from "@/lib/api";
+import { SeletorDeCliente } from "@/components/cadastro/SeletorDeCliente";
 import { useQuoteStore } from "@/store/useQuoteStore";
+
+/**
+ * O formulário zerado, num lugar só.
+ *
+ * Ele é usado no estado inicial e na limpeza depois de salvar; escrever o
+ * literal duas vezes é como um campo novo entra em uma das duas e some da
+ * outra — e o resíduo aparece no orçamento seguinte.
+ */
+const FORMULARIO_VAZIO = {
+  client_id: null as number | null,
+  client_name: "",
+  client_email: "",
+  notes: "",
+};
 
 /**
  * Captura os dados do cliente e persiste o orçamento.
@@ -35,7 +50,7 @@ export function SaveQuoteDialog({ disabled }: { disabled?: boolean }) {
 
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [form, setForm] = useState({ client_name: "", client_email: "", notes: "" });
+  const [form, setForm] = useState(FORMULARIO_VAZIO);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
   async function handleSubmit(event: React.FormEvent) {
@@ -58,7 +73,7 @@ export function SaveQuoteDialog({ disabled }: { disabled?: boolean }) {
       });
 
       setOpen(false);
-      setForm({ client_name: "", client_email: "", notes: "" });
+      setForm(FORMULARIO_VAZIO);
     } catch (error) {
       if (error instanceof ApiError) {
         // Erros de validação vão para os campos; o resto vira toast.
@@ -92,14 +107,20 @@ export function SaveQuoteDialog({ disabled }: { disabled?: boolean }) {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <Field
-              id="client_name"
-              label="Cliente"
-              required
-              value={form.client_name}
-              onChange={(client_name) => setForm({ ...form, client_name })}
-              errors={fieldErrors.client_name}
+            <SeletorDeCliente
+              clienteId={form.client_id}
+              nome={form.client_name}
+              onChange={({ clienteId, nome }) =>
+                setForm({ ...form, client_id: clienteId, client_name: nome })
+              }
             />
+
+            {fieldErrors.client_name?.map((mensagem) => (
+              <p key={mensagem} className="text-xs text-destructive">
+                {mensagem}
+              </p>
+            ))}
+
             <Field
               id="client_email"
               label="E-mail"

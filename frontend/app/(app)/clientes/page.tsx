@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { CadastroSimples, SeloAtivo } from "@/components/cadastro/CadastroSimples";
 import { TextField } from "@/components/form/Field";
 import { Switch } from "@/components/ui/switch";
@@ -40,7 +42,15 @@ export default function ClientesPage() {
           render: (c) => (
             <div className="flex items-center gap-2">
               <div className="min-w-0">
-                <p className="truncate font-medium">{c.name}</p>
+                {/* O nome leva à ficha: histórico de orçamentos e movimento no
+                    caixa. É o que o cadastro passou a valer quando o orçamento
+                    ganhou `client_id`. */}
+                <Link
+                  href={`/clientes/${c.id}`}
+                  className="block truncate font-medium hover:underline"
+                >
+                  {c.name}
+                </Link>
                 <p className="truncate text-xs text-muted-foreground">
                   {c.cpf_cnpj ?? "sem documento"}
                 </p>

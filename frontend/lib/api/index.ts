@@ -151,17 +151,42 @@ export const api = {
   quotes: {
     ...crud<QuoteListItem>("/quotes"),
 
+    /**
+     * `client_id` liga o orçamento ao cadastro; `client_name` continua indo
+     * junto e obrigatório. Os dois respondem perguntas diferentes: o id dá
+     * histórico e sobrevive a uma correção de nome, o texto é a fotografia do
+     * que foi escrito na proposta. Quando o id vem, o servidor preenche o nome
+     * a partir do registro e descarta o que o navegador mandou.
+     */
     create: (
       spec: QuoteSpecification,
-      client: { client_name: string; client_email?: string; notes?: string },
+      client: {
+        client_id?: number | null;
+        client_name: string;
+        client_email?: string;
+        notes?: string;
+      },
     ) =>
       request<{ data: { id: number; reference: string } }>("/quotes", {
         method: "POST",
         body: JSON.stringify({ ...spec, ...client }),
       }).then((r) => r.data),
 
-    /** Aprovar gera as parcelas no livro-caixa — não é só mudar um rótulo. */
-    approve: (id: number, payload: { installments?: number; first_due_date?: string } = {}) =>
+    /**
+     * Aprovar gera as parcelas no livro-caixa — não é só mudar um rótulo.
+     *
+     * `client_id` é aceito pelo servidor desde a Fase 4 e não era enviado por
+     * ninguém: aprovar um orçamento avulso vinculando-o a um cadastro é o
+     * momento em que a venda ganha dono no financeiro.
+     */
+    approve: (
+      id: number,
+      payload: {
+        installments?: number;
+        first_due_date?: string;
+        client_id?: number | null;
+      } = {},
+    ) =>
       request<{ data: unknown; message?: string }>(`/quotes/${id}/approve`, {
         method: "POST",
         body: JSON.stringify(payload),

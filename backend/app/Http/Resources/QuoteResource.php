@@ -25,6 +25,16 @@ class QuoteResource extends JsonResource
             'status' => $this->status,
 
             'client' => [
+                /*
+                 * O id do cadastro, quando o orçamento nasceu ligado a um.
+                 *
+                 * Null é a resposta honesta para a venda fechada com um nome e
+                 * um WhatsApp — e é o que permite à tela oferecer "promover a
+                 * cliente" só onde ela faz sentido.
+                 */
+                'id' => $this->client_id,
+
+                // Texto congelado na emissão; ver QuoteController::store().
                 'name' => $this->client_name,
                 'email' => $this->client_email,
                 'document' => $this->client_document,

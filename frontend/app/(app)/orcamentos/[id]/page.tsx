@@ -223,25 +223,38 @@ export default function OrcamentoPage() {
           </div>
 
           {/*
-            O orçamento guarda o cliente como TEXTO. Promover cria o cadastro de
-            verdade, que é o que permite o histórico por cliente e o vínculo com
-            o livro-caixa.
+            Ligado ao cadastro ou avulso — e a diferença decide o que oferecer.
+
+            Antes de o orçamento ganhar `client_id`, "Cadastrar como cliente"
+            aparecia sempre, inclusive para quem já tinha ficha: clicar duas
+            vezes criava o mesmo cliente de novo. Agora quem já tem vai para a
+            ficha, e promover só faz sentido onde não há vínculo.
           */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                await api.quotes.promoteClient(id);
-                toast.success("Cliente cadastrado a partir do orçamento");
-              } catch (erro) {
-                toast.error(mensagemDeErro(erro));
-              }
-            }}
-          >
-            <UserPlus className="size-3.5" />
-            Cadastrar como cliente
-          </Button>
+          {q.client.id === null ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await api.quotes.promoteClient(id);
+                  toast.success("Cliente cadastrado a partir do orçamento");
+                  orcamento.refetch();
+                } catch (erro) {
+                  toast.error(mensagemDeErro(erro));
+                }
+              }}
+            >
+              <UserPlus className="size-3.5" />
+              Cadastrar como cliente
+            </Button>
+          ) : (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/clientes/${q.client.id}`}>
+                <UserPlus className="size-3.5" />
+                Ver ficha do cliente
+              </Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
 

@@ -37,6 +37,11 @@ class TransactionController extends Controller
             ->with(['client:id,name', 'supplier:id,name', 'installments'])
             ->when($request->filled('type'), fn ($q) => $q->where('type', $request->string('type')))
             ->when($request->filled('category'), fn ($q) => $q->where('category', $request->string('category')))
+
+            // O movimento de um cliente só — o que a ficha dele mostra ao lado
+            // dos orçamentos. Sem `exists` na validação: o `where` já passa pelo
+            // TenantScope, então o id de outra empresa simplesmente não casa.
+            ->when($request->filled('client_id'), fn ($q) => $q->where('client_id', $request->integer('client_id')))
             ->when($request->filled('month') && $request->filled('year'), fn ($q) => $q
                 ->whereYear('transaction_date', $request->integer('year'))
                 ->whereMonth('transaction_date', $request->integer('month')))

@@ -274,7 +274,17 @@ export interface QuoteListItem {
   id: number;
   reference: string;
   status: QuoteStatusValue;
-  client: { name: string; email: string | null; document: string | null };
+  /**
+   * `id` é null na venda fechada só com um nome e um WhatsApp — o caminho mais
+   * comum na cartonagem, e o motivo de o cadastro nunca ter sido obrigatório.
+   * É por ele que a tela decide se oferece "promover a cliente".
+   */
+  client: {
+    id: number | null;
+    name: string;
+    email: string | null;
+    document: string | null;
+  };
   specification: {
     width_mm: number;
     height_mm: number;
