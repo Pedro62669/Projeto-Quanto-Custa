@@ -23,8 +23,9 @@ import {
 } from "@/components/ui/accordion";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { useQuoteStore } from "@/store/useQuoteStore";
+import { materiaisParaPeca, useQuoteStore } from "@/store/useQuoteStore";
 import { CustomPartsEditor } from "@/components/calculator/CustomPartsEditor";
+import { ListaDeMateriais } from "@/components/calculator/ListaDeMateriais";
 import {
   defaultLidDimensions,
   hasSeparateLid,
@@ -144,7 +145,19 @@ export function DimensionForm() {
               <SelectValue placeholder="Selecione o material" />
             </SelectTrigger>
             <SelectContent>
-              {materials.map((material) => (
+              {/*
+                Só material medido em ÁREA.
+
+                A estrutura é cortada em milímetros, e ímã não se corta: o motor
+                recusa convertê-lo para R$/m² e devolve 422. A lista vinha
+                inteira, então bastava a empresa cadastrar uma ferragem para o
+                seletor oferecer a peça que derruba o cálculo — e ela aparecia
+                em primeiro se o nome viesse antes no alfabeto, porque a API
+                ordena por nome e a calculadora abre no primeiro item.
+
+                Ferragem e berço entram pela lista de materiais, logo abaixo.
+              */}
+              {materiaisParaPeca(materials, "structure").map((material) => (
                 <SelectItem key={material.id} value={material.id.toString()}>
                   <span className="flex items-center gap-2">
                     {/* Mesma cor aplicada ao modelo 3D: cria o vínculo visual
@@ -266,6 +279,12 @@ export function DimensionForm() {
             : "Garante essa margem líquida sobre o preço final de venda."}
         </p>
       </section>
+
+      {/* ── A lista de materiais ───────────────────────────────────────────
+          Depois da matéria-prima, que é a estrutura, e antes dos ajustes de
+          produção: a ordem em que a caixa é pensada — do que ela é feita antes
+          de quanto tempo leva para montar. */}
+      <ListaDeMateriais />
 
       {/* ── Ajustes avançados ──────────────────────────────────────────── */}
       <Accordion type="single" collapsible>

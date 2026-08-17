@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Enums\MaterialUnit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -39,6 +40,33 @@ class MaterialResource extends JsonResource
             // preços, mas não do preço de compra bruto nem da unidade de
             // negociação com o fornecedor — isso é informação de admin.
             'cost_per_m2' => $temArea ? round($this->costPerSquareMeter(), 4) : null,
+
+            /*
+             * As outras duas grandezas, pela MESMA razão do custo por m² acima.
+             *
+             * Um ímã custa por peça e uma espuma custa por metro cúbico — e sem
+             * esses números a calculadora não conseguia simular caixa rígida com
+             * ferragem ou berço. Ela nem oferecia os campos, o que escondia o
+             * buraco: motor, API e ficha técnica suportavam os três papéis, e a
+             * tela não tinha por onde informá-los.
+             *
+             * Cada um é null fora da sua unidade. É o mesmo contrato do m²: null
+             * quer dizer "esta grandeza não se aplica a este material", enquanto
+             * zero diria "é de graça".
+             */
+            /*
+             * `=== Piece` e não `! isAreaBased()`: espuma também não é área, e
+             * `costPerPiece()` a deixaria passar — devolvendo o preço do metro
+             * cúbico com rótulo de preço por peça, que é um número certo dando
+             * a resposta a outra pergunta.
+             */
+            'cost_per_piece' => $this->cost_unit === MaterialUnit::Piece
+                ? round($this->costPerPiece(), 4)
+                : null,
+
+            'cost_per_m3' => $this->cost_unit->isVolumetric()
+                ? round($this->costPerCubicMeter(), 4)
+                : null,
 
             /*
              * A bandeira que a interface consome para não oferecer um ímã onde

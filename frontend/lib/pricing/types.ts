@@ -73,6 +73,23 @@ export interface HardwareLine {
   quantity: number;
 }
 
+/**
+ * Uma linha da lista de materiais, do jeito que a API a recebe.
+ *
+ * `quantity` só faz sentido em ferragem — revestimento é área, e "quantos
+ * revestimentos" é uma pergunta sem resposta; berço é um só, com a grade
+ * descrita pelos `cradle_*`. Null nos dois casos, como a coluna do banco.
+ *
+ * Estrutura não entra: ela já é o `material_id` do orçamento.
+ */
+export interface ComponentInput {
+  /** Identidade só do cliente, para o React. Descartada pela API. */
+  id: string;
+  material_id: number;
+  role: Exclude<ComponentRole, "structure">;
+  quantity: number | null;
+}
+
 export interface Material {
   id: number;
   name: string;
@@ -87,6 +104,16 @@ export interface Material {
    * de zero precifica a caixa como se o material fosse de graça.
    */
   cost_per_m2: number | null;
+
+  /**
+   * As outras duas grandezas, normalizadas pelo backend como o m² acima.
+   *
+   * Ímã custa por peça; espuma, por metro cúbico. Cada um é null fora da sua
+   * unidade — null quer dizer "esta grandeza não se aplica", enquanto zero
+   * diria "é de graça".
+   */
+  cost_per_piece: number | null;
+  cost_per_m3: number | null;
 
   /** Falso em ferragem e em bloco. Filtra quem pode virar peça medida em mm. */
   is_area_based: boolean;
@@ -221,6 +248,31 @@ export interface QuoteSpecification {
 
   /** Berço de acomodação. Ausente ou null = caixa vazia. */
   cradle?: CradleSpec | null;
+
+  /**
+   * A lista de materiais como a API a aceita — identidade, não custo.
+   *
+   * Convive com os três campos acima porque eles têm públicos diferentes: o
+   * motor quer números resolvidos (R$/m², R$/peça), a API quer `material_id` e
+   * papel, e é ela que grava. A tradução é de mão única, de identidade para
+   * custo, e mora em `paraOMotor()` na store — mesma direção do servidor.
+   *
+   * O motor IGNORA este campo. Mandá-lo junto é o que faz `api.quotes.create`
+   * receber a lista sem um segundo objeto viajando ao lado.
+   */
+  components?: ComponentInput[];
+
+  /*
+   * Parâmetros de construção do berço, como o usuário os informa.
+   *
+   * Separados de `cradle` acima pelo mesmo motivo que no banco: descrevem a
+   * CONSTRUÇÃO e não o material. A mesma espuma serve a berços de alturas
+   * diferentes, e a grade 3×4 não é propriedade do papelão.
+   */
+  cradle_type?: CradleType | null;
+  cradle_rows?: number | null;
+  cradle_columns?: number | null;
+  cradle_height_ratio?: number | null;
 
   /**
    * Peças medidas à mão — só no modelo livre.

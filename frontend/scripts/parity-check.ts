@@ -88,6 +88,10 @@ function run(): number {
       type: "cardboard",
       type_label: "Papelão",
       cost_per_m2: testCase.material.cost_per_m2,
+      // A estrutura é sempre medida em área nos casos de paridade: peça e bloco
+      // entram como componentes, com custo próprio no caso de teste.
+      cost_per_piece: null,
+      cost_per_m3: null,
       is_area_based: true,
       default_waste_percent: 0,
       thickness_mm: testCase.material.thickness_mm,

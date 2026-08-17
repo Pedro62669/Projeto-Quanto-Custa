@@ -6,7 +6,14 @@ import { toast } from "sonner";
 
 import { api, type QuoteListItem } from "@/lib/api";
 import { mensagemDeErro } from "@/hooks/useApi";
-import type { BoxModel, CustomPartInput, Material, PricingMode } from "@/lib/pricing/types";
+import type {
+  BoxModel,
+  ComponentInput,
+  CradleType,
+  CustomPartInput,
+  Material,
+  PricingMode,
+} from "@/lib/pricing/types";
 import { useQuoteStore } from "@/store/useQuoteStore";
 
 /** O orçamento sendo reaberto, e em que modo. */
@@ -116,6 +123,25 @@ export function useReabrirOrcamento(pronto: boolean): Reabertura | null {
           production_minutes_per_unit: q.parameters.production_minutes_per_unit,
           profit_margin_percent: q.parameters.profit_margin_percent,
           pricing_mode: q.parameters.pricing_mode as PricingMode,
+
+          cradle_type: q.specification.cradle_type as CradleType | null,
+          cradle_rows: q.specification.cradle_rows,
+          cradle_columns: q.specification.cradle_columns,
+          cradle_height_ratio: q.specification.cradle_height_ratio,
+
+          /*
+           * A lista volta como IDENTIDADE. Os custos que o motor consome são
+           * derivados por `updateSpec` a partir do cadastro atual — reabrir uma
+           * simulação usa o preço de hoje, e é isso que se espera de uma
+           * simulação. O preço congelado do que foi vendido continua intacto no
+           * `pricing_snapshot` do orçamento original.
+           */
+          components: (q.components ?? []).map((c) => ({
+            id: crypto.randomUUID(),
+            material_id: c.material_id,
+            role: c.role as ComponentInput["role"],
+            quantity: c.quantity,
+          })),
 
           custom_parts: reconstruirPecas(q.custom_parts ?? [], materiais),
         });

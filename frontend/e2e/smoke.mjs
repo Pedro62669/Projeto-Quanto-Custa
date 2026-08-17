@@ -171,10 +171,24 @@ check("materiais carregam do servidor", materiaisNaTela > 0, `${materiaisNaTela}
  * (era o buraco que motivou esta fase — não havia como cadastrar insumo) e dá
  * ao plano de corte da ficha técnica o dado sem o qual ele não desenha nada.
  *
- * A primeira linha é a mesma que a calculadora seleciona: as duas listas vêm
- * ordenadas por nome do servidor.
+ * A linha escolhida espelha a regra de `materiaisParaPeca(…, "structure")`: o
+ * primeiro PAPELÃO, e não a primeira linha da tabela.
+ *
+ * As duas eram a mesma coisa enquanto o cadastro só tinha papel, e deixaram de
+ * ser por dois motivos somados. A API ordena por nome, então uma ferragem
+ * chamada "Ímã" passa à frente; e a calculadora, para a estrutura, prefere
+ * papelão a qualquer outro material medido em área.
+ *
+ * Editar a linha errada aqui é silencioso: a medida da folha vai para um
+ * material que o orçamento não usa, e o plano de corte da ficha técnica sai
+ * vazio algumas dezenas de linhas abaixo, sem nada explicando por quê.
  */
-await page.click("tbody tr:first-child button[aria-label^='Editar']");
+const linhaDaEstrutura = page
+  .locator("tbody tr")
+  .filter({ hasText: "Papelão" })
+  .first();
+
+await linhaDaEstrutura.locator("button[aria-label^='Editar']").click();
 await page.waitForSelector("text=Folha e fibra", { timeout: 20000 });
 
 await page.getByLabel("Largura da folha (mm)").fill("1000");
@@ -343,6 +357,66 @@ const precoInicial = await page.textContent(".font-mono.text-4xl");
 check("preço confirmado pelo servidor", /R\$/.test(precoInicial ?? ""), precoInicial?.trim());
 
 await page.screenshot({ path: `${OUT}/01-calculadora.png` });
+
+/*
+ * ── 5a. A lista de materiais ─────────────────────────────────────────────
+ *
+ * Uma caixa rígida tem papelão, revestimento, ferragem e berço. O motor
+ * precificava os quatro, a API os aceitava e a ficha técnica os listava — e a
+ * calculadora não tinha campo para nenhum: a cartonagem rígida só podia ser
+ * orçada como papelão nu.
+ *
+ * O check é o preço MUDAR ao entrar um ímã. Verificar que a linha apareceu na
+ * tela não provaria nada — o buraco não era visual, era o custo não chegar ao
+ * cálculo.
+ */
+check("a calculadora tem lista de materiais", (await page.locator("text=Lista de materiais").count()) > 0);
+
+const botaoFerragem = page.getByRole("button", { name: "Ferragem" });
+
+/*
+ * O botão nasce desabilitado quando não há material cotado por peça, e isso é
+ * correto — a empresa pode não usar ferragem nenhuma. O check se adapta em vez
+ * de exigir um cadastro que não é obrigatório.
+ */
+if (await botaoFerragem.isEnabled()) {
+  await botaoFerragem.click();
+  await esperaEmDia();
+
+  const comFerragem = await page.textContent(".font-mono.text-4xl");
+  check(
+    "ferragem entra no preço",
+    comFerragem !== precoInicial,
+    `${precoInicial?.trim()} → ${comFerragem?.trim()}`,
+  );
+
+  await page.getByLabel("Quantidade por caixa").fill("4");
+  await esperaEmDia();
+
+  const comQuatro = await page.textContent(".font-mono.text-4xl");
+  check(
+    "a quantidade de ferragem multiplica",
+    comQuatro !== comFerragem,
+    `1 un → 4 un: ${comFerragem?.trim()} → ${comQuatro?.trim()}`,
+  );
+
+  await page.screenshot({ path: `${OUT}/01b-lista-materiais.png` });
+
+  // Volta ao estado anterior: os checks seguintes comparam preços a partir do
+  // orçamento sem ferragem, e deixar o ímã aqui os faria medir outra caixa.
+  await page.click("button[aria-label='Remover ferragem']");
+  await esperaEmDia();
+
+  check(
+    "remover a ferragem devolve o preço original",
+    (await page.textContent(".font-mono.text-4xl")) === precoInicial,
+  );
+} else {
+  check(
+    "sem material por peça, o botão de ferragem explica por quê",
+    Boolean(await botaoFerragem.getAttribute("title")),
+  );
+}
 
 // ── 5b. O painel: três colunas, cabeçalho e composição ───────────────────
 //
@@ -872,8 +946,26 @@ await esperaEmDia();
 
 // ── 9. Salvar orçamento ──────────────────────────────────────────────────
 await page.click('button:has-text("Salvar orçamento")');
-await page.waitForSelector("#client_name", { timeout: 10000 });
-await page.fill("#client_name", "Cliente E2E");
+
+/*
+ * O cliente entra pelo SELETOR, não por um campo de texto.
+ *
+ * O orçamento guardava o cliente como texto livre, e o cadastro de clientes não
+ * servia para nada: "Papelaria Silva" digitada três vezes virava três clientes.
+ * Agora a busca é sobre os cadastrados — e digitar um nome fora da lista
+ * continua valendo, que é o caminho da venda fechada com um nome e um WhatsApp.
+ *
+ * Este check exercita justamente esse segundo caminho: nome novo, sem cadastro.
+ */
+await page.waitForSelector("#busca-cliente", { timeout: 10000 });
+await page.fill("#busca-cliente", "Cliente E2E");
+await page.click('button:has-text("sem cadastrar")');
+
+check(
+  "o seletor aceita cliente avulso",
+  (await page.locator("text=avulso, sem cadastro").count()) > 0,
+);
+
 await page.fill("#client_email", "e2e@teste.com");
 await page.screenshot({ path: `${OUT}/03-dialog-salvar.png` });
 await page.click('button[type="submit"]:has-text("Salvar")');

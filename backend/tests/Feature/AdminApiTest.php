@@ -223,6 +223,29 @@ class AdminApiTest extends TestCase
         $this->assertNull($porNome['Ima de neodimio']['cost_per_m2']);
         $this->assertFalse($porNome['Ima de neodimio']['is_area_based']);
         $this->assertNull($porNome['Espuma EVA']['cost_per_m2']);
+
+        /*
+         * Cada grandeza no seu campo — o que destravou a lista de materiais na
+         * calculadora.
+         *
+         * Sem esses dois números o preview local não conseguia precificar
+         * ferragem nem berço, e a tela simplesmente não oferecia os campos: o
+         * motor, a API e a ficha técnica suportavam os quatro papéis, e a
+         * cartonagem rígida só podia ser orçada como papelão nu.
+         */
+        $this->assertSame(0.85, $porNome['Ima de neodimio']['cost_per_piece']);
+        // `(float)` porque `round()` de um valor inteiro sai como int no JSON.
+        $this->assertSame(320.0, (float) $porNome['Espuma EVA']['cost_per_m3']);
+
+        /*
+         * E cada um é null fora da sua unidade. A espuma NÃO tem preço por peça
+         * — `costPerPiece()` a deixaria passar, porque ela só recusa material de
+         * área, e devolveria o preço do metro cúbico com rótulo de peça: um
+         * número certo respondendo a outra pergunta.
+         */
+        $this->assertNull($porNome['Espuma EVA']['cost_per_piece']);
+        $this->assertNull($porNome['Ima de neodimio']['cost_per_m3']);
+        $this->assertNull($porNome['Papelão cinza 1,9mm']['cost_per_piece']);
     }
 
     /* ── Custos fixos ──────────────────────────────────────────────────── */
