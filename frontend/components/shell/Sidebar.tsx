@@ -64,11 +64,21 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                   className={cn(
                     "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
                     ativo
-                      ? "bg-brand font-medium text-white"
+                      ? "bg-foreground font-medium text-white"
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                   )}
                 >
-                  <item.icon className="size-4 shrink-0" />
+                  {/*
+                    O ícone carrega a cor da marca; o rótulo fica branco.
+
+                    A divisão de trabalho é essa: o branco garante a leitura
+                    (5,7:1 sobre o preto), e o azul marca o lugar sem disputar
+                    com o texto. Pintar os dois de azul foi a versão que ficou
+                    apagada — o rótulo é o que se lê, e ele é pequeno.
+                  */}
+                  <item.icon
+                    className={cn("size-4 shrink-0", ativo && "text-brand-on-dark")}
+                  />
                   {item.label}
                 </Link>
               );
@@ -90,11 +100,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             className={cn(
               "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
               estaAtivo("/plataforma", caminho)
-                ? "bg-brand font-medium text-white"
+                ? "bg-foreground font-medium text-white"
                 : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
             )}
           >
-            <ShieldCheck className="size-4 shrink-0" />
+            <ShieldCheck
+              className={cn(
+                "size-4 shrink-0",
+                estaAtivo("/plataforma", caminho) && "text-brand-on-dark",
+              )}
+            />
             Plataforma
           </Link>
         </div>

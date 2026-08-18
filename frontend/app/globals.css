@@ -64,6 +64,20 @@
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
 
+  /*
+   * A marca sobre superfície ESCURA — e não sobre o tema escuro.
+   *
+   * A distinção parece sutil e não é. `--brand-strong` clareia conforme o TEMA,
+   * porque ele assume que o fundo é o do tema. Mas o item ativo da barra
+   * lateral pinta um retângulo preto mesmo no tema claro: ali o fundo não é o
+   * do tema, é o do componente, e o token que segue o tema devolveria o azul
+   * escuro sobre preto — 3,94:1, ilegível.
+   *
+   * Este não muda entre temas, justamente porque a superfície dele também não
+   * muda: preto é preto nos dois.
+   */
+  --color-brand-on-dark: var(--brand-on-dark);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -109,6 +123,9 @@
   /* #006dbf. No claro a mesma cor serve de fundo e de texto: 5,33:1 nos dois. */
   --brand: oklch(0.528 0.152 250.7);
   --brand-strong: oklch(0.528 0.152 250.7);
+
+  /* #3aa0ea — sobre preto dá ~8:1. Igual nos dois temas; ver o comentário acima. */
+  --brand-on-dark: oklch(0.681 0.143 244.5);
 
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -164,6 +181,7 @@
    */
   --brand: oklch(0.528 0.152 250.7);
   --brand-strong: oklch(0.681 0.143 244.5);
+  --brand-on-dark: oklch(0.681 0.143 244.5);
 
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
