@@ -48,6 +48,22 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  /*
+   * A cor da marca — #006dbf.
+   *
+   * Registrada como token próprio, e NÃO como `--primary`. O primário é
+   * quase-preto de propósito: quem manda na tela é o preço, e o botão que grava
+   * o orçamento não disputa atenção com ele. O azul é sinalização — onde estou,
+   * o que é clicável, o que está em foco.
+   *
+   * `--brand-strong` existe porque a mesma cor não serve às duas funções: no
+   * fundo escuro o azul de marca dá 2,88:1 contra o fundo, que reprova em AA.
+   * Ele continua servindo de PREENCHIMENTO (com texto branco por cima, 5,33:1)
+   * e o `--strong`, mais claro, é o que vira TEXTO e ícone.
+   */
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -89,9 +105,22 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+
+  /* #006dbf. No claro a mesma cor serve de fundo e de texto: 5,33:1 nos dois. */
+  --brand: oklch(0.528 0.152 250.7);
+  --brand-strong: oklch(0.528 0.152 250.7);
+
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+
+  /*
+   * O anel de foco passa a ser a marca.
+   *
+   * Era cinza — visível, e mudo. O foco do teclado é o único momento em que a
+   * interface responde "estou aqui", e é onde a cor da empresa trabalha em vez
+   * de enfeitar.
+   */
+  --ring: oklch(0.528 0.152 250.7);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -124,9 +153,23 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+
+  /*
+   * No escuro as duas se separam.
+   *
+   * `--brand` continua sendo #006dbf porque como PREENCHIMENTO ele funciona:
+   * texto branco por cima dá 5,33:1 independente do tema. Já como TEXTO sobre o
+   * fundo escuro ele cai para 2,88:1 e reprova — daí `--brand-strong` clarear
+   * para #3aa0ea, que devolve 5,40:1.
+   */
+  --brand: oklch(0.528 0.152 250.7);
+  --brand-strong: oklch(0.681 0.143 244.5);
+
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+
+  /* O anel acompanha o texto, não o preenchimento: ele É uma linha fina. */
+  --ring: oklch(0.681 0.143 244.5);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

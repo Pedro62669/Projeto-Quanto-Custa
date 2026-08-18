@@ -73,7 +73,7 @@ export default function ProdutosPage() {
             {p.quote ? (
               <Link
                 href={`/orcamentos/${p.quote.id}`}
-                className="truncate font-mono text-xs text-muted-foreground hover:underline"
+                className="truncate font-mono text-xs text-brand-strong hover:underline"
               >
                 {p.quote.reference}
               </Link>

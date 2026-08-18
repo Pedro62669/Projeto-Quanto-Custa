@@ -64,7 +64,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                   className={cn(
                     "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
                     ativo
-                      ? "bg-muted font-medium text-foreground"
+                      ? "bg-brand/10 font-medium text-brand-strong"
                       : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                   )}
                 >
@@ -90,7 +90,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             className={cn(
               "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
               estaAtivo("/plataforma", caminho)
-                ? "bg-muted font-medium text-foreground"
+                ? "bg-brand/10 font-medium text-brand-strong"
                 : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
             )}
           >

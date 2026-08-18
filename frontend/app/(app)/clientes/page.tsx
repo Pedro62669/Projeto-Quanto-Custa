@@ -47,7 +47,7 @@ export default function ClientesPage() {
                     ganhou `client_id`. */}
                 <Link
                   href={`/clientes/${c.id}`}
-                  className="block truncate font-medium hover:underline"
+                  className="block truncate font-medium text-brand-strong hover:underline"
                 >
                   {c.name}
                 </Link>

@@ -151,7 +151,7 @@ export default function ClientePage() {
                     <TableCell>
                       <Link
                         href={`/orcamentos/${q.id}`}
-                        className="font-mono text-sm font-medium hover:underline"
+                        className="font-mono text-sm font-medium text-brand-strong hover:underline"
                       >
                         {q.reference}
                       </Link>
