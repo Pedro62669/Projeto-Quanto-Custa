@@ -35,7 +35,23 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      {/*
+        `suppressHydrationWarning` por causa das EXTENSÕES do navegador, não de
+        nada que este projeto renderize.
+
+        ColorZilla injeta `cz-shortcut-listen="true"` no body antes de o React
+        hidratar; Grammarly e LastPass fazem o mesmo com atributos próprios. O
+        servidor manda um body e o React encontra outro, e o aviso aponta para
+        cá — para uma linha que não tem defeito nenhum.
+
+        O escopo é o que torna isso seguro: a supressão vale para os atributos e
+        o texto DESTE elemento, e não desce para os filhos. Uma divergência de
+        verdade lá dentro — data formatada em fuso diferente, `Math.random()` na
+        renderização — continua sendo denunciada normalmente. E a suíte e2e tem
+        um check de hidratação que roda num navegador limpo, sem extensão: é ele
+        que continua vigiando o que esta linha silencia aqui.
+      */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         {children}
 
         {/*
