@@ -45,15 +45,28 @@ export function TabelaDePrecos({ vitrine }: { vitrine: Vitrine | null }) {
             key={plano.tipo}
             className={cn(
               "flex flex-col rounded-xl border p-6",
+              /*
+                O plano recomendado se separa por COR, não só por peso.
+
+                Borda preta contra bordas cinzas é diferença de intensidade, e o
+                olho lê isso como "mais forte" — não como "este". Em azul ele
+                passa a ser reconhecido pela marca, na única seção da página em
+                que a decisão de fato acontece.
+              */
               destacado
-                ? "border-foreground/80 bg-card shadow-md ring-1 ring-foreground/10"
+                ? "border-brand bg-card shadow-md ring-1 ring-brand/20"
                 : "border-border bg-card",
             )}
           >
             <div className="flex items-center justify-between gap-2">
               <h3 className="font-medium">{plano.rotulo}</h3>
+              {/*
+                O selo acompanha a borda: preenchido com a marca e texto branco
+                (5,33:1), e não `--brand-on-inverted` — aqui o fundo é o AZUL,
+                não a superfície invertida.
+              */}
               {destacado && (
-                <span className="rounded-full bg-primary px-2.5 py-0.5 text-[0.7rem] font-medium text-primary-foreground">
+                <span className="rounded-full bg-brand px-2.5 py-0.5 text-[0.7rem] font-medium text-white">
                   Sem limites
                 </span>
               )}
@@ -85,11 +98,11 @@ export function TabelaDePrecos({ vitrine }: { vitrine: Vitrine | null }) {
                 por preço — ver PlanType, onde só existem os três tetos acima.
               */}
               <li className="flex items-start gap-2 text-muted-foreground">
-                <Check className="mt-0.5 size-4 shrink-0" aria-hidden />
+                <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
                 <span>Todos os recursos, inclusive no gratuito</span>
               </li>
               <li className="flex items-start gap-2 text-muted-foreground">
-                <Check className="mt-0.5 size-4 shrink-0" aria-hidden />
+                <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
                 <span>Usuários da equipe sem cobrança por pessoa</span>
               </li>
             </ul>
@@ -134,7 +147,7 @@ function ItemDeCota({
 }) {
   return (
     <li className="flex items-start gap-2">
-      <Check className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
       <span>
         <strong className="font-medium tabular-nums">
           {valor === null ? semTeto : valor.toLocaleString("pt-BR")}

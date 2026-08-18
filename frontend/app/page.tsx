@@ -110,7 +110,7 @@ function Heroi({ dias }: { dias: number | null }) {
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link href="/cadastro" className={cn(ESTILO_CTA, "h-12 px-6 text-base")}>
               Começar grátis
-              <ArrowRight className="size-4" aria-hidden />
+              <ArrowRight className="size-4 text-brand-on-inverted" aria-hidden />
             </Link>
             <a href="#como-funciona" className={cn(ESTILO_CTA_SECUNDARIO, "h-12 px-6 text-base")}>
               Ver como funciona
@@ -171,7 +171,7 @@ function ContasQueAPlanilhaErra() {
         <div className="mt-10 grid gap-8 md:grid-cols-3">
           {contas.map((conta, indice) => (
             <div key={conta.titulo}>
-              <span className="font-mono text-sm text-muted-foreground tabular-nums">
+              <span className="font-mono text-sm text-brand tabular-nums">
                 {String(indice + 1).padStart(2, "0")}
               </span>
               <h3 className="mt-2 font-medium leading-snug">{conta.titulo}</h3>
@@ -250,7 +250,7 @@ function Recursos() {
         <div className="mt-10 grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-4">
           {recursos.map((recurso) => (
             <div key={recurso.titulo}>
-              <recurso.icone className="size-5 text-foreground" aria-hidden />
+              <recurso.icone className="size-5 text-brand" aria-hidden />
               <h3 className="mt-3 font-medium leading-snug">{recurso.titulo}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 {recurso.texto}
@@ -298,7 +298,8 @@ function ComoFunciona() {
         <ol className="mt-10 grid gap-6 md:grid-cols-3">
           {passos.map((passo, indice) => (
             <li key={passo.titulo} className="rounded-xl border border-border bg-card p-6">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-primary font-mono text-sm text-primary-foreground tabular-nums">
+              {/* Quadrado preto, número azul — a mesma regra da logo. */}
+              <span className="flex size-8 items-center justify-center rounded-lg bg-primary font-mono text-sm text-brand-on-inverted tabular-nums">
                 {indice + 1}
               </span>
               <h3 className="mt-4 font-medium">{passo.titulo}</h3>
@@ -409,7 +410,7 @@ function Fechamento({ dias }: { dias: number | null }) {
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link href="/cadastro" className={cn(ESTILO_CTA, "h-12 px-7 text-base")}>
             Criar conta grátis
-            <ArrowRight className="size-4" aria-hidden />
+            <ArrowRight className="size-4 text-brand-on-inverted" aria-hidden />
           </Link>
           <Link href="/login" className={cn(ESTILO_CTA_SECUNDARIO, "h-12 px-7 text-base")}>
             Já tenho conta
