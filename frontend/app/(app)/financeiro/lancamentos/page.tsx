@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -140,25 +140,37 @@ export default function LancamentosPage() {
     },
     {
       header: "",
-      className: "w-12 text-right",
+      className: "w-20 text-right",
       render: (t) => (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Excluir ${t.description}`}
-          className="text-muted-foreground hover:text-destructive"
-          onClick={async () => {
-            try {
-              await api.finance.transactions.remove(t.id);
-              toast.success("Lançamento excluído");
-              lista.refetch();
-            } catch (erro) {
-              toast.error(mensagemDeErro(erro));
-            }
-          }}
-        >
-          <Trash2 />
-        </Button>
+        <div className="flex items-center justify-end gap-0.5">
+          {/*
+            Corrigir, em vez de apagar e relançar.
+
+            A rota nem existia: errar o valor custava o registro inteiro — a
+            data original e a numeração das parcelas iam junto. O servidor
+            recusa quando há parcela baixada, porque conciliação feita não se
+            reescreve.
+          */}
+          <CorrigirLancamento lancamento={t} onSalvo={lista.refetch} />
+
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Excluir ${t.description}`}
+            className="text-muted-foreground hover:text-destructive"
+            onClick={async () => {
+              try {
+                await api.finance.transactions.remove(t.id);
+                toast.success("Lançamento excluído");
+                lista.refetch();
+              } catch (erro) {
+                toast.error(mensagemDeErro(erro));
+              }
+            }}
+          >
+            <Trash2 />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -431,6 +443,144 @@ function NovoLancamento({
             <Button type="submit" disabled={salvando}>
               {salvando && <Loader2 className="size-4 animate-spin" />}
               Registrar
+            </Button>
+          </SheetFooter>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/**
+ * Corrigir um lançamento já feito.
+ *
+ * O que se corrige é a DIGITAÇÃO: valor, descrição, data. Tipo e categoria não
+ * aparecem aqui de propósito — trocar entrada por saída inverte o sinal do mês
+ * inteiro, e trocar a categoria move dinheiro entre relatórios. As duas coisas
+ * são um lançamento diferente, não uma correção, e para isso existe excluir e
+ * relançar, que deixa rastro.
+ *
+ * O servidor recusa quando há parcela baixada: conciliação feita é dinheiro
+ * conferido contra o extrato, e reescrever por cima deixaria o caixa dizendo um
+ * número que a conciliação já provou ser outro. A mensagem de erro indica o
+ * caminho — estornar a baixa primeiro.
+ */
+function CorrigirLancamento({
+  lancamento,
+  onSalvo,
+}: {
+  lancamento: Transaction;
+  onSalvo: () => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erros, setErros] = useState<FieldErrors>({});
+
+  const [form, setForm] = useState({
+    amount: lancamento.amount as number | null,
+    description: lancamento.description,
+    transaction_date: lancamento.transaction_date.slice(0, 10),
+  });
+
+  async function salvar(evento: React.FormEvent) {
+    evento.preventDefault();
+    setSalvando(true);
+    setErros({});
+
+    try {
+      await api.finance.transactions.update(lancamento.id, {
+        ...form,
+        amount: form.amount ?? 0,
+      });
+
+      toast.success("Lançamento corrigido", {
+        description: "As parcelas foram redistribuídas pelo novo valor.",
+      });
+
+      setAberto(false);
+      onSalvo();
+    } catch (erro) {
+      if (erro instanceof ApiError) {
+        setErros(erro.errors);
+        if (Object.keys(erro.errors).length === 0) toast.error(erro.message);
+      } else {
+        toast.error(mensagemDeErro(erro));
+      }
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Sheet open={aberto} onOpenChange={setAberto}>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Corrigir ${lancamento.description}`}
+        className="text-muted-foreground"
+        onClick={() => setAberto(true)}
+      >
+        <Pencil />
+      </Button>
+
+      <SheetContent>
+        <form onSubmit={salvar} className="flex h-full flex-col">
+          <SheetHeader>
+            <SheetTitle>Corrigir lançamento</SheetTitle>
+            <SheetDescription>
+              Valor, descrição e data. Tipo e categoria não mudam — para isso,
+              exclua e relance.
+            </SheetDescription>
+          </SheetHeader>
+
+          <SheetBody className="space-y-4">
+            <FormError message={erros.amount?.[0] ?? null} />
+
+            <NumberField
+              label="Valor"
+              name="amount"
+              value={form.amount}
+              onChange={(v) => setForm({ ...form, amount: v })}
+              errors={erros}
+              min={0.01}
+            />
+
+            <TextField
+              label="Descrição"
+              name="description"
+              required
+              value={form.description}
+              onChange={(v) => setForm({ ...form, description: v })}
+              errors={erros}
+            />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="correcao-data" className="text-xs">
+                Data
+              </Label>
+              <Input
+                id="correcao-data"
+                type="date"
+                value={form.transaction_date}
+                onChange={(e) =>
+                  setForm({ ...form, transaction_date: e.target.value })
+                }
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Se este lançamento tiver parcela já baixada, o servidor recusa a
+              correção — estorne a baixa em Parcelas antes.
+            </p>
+          </SheetBody>
+
+          <SheetFooter>
+            <Button type="button" variant="ghost" onClick={() => setAberto(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={salvando}>
+              {salvando && <Loader2 className="size-4 animate-spin" />}
+              Salvar correção
             </Button>
           </SheetFooter>
         </form>

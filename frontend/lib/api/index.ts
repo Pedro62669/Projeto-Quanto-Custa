@@ -354,7 +354,36 @@ export const api = {
         `/financial/dashboard${query({ month, year })}`,
       ).then((r) => r.data),
 
-    transactions: crud<Transaction, TransactionPayload>("/transactions"),
+    transactions: {
+      ...crud<Transaction, TransactionPayload>("/transactions"),
+
+      /**
+       * Corrigir um lançamento — valor, descrição, data e contraparte.
+       *
+       * Assinatura PRÓPRIA, mais estreita que a da fábrica de CRUD, porque o
+       * servidor aceita menos do que aceita na criação: tipo e categoria não se
+       * editam. Trocar entrada por saída inverte o sinal do mês inteiro, e
+       * trocar a categoria move dinheiro entre relatórios — as duas coisas são
+       * um lançamento diferente, não uma correção.
+       *
+       * A rota `PUT` também é nova. Antes dela esta função existia assim mesmo,
+       * gerada pela fábrica para todo recurso, e apontava para um endpoint que
+       * não estava registrado: 405 para quem a chamasse.
+       */
+      update: (
+        id: number,
+        payload: Partial<
+          Pick<
+            TransactionPayload,
+            "amount" | "description" | "transaction_date" | "client_id" | "supplier_id"
+          >
+        >,
+      ) =>
+        request<{ data: Transaction }>(`/transactions/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        }).then((r) => r.data),
+    },
     installments: crud<Installment>("/installments"),
 
     settle: (id: number, paymentDate?: string) =>

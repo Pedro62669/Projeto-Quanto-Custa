@@ -252,8 +252,14 @@ Route::middleware(['auth:sanctum', EnsureSubscriptionIsActive::class])->group(fu
     // baixa o estoque numa transação só.
     Route::post('products/{product}/sell', [ProductController::class, 'sell']);
 
+    /*
+     * `update` entrou depois: o lançamento não tinha correção, e errar o valor
+     * obrigava a apagar e relançar — perdendo a data original e a numeração das
+     * parcelas. A fábrica de CRUD do frontend já gerava a chamada, que apontava
+     * para uma rota inexistente e devolvia 405.
+     */
     Route::apiResource('transactions', TransactionController::class)
-        ->only(['index', 'store', 'show', 'destroy']);
+        ->only(['index', 'store', 'show', 'update', 'destroy']);
 
     Route::get('installments', [InstallmentController::class, 'index']);
     Route::post('installments/{installment}/settle', [InstallmentController::class, 'settle']);

@@ -138,6 +138,85 @@ class TransactionController extends Controller
      * precisa sobreviver é o registro de ACESSO da exclusão, e disso cuida a
      * auditoria do Marco Civil.
      */
+    /**
+     * PUT /api/transactions/{transaction} — corrigir o lançamento.
+     *
+     * A rota não existia: o apiResource registrava só index, store, show e
+     * destroy. Errou o valor, apagava e relançava — perdendo a data original e
+     * a numeração das parcelas. Pior, `api.finance.transactions.update` EXISTIA
+     * no cliente, porque a fábrica de CRUD a gera para todo recurso, e apontava
+     * para uma rota inexistente: 405 para quem a usasse.
+     *
+     * O que NÃO se edita aqui: tipo e categoria. Trocar uma entrada por saída
+     * inverte o sinal do mês inteiro, e trocar a categoria move dinheiro entre
+     * relatórios — as duas coisas são um lançamento diferente, não uma correção.
+     * Para isso existe excluir e relançar, que deixa rastro.
+     */
+    public function update(Request $request, Transaction $transaction): JsonResponse
+    {
+        /*
+         * Conciliação feita não se reescreve.
+         *
+         * Uma parcela baixada é dinheiro que entrou ou saiu da conta, conferido
+         * contra o extrato. Mudar o valor do lançamento por cima disso deixaria
+         * o caixa dizendo um número que a conciliação já provou ser outro — e
+         * em silêncio, porque a parcela continuaria marcada como paga.
+         *
+         * Quem precisa corrigir estorna a baixa primeiro; o estorno fica
+         * registrado, a reescrita não ficaria.
+         */
+        if ($transaction->installments()->completed()->exists()) {
+            return response()->json([
+                'message' => 'Lançamento com parcela baixada não muda de valor.',
+                'errors' => ['amount' => [
+                    'Estorne a baixa no controle de parcelas antes de corrigir o '
+                    .'valor. A conciliação já contou este dinheiro.',
+                ]],
+            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $validated = $request->validate([
+            'amount' => ['sometimes', 'numeric', 'min:0.01', 'max:99999999'],
+            'description' => ['sometimes', 'string', 'max:255'],
+            'transaction_date' => ['sometimes', 'date'],
+
+            // Sem `exists`, como no store: a regra passa por fora do
+            // TenantScope e aceitaria a contraparte da empresa vizinha.
+            'client_id' => ['sometimes', 'nullable', 'integer'],
+            'supplier_id' => ['sometimes', 'nullable', 'integer'],
+        ]);
+
+        $client = isset($validated['client_id'])
+            ? Client::query()->findOrFail($validated['client_id'])
+            : null;
+
+        $supplier = isset($validated['supplier_id'])
+            ? Supplier::query()->findOrFail($validated['supplier_id'])
+            : null;
+
+        $transaction->update([
+            ...$validated,
+            ...(array_key_exists('client_id', $validated) ? ['client_id' => $client?->id] : []),
+            ...(array_key_exists('supplier_id', $validated) ? ['supplier_id' => $supplier?->id] : []),
+        ]);
+
+        /*
+         * As parcelas acompanham o novo valor.
+         *
+         * Sem isto o lançamento diria R$ 500 e as parcelas somariam R$ 800 — e
+         * o painel financeiro, que lê as parcelas, mostraria um número que a
+         * lista de lançamentos contradiz. Só o VALOR é redistribuído: a
+         * quantidade e os vencimentos foram combinados com o cliente.
+         */
+        if (array_key_exists('amount', $validated)) {
+            $this->financial->redistribute($transaction->fresh());
+        }
+
+        return response()->json([
+            'data' => $transaction->fresh()->load(['installments', 'client:id,name', 'supplier:id,name']),
+        ]);
+    }
+
     public function destroy(Transaction $transaction): JsonResponse
     {
         $transaction->delete();

@@ -92,6 +92,43 @@ class FinancialEngine
     }
 
     /**
+     * Redistribui o valor entre as parcelas que já existem.
+     *
+     * Chamado quando um lançamento é corrigido. Sem isto o lançamento diria
+     * R$ 500 e as parcelas somariam R$ 800 — e o painel financeiro, que lê as
+     * PARCELAS, mostraria um número que a lista de lançamentos contradiz. Duas
+     * telas do mesmo dinheiro discordando é o tipo de erro que ninguém
+     * investiga porque cada uma parece certa sozinha.
+     *
+     * Só o valor muda. A quantidade de parcelas e os vencimentos foram
+     * combinados com o cliente, e recriá-los transformaria uma correção de
+     * digitação numa renegociação que ninguém pediu.
+     *
+     * Mesma aritmética em CENTAVOS de `generateInstallments`, e pela mesma
+     * razão: a sobra da divisão vai para a última parcela, para que a soma feche
+     * exatamente com o total.
+     */
+    public function redistribute(Transaction $transaction): void
+    {
+        $parcelas = $transaction->installments()->orderBy('installment_number')->get();
+
+        if ($parcelas->isEmpty()) {
+            return;
+        }
+
+        $total = $parcelas->count();
+        $totalCentavos = (int) round($transaction->amount * 100);
+        $base = intdiv($totalCentavos, $total);
+        $sobra = $totalCentavos - ($base * $total);
+
+        foreach ($parcelas as $indice => $parcela) {
+            $ultima = $indice === $total - 1;
+
+            $parcela->update(['amount' => ($base + ($ultima ? $sobra : 0)) / 100]);
+        }
+    }
+
+    /**
      * As métricas do painel para um mês.
      *
      * @return array<string, mixed>
