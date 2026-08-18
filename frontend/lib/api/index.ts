@@ -209,6 +209,19 @@ export const api = {
         body: JSON.stringify(payload),
       }),
 
+    /**
+     * Publica a caixa aprovada no catálogo de produtos.
+     *
+     * Idempotente: clicar duas vezes devolve a mesma entrada, porque duas linhas
+     * do mesmo modelo teriam estoques separados e a segunda venda baixaria o
+     * errado. Só orçamento aprovado — o catálogo vende pelo preço que o cliente
+     * aceitou, e rascunho é simulação.
+     */
+    publishProduct: (id: number) =>
+      request<{ data: Product }>(`/quotes/${id}/publish-product`, {
+        method: "POST",
+      }).then((r) => r.data),
+
     promoteClient: (id: number) =>
       request<{ data: Client; message?: string }>(`/quotes/${id}/promote-client`, {
         method: "POST",
@@ -233,7 +246,35 @@ export const api = {
   materials: crud<MaterialAdmin, MaterialPayload>("/admin/materials"),
   clients: crud<Client>("/clients"),
   suppliers: crud<Supplier, SupplierPayload>("/suppliers"),
-  products: crud<Product>("/products"),
+
+  products: {
+    ...crud<Product>("/products"),
+
+    /**
+     * A venda que liga o catálogo ao caixa.
+     *
+     * Lança a entrada, gera as parcelas e baixa o estoque numa transação de
+     * banco só. Antes disto vender eram duas ações separadas — lançar no
+     * financeiro e editar o cadastro — que ninguém garantia acontecerem juntas.
+     *
+     * `unit_price` ausente usa o preço do cadastro; informá-lo cobre o desconto
+     * de balcão sem editar o produto, o que mudaria todas as vendas seguintes.
+     */
+    sell: (
+      id: number,
+      payload: {
+        quantity: number;
+        unit_price?: number;
+        client_id?: number;
+        installments?: number;
+        first_due_date?: string;
+      },
+    ) =>
+      request<{ data: { product: Product; transaction: Transaction } }>(
+        `/products/${id}/sell`,
+        { method: "POST", body: JSON.stringify(payload) },
+      ).then((r) => r.data),
+  },
 
   /* ── Empresa ─────────────────────────────────────────────────────────── */
   company: {

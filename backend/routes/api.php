@@ -239,6 +239,19 @@ Route::middleware(['auth:sanctum', EnsureSubscriptionIsActive::class])->group(fu
     Route::post('quotes/{quote}/approve', QuoteApprovalController::class);
     Route::post('quotes/{quote}/promote-client', [QuoteApprovalController::class, 'promoteClient']);
 
+    /*
+     * A caixa aprovada vira produto de catálogo.
+     *
+     * Fica junto da aprovação, e não em `products`, porque é o ORÇAMENTO que dá
+     * origem: o preço publicado é o que o cliente aceitou, e a regra que o
+     * protege ("só aprovado") é sobre o estado da proposta.
+     */
+    Route::post('quotes/{quote}/publish-product', [QuoteApprovalController::class, 'publishProduct']);
+
+    // A venda que liga o catálogo ao caixa: lança a entrada, gera as parcelas e
+    // baixa o estoque numa transação só.
+    Route::post('products/{product}/sell', [ProductController::class, 'sell']);
+
     Route::apiResource('transactions', TransactionController::class)
         ->only(['index', 'store', 'show', 'destroy']);
 

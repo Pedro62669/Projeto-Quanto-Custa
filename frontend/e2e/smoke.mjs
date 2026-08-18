@@ -1001,6 +1001,10 @@ await page.waitForURL(/\/orcamentos\/\d+$/, { timeout: 30000 });
 await page.waitForSelector("text=Composição por unidade", { timeout: 30000 });
 check("o detalhe do orçamento abre", page.url().includes("/orcamentos/"), page.url());
 
+// Guardado para o trecho do catálogo: a ficha técnica navega para fora e a
+// volta precisa saber a que orçamento retornar.
+const idDoOrcamento = page.url().match(/\/orcamentos\/(\d+)/)?.[1] ?? "";
+
 await page.screenshot({ path: `${OUT}/09-orcamento-detalhe.png`, fullPage: true });
 
 // ── 9b. Ficha técnica: o plano de corte enfim tem tela ───────────────────
@@ -1024,6 +1028,104 @@ check(
 );
 
 await page.screenshot({ path: `${OUT}/10-ficha-tecnica.png`, fullPage: true });
+
+/*
+ * ── 9b. Do orçamento ao catálogo, e do catálogo ao caixa ─────────────────
+ *
+ * Produtos era uma ilha: guardava custo, preço, estoque e margem sem relação
+ * nenhuma com orçamento, cliente ou caixa. O sinal de que a ligação era
+ * prevista e nunca construída está em `TransactionCategory::ProductSale`, que
+ * existia desde a Fase 4 sem nunca ter sido escrito por linha nenhuma.
+ *
+ * Este trecho percorre as duas pontas novas de uma vez: aprovar → publicar →
+ * vender → conferir no financeiro. É o caminho inteiro, e ele só existe porque
+ * as três telas passaram a se conhecer.
+ */
+await page.goto(`${BASE}/orcamentos/${idDoOrcamento}`, {
+  waitUntil: "domcontentloaded",
+  timeout: 60000,
+});
+await page.waitForSelector("text=Composição por unidade", { timeout: 30000 });
+
+// Aprovar é o que destrava a publicação: o catálogo vende pelo preço que o
+// cliente aceitou, e rascunho é simulação.
+await page.getByRole("button", { name: "Aprovar", exact: true }).click();
+await page.waitForSelector('button:has-text("Aprovar e lançar")', { timeout: 20000 });
+await page.click('button:has-text("Aprovar e lançar")');
+
+await page.waitForSelector('button:has-text("Publicar no catálogo")', { timeout: 30000 });
+check("orçamento aprovado oferece publicar no catálogo", true);
+
+await page.click('button:has-text("Publicar no catálogo")');
+await page.waitForSelector("text=está no catálogo", { timeout: 30000 });
+check("a caixa aprovada vira produto de catálogo", true);
+
+// A caixa publicada mora na aba própria — mercadoria e caixa pronta respondem
+// perguntas diferentes e nascem de lugares diferentes.
+await page.click("nav[aria-label='Navegação principal'] a[href='/produtos']");
+await page.waitForURL("**/produtos", { timeout: 30000 });
+await page.click('button:has-text("Caixas prontas")');
+await page.waitForSelector("tbody tr", { timeout: 30000 });
+
+check(
+  "a caixa aparece no catálogo com a proposta de origem",
+  (await page.locator(`tbody >> text=${referencia}`).count()) > 0,
+  referencia,
+);
+
+// Publicar não produz caixa nenhuma: o lote foi entregue a quem o encomendou.
+check(
+  "publicar não semeia estoque — não há o que vender ainda",
+  await page.locator("tbody tr button[aria-label^='Vender']").first().isDisabled(),
+);
+
+await page.screenshot({ path: `${OUT}/11-catalogo.png`, fullPage: true });
+
+/*
+ * A venda, na aba de mercadorias.
+ *
+ * O check é o ESTOQUE baixar e o lançamento aparecer no caixa — não que o
+ * diálogo tenha fechado. Vender eram duas ações separadas que ninguém garantia
+ * acontecerem juntas; o que esta fase entrega é que sejam uma só.
+ */
+await page.click('button:has-text("Mercadorias")');
+await page.waitForTimeout(1500);
+
+const temMercadoria = (await page.locator("tbody tr").count()) > 0;
+
+if (temMercadoria) {
+  const estoqueAntes = await page.locator("tbody tr:first-child td:nth-child(5)").innerText();
+
+  await page.locator("tbody tr:first-child button[aria-label^='Vender']").click();
+  await page.waitForSelector("#venda-quantidade", { timeout: 20000 });
+  await page.fill("#venda-quantidade", "2");
+  await page.screenshot({ path: `${OUT}/12-venda.png` });
+  await page.click('button:has-text("Lançar venda")');
+
+  await page.waitForSelector("text=lançada", { timeout: 30000 });
+  await page.waitForTimeout(1500);
+
+  const estoqueDepois = await page.locator("tbody tr:first-child td:nth-child(5)").innerText();
+  check(
+    "vender baixa o estoque",
+    Number(estoqueAntes) - Number(estoqueDepois) === 2,
+    `${estoqueAntes} → ${estoqueDepois}`,
+  );
+
+  // E o dinheiro no livro-caixa, pela categoria que existia sem uso.
+  await page.click("nav[aria-label='Navegação principal'] a[href='/financeiro/lancamentos']");
+  await page.waitForURL("**/lancamentos", { timeout: 30000 });
+  await page.waitForSelector("tbody tr", { timeout: 30000 });
+
+  check(
+    "a venda aparece no livro-caixa",
+    (await page.locator("tbody >> text=Venda de produto").count()) > 0,
+  );
+
+  await page.screenshot({ path: `${OUT}/13-venda-no-caixa.png`, fullPage: true });
+} else {
+  check("sem mercadoria cadastrada, nada a vender", true, "aba vazia");
+}
 
 // Volta para a calculadora — o restante dos checks é lá.
 await page.click("nav[aria-label='Navegação principal'] a[href='/calculadora']");

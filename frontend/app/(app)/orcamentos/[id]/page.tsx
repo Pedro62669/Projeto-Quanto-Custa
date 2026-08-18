@@ -10,6 +10,7 @@ import {
   Download,
   FileText,
   Loader2,
+  Package,
   Pencil,
   Send,
   Trash2,
@@ -131,6 +132,10 @@ export default function OrcamentoPage() {
               </Link>
             </Button>
           )}
+
+          {/* Só depois de aprovado: o catálogo vende pelo preço que o cliente
+              aceitou, e rascunho é simulação. */}
+          {aprovado && <PublicarNoCatalogo id={id} />}
 
           {!aprovado && (
             <>
@@ -454,6 +459,59 @@ function MudarSituacao({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/**
+ * Publica a caixa aprovada no catálogo.
+ *
+ * "Quanto custa aquela caixa que fizemos para a joalheria?" era pergunta sem
+ * resposta: o orçamento guardava o preço e o catálogo de produtos vivia num
+ * canto do sistema sem relação com nada. Publicar liga os dois — o modelo passa
+ * a ser vendável de prateleira pelo preço que o motor calculou e o cliente
+ * aprovou.
+ *
+ * Sem confirmação: a operação é idempotente e não move dinheiro. Publicar duas
+ * vezes devolve a mesma entrada do catálogo, então um clique a mais não custa
+ * nada — e um diálogo para cada ação inofensiva ensina a clicar em "confirmar"
+ * sem ler, o que estraga os diálogos que importam.
+ */
+function PublicarNoCatalogo({ id }: { id: number }) {
+  const [publicando, setPublicando] = useState(false);
+  const router = useRouter();
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={publicando}
+      onClick={async () => {
+        setPublicando(true);
+
+        try {
+          const produto = await api.quotes.publishProduct(id);
+
+          toast.success(`${produto.name} está no catálogo`, {
+            description: "Estoque zerado — publicar não produz caixa nenhuma.",
+            action: {
+              label: "Ver",
+              onClick: () => router.push("/produtos"),
+            },
+          });
+        } catch (erro) {
+          toast.error(mensagemDeErro(erro));
+        } finally {
+          setPublicando(false);
+        }
+      }}
+    >
+      {publicando ? (
+        <Loader2 className="size-3.5 animate-spin" />
+      ) : (
+        <Package className="size-3.5" />
+      )}
+      Publicar no catálogo
+    </Button>
   );
 }
 

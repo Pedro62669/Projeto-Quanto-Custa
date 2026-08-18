@@ -220,6 +220,20 @@ export interface SupplierPayload {
 export interface Product {
   id: number;
   name: string;
+
+  /**
+   * `box` nasce de um orçamento aprovado e traz o preço que o motor calculou;
+   * `merchandise` é comprada pronta, com preço digitado no cadastro. O
+   * formulário só cria a segunda — o servidor força isso, porque preço digitado
+   * se passando por preço calculado é o que a ligação com o orçamento existe
+   * para impedir.
+   */
+  kind: "box" | "merchandise";
+
+  /** A proposta de origem, presente só nas caixas. */
+  quote?: { id: number; reference: string } | null;
+  quote_id: number | null;
+
   sku: string | null;
   cost_price: number | null;
   sale_price: number | null;

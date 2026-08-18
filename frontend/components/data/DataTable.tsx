@@ -69,8 +69,19 @@ export function DataTable<T>({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            {columns.map((coluna) => (
-              <TableHead key={coluna.header} className={coluna.className}>
+            {/*
+              A chave é a POSIÇÃO, e não o texto do cabeçalho.
+
+              Coluna de ação não tem título, e mais de uma tabela já tem duas:
+              produtos ganhou "vender" ao lado do editar/excluir que o
+              CadastroSimples acrescenta. Duas colunas com `header: ""` davam a
+              mesma chave, e o React avisa que pode duplicar ou omitir filhos.
+
+              Posição é a identidade certa aqui: coluna não é reordenada nem
+              filtrada em lugar nenhum — a lista é montada uma vez por tela.
+            */}
+            {columns.map((coluna, indice) => (
+              <TableHead key={indice} className={coluna.className}>
                 {coluna.header}
               </TableHead>
             ))}
@@ -84,8 +95,8 @@ export function DataTable<T>({
               onClick={onRowClick ? () => onRowClick(linha) : undefined}
               className={onRowClick ? "cursor-pointer" : undefined}
             >
-              {columns.map((coluna) => (
-                <TableCell key={coluna.header} className={coluna.className}>
+              {columns.map((coluna, indice) => (
+                <TableCell key={indice} className={coluna.className}>
                   {coluna.render(linha)}
                 </TableCell>
               ))}

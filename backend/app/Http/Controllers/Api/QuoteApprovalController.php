@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ProductKind;
 use App\Enums\QuoteStatus;
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
+use App\Models\Product;
 use App\Models\Quote;
 use App\Models\Transaction;
 use App\Services\Finance\FinancialEngine;
@@ -147,5 +149,83 @@ class QuoteApprovalController extends Controller
         $quote->update(['client_id' => $client->id]);
 
         return response()->json(['data' => $client], JsonResponse::HTTP_CREATED);
+    }
+
+    /**
+     * Publica a caixa no catálogo de produtos.
+     *
+     * "Quanto custa aquela caixa que fizemos para a joalheria?" era uma
+     * pergunta sem resposta: o orçamento guardava o preço e o catálogo de
+     * produtos vivia num canto do sistema sem relação com nada. Publicar liga
+     * os dois — a caixa passa a ser vendável de prateleira pelo preço que o
+     * motor calculou e o cliente aprovou.
+     *
+     * Só orçamento APROVADO. Um rascunho é uma simulação, e pôr no catálogo um
+     * preço que ninguém aceitou seria vender por um número que nunca foi
+     * negociado.
+     *
+     * O preço é o `unit_price` congelado, não uma nova simulação: é o valor que
+     * a proposta praticou. Se o papelão encarecer, quem republicar decide —
+     * mudar sozinho seria alterar o catálogo pelas costas de quem o montou.
+     */
+    public function publishProduct(Quote $quote): JsonResponse
+    {
+        $this->authorize('update', $quote);
+
+        if ($quote->status !== QuoteStatus::Approved) {
+            return response()->json([
+                'message' => 'Só orçamento aprovado vira produto de catálogo.',
+                'errors' => ['status' => [
+                    'Aprove a proposta antes de publicá-la: o catálogo vende pelo '
+                    .'preço que o cliente aceitou, e rascunho é simulação.',
+                ]],
+            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        /*
+         * Idempotente por orçamento.
+         *
+         * Clicar duas vezes criaria duas entradas do MESMO modelo no catálogo,
+         * com o mesmo preço e estoques separados — e a segunda venda baixaria o
+         * estoque errado. Devolve a que já existe, como `promoteClient` faz com
+         * o cliente.
+         */
+        $existente = Product::query()->where('quote_id', $quote->id)->first();
+
+        if ($existente !== null) {
+            return response()->json(['data' => $this->comMargem($existente)]);
+        }
+
+        $product = Product::create([
+            'kind' => ProductKind::Box,
+            'quote_id' => $quote->id,
+
+            // O nome carrega a referência: duas caixas 300×80×250 para clientes
+            // diferentes não podem virar duas linhas indistinguíveis na lista.
+            'name' => "{$quote->box_model->label()} {$quote->width_mm}×{$quote->height_mm}×{$quote->depth_mm} — {$quote->reference}",
+
+            'cost_price' => $quote->unit_cost,
+            'sale_price' => $quote->unit_price,
+
+            /*
+             * Estoque zero: publicar no catálogo não produz caixa nenhuma.
+             * Semear com a quantidade do orçamento diria que o lote está na
+             * prateleira quando ele foi entregue ao cliente que o encomendou.
+             */
+            'stock_quantity' => 0,
+
+            'description' => "Publicado do orçamento {$quote->reference}.",
+        ]);
+
+        return response()->json(
+            ['data' => $this->comMargem($product)],
+            JsonResponse::HTTP_CREATED,
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function comMargem(Product $product): array
+    {
+        return [...$product->toArray(), 'margin_percent' => $product->marginPercent()];
     }
 }

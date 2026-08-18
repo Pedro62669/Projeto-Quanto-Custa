@@ -30,7 +30,7 @@ class Transaction extends Model
     use HasFactory;
 
     protected $fillable = [
-        'tenant_id', 'client_id', 'supplier_id', 'quote_id',
+        'tenant_id', 'client_id', 'supplier_id', 'quote_id', 'product_id',
         'type', 'category', 'amount', 'description', 'transaction_date',
     ];
 
@@ -57,6 +57,12 @@ class Transaction extends Model
     public function quote(): BelongsTo
     {
         return $this->belongsTo(Quote::class);
+    }
+
+    /** O produto revendido. Null em tudo que não é venda de catálogo. */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 
     public function installments(): HasMany

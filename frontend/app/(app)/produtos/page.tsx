@@ -1,11 +1,18 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
+
 import { CadastroSimples, SeloAtivo } from "@/components/cadastro/CadastroSimples";
+import { DialogoDeVenda } from "@/components/produtos/DialogoDeVenda";
 import { NumberField, TextField } from "@/components/form/Field";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { api, type Product } from "@/lib/api";
+import type { Column } from "@/components/data/DataTable";
 import { formatCurrency } from "@/lib/pricing/engine";
 
 interface Formulario {
@@ -18,87 +25,160 @@ interface Formulario {
   is_active: boolean;
 }
 
+type Aba = "merchandise" | "box";
+
 /**
- * Produtos de prateleira.
+ * O catálogo — e a ilha que ele deixou de ser.
  *
- * O que a empresa vende PRONTO, sem passar pela calculadora: caixinhas de
- * estoque, sacolas, papel avulso. A margem é calculada pelo servidor a partir do
- * custo e do preço — e é ela que denuncia o produto que só dá trabalho.
+ * A tela guardava custo, preço, estoque e margem sem relação nenhuma com o
+ * resto do sistema: nem com orçamento, nem com cliente, nem com o caixa. Duas
+ * ligações a tiraram do isolamento.
+ *
+ * A CAIXA PRONTA nasce de um orçamento aprovado, com o preço que o motor
+ * calculou e o cliente aceitou. Ela responde "quanto custa aquela caixa que
+ * fizemos para a joalheria?" sem refazer a conta — e permite vender de
+ * prateleira um modelo que já foi produzido uma vez. Por isso não há botão de
+ * criar nesta aba: o servidor recusa, porque preço digitado se passando por
+ * preço calculado é o que a ligação existe para impedir.
+ *
+ * A MERCADORIA é o que se compra pronto e se revende: fita, laço, tag, sacola.
+ * Preço digitado, sem proposta por trás — e é o que o formulário cria.
+ *
+ * As duas vendem pelo mesmo caminho, e vender lança no caixa e baixa o estoque
+ * numa transação só.
  */
 export default function ProdutosPage() {
+  const [aba, setAba] = useState<Aba>("merchandise");
+
+  /*
+   * Contador de versão na chave da lista.
+   *
+   * Vender muda o estoque, e a lista precisa refletir isso sem recarregar a
+   * página. `useApi` recarrega quando a chave muda — incrementar aqui é o
+   * gatilho, e evita inventar uma camada de invalidação para um caso só.
+   */
+  const [versao, setVersao] = useState(0);
+
+  const caixas = aba === "box";
+
+  const colunas: Column<Product>[] = [
+    {
+      header: "Produto",
+      render: (p) => (
+        <div className="flex items-center gap-2">
+          <div className="min-w-0">
+            <p className="truncate font-medium">{p.name}</p>
+            {/* A caixa mostra a proposta de origem; a mercadoria, o SKU. Cada
+                uma diz o que a identifica no mundo real. */}
+            {p.quote ? (
+              <Link
+                href={`/orcamentos/${p.quote.id}`}
+                className="truncate font-mono text-xs text-muted-foreground hover:underline"
+              >
+                {p.quote.reference}
+              </Link>
+            ) : (
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {p.sku ?? "sem SKU"}
+              </p>
+            )}
+          </div>
+          <SeloAtivo ativo={p.is_active} />
+        </div>
+      ),
+    },
+    {
+      header: "Custo",
+      className: "text-right",
+      render: (p) => (
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+          {p.cost_price === null ? "—" : formatCurrency(p.cost_price)}
+        </span>
+      ),
+    },
+    {
+      header: "Venda",
+      className: "text-right",
+      render: (p) => (
+        <span className="font-mono tabular-nums">
+          {p.sale_price === null ? "—" : formatCurrency(p.sale_price)}
+        </span>
+      ),
+    },
+    {
+      header: "Margem",
+      className: "text-right",
+      render: (p) => (
+        // A margem vem do servidor (`marginPercent()`), não é recalculada aqui:
+        // uma segunda fórmula divergiria da primeira sem avisar.
+        <span
+          className={`font-mono text-xs tabular-nums ${
+            (p.margin_percent ?? 0) < 15 ? "text-amber-600 dark:text-amber-500" : ""
+          }`}
+        >
+          {p.margin_percent === null || p.margin_percent === undefined
+            ? "—"
+            : `${p.margin_percent}%`}
+        </span>
+      ),
+    },
+    {
+      header: "Estoque",
+      className: "text-right",
+      render: (p) => (
+        <span
+          className={`font-mono text-xs tabular-nums ${
+            (p.stock_quantity ?? 0) <= 0 ? "text-destructive" : ""
+          }`}
+        >
+          {p.stock_quantity ?? "—"}
+        </span>
+      ),
+    },
+    {
+      header: "",
+      className: "w-10",
+      render: (p) => (
+        <DialogoDeVenda produto={p} onVendido={() => setVersao((v) => v + 1)} />
+      ),
+    },
+  ];
+
   return (
     <CadastroSimples<Product, Formulario>
+      // A chave carrega a aba E a versão: sem a aba, trocar de guia mostraria a
+      // lista anterior; sem a versão, o estoque ficaria velho depois de vender.
+      chave={`produtos:${aba}:${versao}`}
       titulo="Produtos"
-      descricao="O que se vende pronto, sem cálculo de caixa. A margem sai do custo contra o preço de venda."
-      substantivo="produto"
-      chave="produtos"
+      descricao="O catálogo: as caixas que já foram produzidas e as mercadorias de revenda. Vender lança no caixa e baixa o estoque."
+      substantivo="mercadoria"
       identidade={(p) => p.id}
       rotulo={(p) => p.name}
-      vazioDescricao="Itens de prateleira: sacolas, caixinhas padrão, papel avulso — o que sai sem passar pela calculadora."
-      colunas={[
-        {
-          header: "Produto",
-          render: (p) => (
-            <div className="flex items-center gap-2">
-              <div className="min-w-0">
-                <p className="truncate font-medium">{p.name}</p>
-                <p className="truncate font-mono text-xs text-muted-foreground">
-                  {p.sku ?? "sem SKU"}
-                </p>
-              </div>
-              <SeloAtivo ativo={p.is_active} />
-            </div>
-          ),
-        },
-        {
-          header: "Custo",
-          className: "text-right",
-          render: (p) => (
-            <span className="font-mono text-xs tabular-nums text-muted-foreground">
-              {p.cost_price === null ? "—" : formatCurrency(p.cost_price)}
-            </span>
-          ),
-        },
-        {
-          header: "Venda",
-          className: "text-right",
-          render: (p) => (
-            <span className="font-mono tabular-nums">
-              {p.sale_price === null ? "—" : formatCurrency(p.sale_price)}
-            </span>
-          ),
-        },
-        {
-          header: "Margem",
-          className: "text-right",
-          render: (p) => (
-            // A margem vem do servidor (`marginPercent()`), não é recalculada
-            // aqui: uma segunda fórmula divergiria da primeira sem avisar.
-            <span
-              className={`font-mono text-xs tabular-nums ${
-                (p.margin_percent ?? 0) < 15 ? "text-amber-600 dark:text-amber-500" : ""
-              }`}
-            >
-              {p.margin_percent === null || p.margin_percent === undefined
-                ? "—"
-                : `${p.margin_percent}%`}
-            </span>
-          ),
-        },
-        {
-          header: "Estoque",
-          className: "text-right",
-          render: (p) => (
-            <span
-              className={`font-mono text-xs tabular-nums ${
-                (p.stock_quantity ?? 0) <= 0 ? "text-destructive" : ""
-              }`}
-            >
-              {p.stock_quantity ?? "—"}
-            </span>
-          ),
-        },
-      ]}
+      colunas={colunas}
+      /*
+       * Caixa pronta nasce de orçamento aprovado, nunca do formulário. Oferecer
+       * o botão aqui seria oferecer um caminho que o servidor recusa.
+       */
+      semCriacao={caixas}
+      vazioDescricao={
+        caixas
+          ? "Nenhuma caixa publicada ainda. Aprove um orçamento e use “Publicar no catálogo” na tela dele."
+          : "Itens de prateleira: sacolas, fitas, laços, tags — o que sai sem passar pela calculadora."
+      }
+      antesDaLista={
+        // A aba já está na chave da lista, então trocá-la recarrega sozinha.
+        <Tabs value={aba} onValueChange={(v) => setAba(v as Aba)}>
+          <TabsList>
+            <TabsTrigger value="merchandise">Mercadorias</TabsTrigger>
+            <TabsTrigger value="box">
+              Caixas prontas
+              <Badge variant="secondary" className="ml-1.5 text-[10px]">
+                do orçamento
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      }
       vazio={{
         name: "",
         sku: "",
@@ -188,7 +268,7 @@ export default function ProdutosPage() {
         </>
       )}
       api={{
-        list: api.products.list,
+        list: (params) => api.products.list({ ...params, kind: aba }),
         create: (form) => api.products.create(paraPayload(form)),
         update: (id, form) => api.products.update(id, paraPayload(form)),
         remove: api.products.remove,

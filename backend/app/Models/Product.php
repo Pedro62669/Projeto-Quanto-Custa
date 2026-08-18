@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\ProductKind;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Produto pronto para revenda casada com a embalagem.
@@ -21,11 +24,12 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = [
-        'tenant_id', 'name', 'sku', 'cost_price', 'sale_price',
+        'tenant_id', 'kind', 'quote_id', 'name', 'sku', 'cost_price', 'sale_price',
         'stock_quantity', 'description', 'is_active',
     ];
 
     protected $attributes = [
+        'kind' => ProductKind::Merchandise->value,
         'cost_price' => 0,
         'sale_price' => 0,
         'stock_quantity' => 0,
@@ -35,11 +39,35 @@ class Product extends Model
     protected function casts(): array
     {
         return [
+            'kind' => ProductKind::class,
             'cost_price' => 'float',
             'sale_price' => 'float',
             'stock_quantity' => 'integer',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * O orçamento que originou esta caixa. Null em mercadoria.
+     *
+     * Nullable também em caixa cujo orçamento foi excluído: o produto continua
+     * no catálogo e continua sendo vendido, e o que se perde é o atalho para a
+     * proposta.
+     */
+    public function quote(): BelongsTo
+    {
+        return $this->belongsTo(Quote::class);
+    }
+
+    /** As vendas deste produto no livro-caixa. */
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function scopeOfKind(Builder $query, ProductKind $kind): Builder
+    {
+        return $query->where('kind', $kind);
     }
 
     /**

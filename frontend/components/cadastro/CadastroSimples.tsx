@@ -80,6 +80,20 @@ export interface CadastroSimplesProps<T, F> {
   rotulo: (registro: T) => string;
   /** Texto do estado vazio quando não há filtro nenhum. */
   vazioDescricao: string;
+
+  /**
+   * Esconde o botão de criar — para listas cujo registro nasce em outro lugar.
+   *
+   * A caixa pronta do catálogo é o caso: ela vem de um orçamento aprovado, e o
+   * servidor RECUSA criá-la pelo formulário, porque preço digitado se passando
+   * por preço calculado é exatamente o que a ligação com o orçamento existe
+   * para impedir. Oferecer o botão seria oferecer um caminho que termina em
+   * erro — ou pior, num produto de mentira.
+   */
+  semCriacao?: boolean;
+
+  /** Elemento acima da busca — abas, filtros, avisos. */
+  antesDaLista?: React.ReactNode;
 }
 
 export function CadastroSimples<T, F>({
@@ -95,6 +109,8 @@ export function CadastroSimples<T, F>({
   identidade,
   rotulo,
   vazioDescricao,
+  semCriacao,
+  antesDaLista,
 }: CadastroSimplesProps<T, F>) {
   const [pagina, setPagina] = useState(1);
   const [busca, setBusca] = useState("");
@@ -146,17 +162,21 @@ export function CadastroSimples<T, F>({
         title={titulo}
         description={descricao}
         actions={
-          <Button
-            onClick={() => {
-              setEmEdicao(null);
-              setFormAberto(true);
-            }}
-          >
-            <Plus className="size-4" />
-            Novo {substantivo}
-          </Button>
+          semCriacao ? null : (
+            <Button
+              onClick={() => {
+                setEmEdicao(null);
+                setFormAberto(true);
+              }}
+            >
+              <Plus className="size-4" />
+              Novo {substantivo}
+            </Button>
+          )
         }
       />
+
+      {antesDaLista}
 
       <Input
         placeholder="Buscar…"
