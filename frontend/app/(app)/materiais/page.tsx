@@ -148,7 +148,7 @@ export default function MateriaisPage() {
         description="O custo daqui multiplica a área de toda caixa. Cadastre com a nota na mão: lote e frete dão o número mais fiel."
         actions={
           <Button onClick={abrirNovo}>
-            <Plus className="size-4" />
+            <Plus className="size-4 text-brand-on-inverted" />
             Novo material
           </Button>
         }
@@ -187,7 +187,7 @@ export default function MateriaisPage() {
               description="A calculadora precisa de ao menos um insumo medido em área — papelão ou papel — para calcular um preço."
               action={
                 <Button size="sm" onClick={abrirNovo}>
-                  <Plus className="size-3.5" />
+                  <Plus className="size-3.5 text-brand-on-inverted" />
                   Cadastrar o primeiro
                 </Button>
               }

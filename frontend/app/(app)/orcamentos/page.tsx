@@ -112,7 +112,7 @@ export default function OrcamentosPage() {
         actions={
           <Button asChild>
             <Link href="/calculadora">
-              <Plus className="size-4" />
+              <Plus className="size-4 text-brand-on-inverted" />
               Novo orçamento
             </Link>
           </Button>

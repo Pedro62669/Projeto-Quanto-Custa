@@ -169,7 +169,7 @@ export function CadastroSimples<T, F>({
                 setFormAberto(true);
               }}
             >
-              <Plus className="size-4" />
+              <Plus className="size-4 text-brand-on-inverted" />
               Novo {substantivo}
             </Button>
           )

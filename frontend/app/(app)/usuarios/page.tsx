@@ -119,7 +119,7 @@ export default function UsuariosPage() {
               setFormAberto(true);
             }}
           >
-            <Plus className="size-4" />
+            <Plus className="size-4 text-brand-on-inverted" />
             Novo usuário
           </Button>
         }

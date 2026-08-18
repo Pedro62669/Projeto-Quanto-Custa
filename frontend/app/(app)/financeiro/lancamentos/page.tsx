@@ -182,7 +182,7 @@ export default function LancamentosPage() {
         description="Entradas e saídas da empresa. Venda de orçamento entra sozinha, quando a proposta é aprovada."
         actions={
           <Button onClick={() => setFormAberto(true)}>
-            <Plus className="size-4" />
+            <Plus className="size-4 text-brand-on-inverted" />
             Novo lançamento
           </Button>
         }
