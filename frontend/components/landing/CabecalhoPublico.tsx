@@ -28,8 +28,16 @@ export function CabecalhoPublico() {
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
         <Link href="/" className="flex items-center gap-2.5" aria-label="quantoCusta, início">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Package className="size-4" />
+          {/*
+            Quadrado preto, caixa azul.
+
+            Mesma divisão do menu e dos botões de criar: a superfície é neutra e
+            o símbolo carrega a marca. `--brand-on-inverted` e não `--brand`
+            porque o fundo aqui é `--primary`, que inverte com o tema — no
+            escuro este quadrado fica quase branco.
+          */}
+          <span className="flex size-8 items-center justify-center rounded-lg bg-primary">
+            <Package className="size-4 text-brand-on-inverted" />
           </span>
           <span className="text-[0.95rem] font-semibold tracking-tight">quantoCusta</span>
         </Link>

@@ -15,12 +15,23 @@ import { formatCurrency } from "@/lib/pricing/engine";
 
 const QUANTIDADE = 250;
 
+/*
+ * A escala da barra, do custo mais pesado ao lucro.
+ *
+ * Era cinza em cinco opacidades. Em azul a leitura é a mesma — a ordem continua
+ * sendo dada pela intensidade, não pelo matiz — e a barra passa a ser a peça de
+ * marca da página, que é onde o olho para primeiro.
+ *
+ * O degradê é por OPACIDADE e não por cinco azuis escritos à mão: assim ele
+ * acompanha `--brand` se a cor da empresa mudar, e continua legível nos dois
+ * temas, porque o que varia é quanto do fundo aparece por baixo.
+ */
 const COMPOSICAO = [
-  { rotulo: "Material", valor: 3.45, tom: "bg-foreground" },
-  { rotulo: "Mão de obra", valor: 2.27, tom: "bg-foreground/70" },
-  { rotulo: "Hora-empresa", valor: 1.01, tom: "bg-foreground/45" },
-  { rotulo: "Imposto", valor: 0.76, tom: "bg-foreground/25" },
-  { rotulo: "Lucro", valor: 0.93, tom: "bg-foreground/12" },
+  { rotulo: "Material", valor: 3.45, tom: "bg-brand" },
+  { rotulo: "Mão de obra", valor: 2.27, tom: "bg-brand/75" },
+  { rotulo: "Hora-empresa", valor: 1.01, tom: "bg-brand/55" },
+  { rotulo: "Imposto", valor: 0.76, tom: "bg-brand/35" },
+  { rotulo: "Lucro", valor: 0.93, tom: "bg-brand/20" },
 ];
 
 const UNITARIO = COMPOSICAO.reduce((total, item) => total + item.valor, 0);

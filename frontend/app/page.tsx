@@ -87,11 +87,17 @@ function Heroi({ dias }: { dias: number | null }) {
             Feito para cartonagem rígida
           </p>
 
+          {/*
+            A pergunta em preto, a resposta em azul.
+
+            A segunda linha já era a que se diferenciava — vinha em cinza. Trocar
+            o cinza pela marca faz a mesma separação dizendo mais: preto é o que
+            o visitante já pensa, azul é o que o produto responde. Texto grande,
+            então 5,33:1 sobra com folga.
+          */}
           <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
             Quanto custa essa caixa?
-            <span className="block text-muted-foreground">
-              Com o seu papelão e a sua hora.
-            </span>
+            <span className="block text-brand">Com o seu papelão e a sua hora.</span>
           </h1>
 
           <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
