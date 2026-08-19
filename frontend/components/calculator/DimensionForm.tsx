@@ -34,19 +34,18 @@ import {
 } from "@/lib/pricing/engine";
 import type { BoxModel, PricingMode } from "@/lib/pricing/types";
 
-const BOX_MODELS: Array<{ value: BoxModel; label: string }> = [
-  { value: "rsc", label: "Caixa americana (RSC)" },
-  { value: "tray", label: "Caixa com tampa" },
-  { value: "sleeve", label: "Luva / cinta" },
-  { value: "pouch", label: "Saco / envelope" },
-  { value: "tube", label: "Tubo / lata cilíndrica" },
-  { value: "drawer", label: "Caixa gaveta" },
-  { value: "mailer", label: "Mailer box (e-commerce)" },
-
-  // Por último, e separado por um traço na lista: não é mais um formato, é a
-  // saída para quando nenhum formato serve.
-  { value: "free", label: "Modelo livre (peças medidas)" },
-];
+/*
+ * Os modelos vêm do SERVIDOR, e não de uma lista aqui.
+ *
+ * Havia uma escrita à mão neste arquivo com OITO dos catorze do enum: faltava a
+ * família rígida inteira — tampa solta, livro, livro com aba e as três caixas
+ * ímã. O motor as precificava, o 3D as desenhava, a API as devolvia em
+ * `pricing/parameters`, e não havia como escolhê-las na tela.
+ *
+ * A causa era a cópia. Cada modelo novo exigia lembrar de um arquivo que não
+ * tinha por que ser lembrado, e o rótulo vivia em dois lugares. Agora existe um
+ * só: `BoxModel::label()`.
+ */
 
 /**
  * Formulário de especificação.
@@ -57,10 +56,11 @@ const BOX_MODELS: Array<{ value: BoxModel; label: string }> = [
  * transformariam a tela numa planilha e afogariam o que importa.
  */
 export function DimensionForm() {
-  const { spec, materials, updateSpec, selectMaterial, selectBoxModel } = useQuoteStore(
+  const { spec, materials, boxModels, updateSpec, selectMaterial, selectBoxModel } = useQuoteStore(
     useShallow((s) => ({
       spec: s.spec,
       materials: s.materials,
+      boxModels: s.boxModels,
       updateSpec: s.updateSpec,
       selectMaterial: s.selectMaterial,
       selectBoxModel: s.selectBoxModel,
@@ -204,7 +204,7 @@ export function DimensionForm() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {BOX_MODELS.map((model) => (
+                {boxModels.map((model) => (
                   <SelectItem key={model.value} value={model.value}>
                     {model.label}
                   </SelectItem>

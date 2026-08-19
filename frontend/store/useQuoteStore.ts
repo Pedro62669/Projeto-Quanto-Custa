@@ -281,6 +281,21 @@ interface QuoteState {
   materials: Material[];
   settings: CostSettings | null;
   currency: string;
+
+  /**
+   * Os modelos de caixa, vindos do servidor.
+   *
+   * O formulário mantinha a própria lista escrita à mão, e ela tinha OITO dos
+   * catorze do enum — a família rígida inteira (tampa solta, livro e as três
+   * caixas ímã) simplesmente não aparecia no seletor. O motor as precificava, o
+   * 3D as desenhava, a API as devolvia, e não havia como escolhê-las.
+   *
+   * Ler daqui resolve o buraco e a causa dele: o rótulo de cada modelo passa a
+   * existir num lugar só, `BoxModel::label()`, em vez de numa cópia que
+   * envelhece a cada modelo novo.
+   */
+  boxModels: Array<{ value: BoxModel; label: string }>;
+
   isBootstrapping: boolean;
 
   // ── Especificação editável ──────────────────────────────────────────────
@@ -332,6 +347,7 @@ export const useQuoteStore = create<QuoteState>()(
     materials: [],
     settings: null,
     currency: "BRL",
+    boxModels: [],
     isBootstrapping: true,
 
     spec: DEFAULT_SPEC,
@@ -397,6 +413,14 @@ export const useQuoteStore = create<QuoteState>()(
           materials,
           settings,
           currency: parameters.currency,
+
+          // A ordem vem do enum: dobradas primeiro, rígidas depois, e o modelo
+          // livre por último — que é a ordem em que se procura um formato.
+          boxModels: parameters.box_models.map((m) => ({
+            value: m.value as BoxModel,
+            label: m.label,
+          })),
+
           isBootstrapping: false,
           spec: primeiraCarga
             ? {
