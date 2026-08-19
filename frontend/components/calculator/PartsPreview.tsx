@@ -96,21 +96,48 @@ export function PartsPreview() {
 }
 
 /**
+ * Quanto da peça o texto pode ocupar. O resto é respiro contra a borda.
+ */
+const OCUPACAO = 0.84;
+
+/** Altura de uma linha, em múltiplos da fonte. */
+const ENTRELINHA = 1.25;
+
+/**
+ * Largura média de um caractere, em múltiplos da fonte.
+ *
+ * O mono é mais largo que o sans, e a medida é sempre mono — usar o maior dos
+ * dois para dimensionar evita o caso em que o nome cabe e o "200 × 200" abaixo
+ * dele estoura a peça.
+ */
+const LARGURA_DO_CARACTERE = 0.62;
+
+/**
+ * Piso da fonte, em fração da global. Abaixo disso o texto vira sujeira: ele
+ * ainda está lá, mas ninguém lê — e uma linha ilegível ocupa espaço sem
+ * informar, que é pior que linha nenhuma.
+ */
+const FONTE_MINIMA = 0.45;
+
+/**
  * O rótulo dentro da peça: nome em cima, medida embaixo.
  *
  * O NOME é o que identifica a peça para quem a desenhou — "fundo", "tampa",
- * "lateral longa" — e é ele que a ficha técnica leva para a bancada. A prévia
- * mostrava só a medida, e num projeto de seis retângulos parecidos duas peças de
- * 200 × 200 ficavam indistinguíveis: dava para conferir o tamanho e não dava
- * para saber qual era qual.
+ * "lateral longa" — e é ele que a ficha técnica leva para a bancada. Sem ele,
+ * num projeto de seis retângulos parecidos, duas peças de 200 × 200 ficavam
+ * indistinguíveis: dava para conferir o tamanho e não para saber qual era qual.
  *
- * As linhas entram por ORDEM DE IMPORTÂNCIA e saem por ordem inversa conforme o
- * espaço aperta. Numa peça baixa cai primeiro a quantidade, depois o nome, e a
- * medida fica até o fim — ela é a razão de o desenho existir.
+ * ## A fonte se ajusta à peça, e o descarte é o último recurso
  *
- * O bloco é centrado a partir do número de linhas que sobreviveram, e não por
- * deslocamentos fixos: com o nome opcional, um `dy` cravado deixaria o texto
- * fora do centro em metade dos casos.
+ * A primeira versão usava a fonte global e cortava linhas quando não cabiam.
+ * Numa tira de 200 × 50 isso apagava o nome — justamente a peça que mais
+ * precisa dele, porque é a que menos se reconhece pela forma.
+ *
+ * Agora o texto encolhe até caber, nas duas direções: a altura limita pelo
+ * número de linhas, a largura pela linha mais longa. Só quando nem no piso de
+ * legibilidade couber é que uma linha sai, e sai na ordem inversa da
+ * importância — primeiro a quantidade, depois o nome, e a medida por último,
+ * porque ela é a razão de o desenho existir.
  */
 function RotuloDaPeca({
   part,
@@ -124,30 +151,59 @@ function RotuloDaPeca({
   fonte: number;
 }) {
   const centroX = x + part.width_mm / 2;
-
-  // Largura suficiente para a medida — se ela não cabe, nada cabe.
-  if (part.width_mm < fonte * 6 || part.length_mm < fonte * 3) return null;
-
   const nome = part.name.trim();
 
-  const linhas: Array<{ texto: string; classe: string; opacidade: number }> = [];
+  // Da mais importante para a menos: é nesta ordem que elas serão descartadas,
+  // de trás para a frente.
+  const candidatas = [
+    { texto: `${part.width_mm} × ${part.length_mm}`, classe: "font-mono", opacidade: 1 },
+    ...(nome !== ""
+      ? [{ texto: nome, classe: "font-sans font-medium", opacidade: 1 }]
+      : []),
+    ...(part.quantity > 1
+      ? [{ texto: `×${part.quantity}`, classe: "font-mono", opacidade: 0.7 }]
+      : []),
+  ];
 
-  // Cada linha extra pede 1,2 de altura. Os limites abaixo são esse custo somado
-  // ao mínimo da medida, e é por isso que crescem de 1,2 em 1,2.
-  if (nome !== "" && part.length_mm > fonte * 4.2) {
-    linhas.push({ texto: nome, classe: "font-sans font-medium", opacidade: 1 });
+  /*
+   * Tenta com todas as linhas e vai largando a menos importante enquanto a
+   * fonte necessária ficar abaixo do piso.
+   */
+  let escolhidas = candidatas;
+  let tamanho = 0;
+
+  while (escolhidas.length > 0) {
+    const maiorTexto = Math.max(...escolhidas.map((l) => l.texto.length));
+
+    const porLargura =
+      (part.width_mm * OCUPACAO) / (maiorTexto * LARGURA_DO_CARACTERE);
+    const porAltura = (part.length_mm * OCUPACAO) / (escolhidas.length * ENTRELINHA);
+
+    tamanho = Math.min(fonte, porLargura, porAltura);
+
+    if (tamanho >= fonte * FONTE_MINIMA) break;
+
+    escolhidas = escolhidas.slice(0, -1);
   }
 
-  linhas.push({
-    texto: `${part.width_mm} × ${part.length_mm}`,
-    classe: "font-mono",
-    // Com nome acima, a medida recua para segundo plano.
-    opacidade: linhas.length > 0 ? 0.75 : 1,
+  // Nem a medida sozinha coube em tamanho legível: a peça é pequena demais, e
+  // um rótulo ilegível atrapalharia a comparação de tamanho que o desenho faz.
+  if (escolhidas.length === 0) return null;
+
+  /*
+   * A ordem de LEITURA é outra: o nome vem em cima, como o usuário pediu.
+   * `candidatas` está em ordem de importância, que serve ao descarte; aqui o
+   * nome sobe para a primeira linha e a medida desce.
+   */
+  const linhas = [...escolhidas].sort((a, b) => {
+    const peso = (l: (typeof escolhidas)[number]) =>
+      l.classe.includes("font-sans") ? 0 : l.texto.startsWith("×") ? 2 : 1;
+
+    return peso(a) - peso(b);
   });
 
-  if (part.quantity > 1 && part.length_mm > fonte * 5.4) {
-    linhas.push({ texto: `×${part.quantity}`, classe: "font-mono", opacidade: 0.7 });
-  }
+  // Com o nome acima, a medida recua para segundo plano.
+  const temNome = linhas.some((l) => l.classe.includes("font-sans"));
 
   /*
    * Baseline da primeira linha.
@@ -156,7 +212,7 @@ function RotuloDaPeca({
    * desce-se um terço da fonte, que é o ajuste entre o centro geométrico do
    * texto e a linha de base onde o SVG o assenta.
    */
-  const topo = -((linhas.length - 1) / 2) * 1.2 * fonte + fonte * 0.34;
+  const topo = -((linhas.length - 1) / 2) * ENTRELINHA * tamanho + tamanho * 0.34;
 
   return (
     <text
@@ -164,15 +220,19 @@ function RotuloDaPeca({
       y={y + part.length_mm / 2}
       textAnchor="middle"
       fill="currentColor"
-      fontSize={fonte}
+      fontSize={tamanho}
     >
       {linhas.map((linha, indice) => (
         <tspan
           key={indice}
           x={centroX}
-          dy={indice === 0 ? topo : fonte * 1.2}
+          dy={indice === 0 ? topo : tamanho * ENTRELINHA}
           className={linha.classe}
-          fillOpacity={linha.opacidade}
+          fillOpacity={
+            temNome && linha.classe === "font-mono" && !linha.texto.startsWith("×")
+              ? 0.75
+              : linha.opacidade
+          }
         >
           {linha.texto}
         </tspan>
