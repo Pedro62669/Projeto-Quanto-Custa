@@ -82,10 +82,20 @@ export function CustomPartsEditor() {
         </span>
       </header>
 
+      {/*
+        O texto diz o que fazer com os DOIS campos que não são óbvios.
+
+        A medida se explica sozinha; o nome e a quantidade não. O nome parecia
+        enfeite e é o que a produção lê na bancada para saber qual retângulo é
+        qual — a mesma razão que o servidor já dá quando ele vem vazio
+        ("Dê um nome a cada peça — é por ele que a produção vai identificá-la").
+      */}
       <p className="text-xs text-muted-foreground">
-        Meça cada chapa e cada folha do jeito que elas vão ser cortadas. A
-        quantidade é <strong className="font-medium">por caixa</strong> — o lote
-        multiplica depois.
+        Meça cada chapa e cada folha do jeito que elas vão ser cortadas. Dê um{" "}
+        <strong className="font-medium">nome</strong> a cada uma — é por ele que
+        a produção identifica a peça na ficha técnica. A quantidade é{" "}
+        <strong className="font-medium">por caixa</strong>; o lote multiplica
+        depois.
       </p>
 
       <div className="space-y-3">
@@ -168,17 +178,40 @@ function PartCard({
 
   return (
     <div className="space-y-3 rounded-lg border p-3">
-      <div className="flex items-center gap-2">
-        <span className="font-mono text-xs text-muted-foreground">#{ordem}</span>
+      <div className="flex items-start gap-2">
+        {/*
+          O nome vira um CAMPO como os outros, com rótulo em cima e borda.
 
-        <Input
-          aria-label={`Nome da peça ${ordem}`}
-          value={part.name}
-          onChange={(e) => updateCustomPart(part.id, { name: e.target.value })}
-          placeholder="Nome da peça"
-          maxLength={120}
-          className="h-8 border-transparent bg-transparent px-1 text-sm font-medium shadow-none focus-visible:border-input focus-visible:bg-background"
-        />
+          Ele era um input disfarçado de texto: fundo e borda transparentes, sem
+          rótulo, aparecendo só ao receber foco. Ficava bonito e escondia que
+          dava para escrever — nem quem pediu a tela percebeu que o campo
+          existia. Um cartão em que quatro campos têm rótulo e o quinto não
+          ensina que o quinto não é campo.
+
+          O `placeholder` traz exemplos em vez de repetir o rótulo: "Nome da
+          peça" duas vezes não diz o que escrever ali, "Fundo, tampa, lateral…"
+          diz.
+        */}
+        <div className="min-w-0 flex-1 space-y-1">
+          <Label
+            htmlFor={`part-${ordem}-nome`}
+            className="block text-[10px] uppercase tracking-wider text-muted-foreground"
+          >
+            Nome da peça
+          </Label>
+
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-xs text-muted-foreground">#{ordem}</span>
+            <Input
+              id={`part-${ordem}-nome`}
+              value={part.name}
+              onChange={(e) => updateCustomPart(part.id, { name: e.target.value })}
+              placeholder="Fundo, tampa, lateral…"
+              maxLength={120}
+              className="h-8 flex-1 text-xs"
+            />
+          </div>
+        </div>
 
         {/* A última peça não se apaga: lista vazia derruba o cálculo nas duas
             pontas. Quem quer sair do modelo livre troca de modelo. */}
@@ -189,7 +222,10 @@ function PartCard({
             size="icon"
             aria-label={`Remover a peça ${ordem}`}
             onClick={() => removeCustomPart(part.id)}
-            className="size-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            // `mt-[1.35rem]` desce o botão à linha do CAMPO, não à do rótulo:
+            // a coluna ao lado ganhou um rótulo em cima, e sem isso a lixeira
+            // ficaria alinhada com o texto "NOME DA PEÇA".
+            className="mt-[1.35rem] size-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="size-3.5" />
           </Button>

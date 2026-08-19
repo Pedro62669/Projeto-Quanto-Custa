@@ -372,6 +372,43 @@ await page.screenshot({ path: `${OUT}/01-calculadora.png` });
  */
 check("a calculadora tem lista de materiais", (await page.locator("text=Lista de materiais").count()) > 0);
 
+/*
+ * O que a caixa comporta depende do MODELO.
+ *
+ * Ferragem é da família ímã — o ímã fica embutido entre o cinza e o papel da
+ * aba frontal, e a caixa americana não tem essa aba. Revestimento é de
+ * cartonagem rígida, que é papelão cinza coberto com papel; um RSC é chapa
+ * vincada e não tem o que revestir.
+ *
+ * Este check nasceu esperando o botão de ferragem SEMPRE, e quebrou quando a
+ * regra entrou — o que é o comportamento certo de um teste. Agora ele afirma a
+ * ausência aqui e a presença na caixa ímã, logo abaixo.
+ */
+check(
+  "o RSC não oferece ferragem nem revestimento",
+  (await page.getByRole("button", { name: "Ferragem" }).count()) === 0 &&
+    (await page.getByRole("button", { name: "Revestimento" }).count()) === 0,
+);
+
+check(
+  "o berço vale em qualquer modelo",
+  (await page.getByRole("button", { name: "Berço" }).count()) === 1,
+);
+
+// Troca para a caixa ímã, onde a ferragem existe.
+await page.click("#box-model");
+await page.waitForSelector("[role=option]", { timeout: 20000 });
+await page.getByRole("option", { name: "Caixa ímã (rígida)" }).click();
+await esperaEmDia();
+
+const precoDaIma = await page.textContent(".font-mono.text-4xl");
+
+check(
+  "a caixa ímã oferece os três",
+  (await page.getByRole("button", { name: "Ferragem" }).count()) === 1 &&
+    (await page.getByRole("button", { name: "Revestimento" }).count()) === 1,
+);
+
 const botaoFerragem = page.getByRole("button", { name: "Ferragem" });
 
 /*
@@ -386,8 +423,8 @@ if (await botaoFerragem.isEnabled()) {
   const comFerragem = await page.textContent(".font-mono.text-4xl");
   check(
     "ferragem entra no preço",
-    comFerragem !== precoInicial,
-    `${precoInicial?.trim()} → ${comFerragem?.trim()}`,
+    comFerragem !== precoDaIma,
+    `${precoDaIma?.trim()} → ${comFerragem?.trim()}`,
   );
 
   await page.getByLabel("Quantidade por caixa").fill("4");
@@ -402,14 +439,12 @@ if (await botaoFerragem.isEnabled()) {
 
   await page.screenshot({ path: `${OUT}/01b-lista-materiais.png` });
 
-  // Volta ao estado anterior: os checks seguintes comparam preços a partir do
-  // orçamento sem ferragem, e deixar o ímã aqui os faria medir outra caixa.
   await page.click("button[aria-label='Remover ferragem']");
   await esperaEmDia();
 
   check(
-    "remover a ferragem devolve o preço original",
-    (await page.textContent(".font-mono.text-4xl")) === precoInicial,
+    "remover a ferragem devolve o preço da caixa",
+    (await page.textContent(".font-mono.text-4xl")) === precoDaIma,
   );
 } else {
   check(
@@ -417,6 +452,20 @@ if (await botaoFerragem.isEnabled()) {
     Boolean(await botaoFerragem.getAttribute("title")),
   );
 }
+
+/*
+ * Volta ao RSC: os checks seguintes comparam preços a partir dele, e seguir na
+ * caixa ímã os faria medir outra caixa.
+ */
+await page.click("#box-model");
+await page.waitForSelector("[role=option]", { timeout: 20000 });
+await page.getByRole("option", { name: "Caixa americana (RSC)" }).click();
+await esperaEmDia();
+
+check(
+  "voltar ao RSC devolve o preço inicial",
+  (await page.textContent(".font-mono.text-4xl")) === precoInicial,
+);
 
 // ── 5b. O painel: três colunas, cabeçalho e composição ───────────────────
 //
