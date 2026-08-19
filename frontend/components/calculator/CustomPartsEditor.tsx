@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Layers, Plus, TriangleAlert, Trash2 } from "lucide-react";
 
@@ -7,6 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Select,
   SelectContent,
@@ -45,6 +52,18 @@ export function CustomPartsEditor() {
       currency: s.currency,
       addCustomPart: s.addCustomPart,
     })),
+  );
+
+  /*
+   * Quais cartões estão abertos.
+   *
+   * O inicializador roda uma vez, e abre a peça única: quem acabou de escolher
+   * o modelo livre recebeu uma peça semeada e vai preenchê-la agora. Já um
+   * orçamento reaberto com seis peças começa todo fechado, que é o ponto de
+   * serem recolhíveis.
+   */
+  const [abertos, setAbertos] = useState<string[]>(() =>
+    parts.length === 1 ? [parts[0].id] : [],
   );
 
   const temMaterialComArea = materiaisParaPeca(materials, "structure").length > 0;
@@ -98,7 +117,16 @@ export function CustomPartsEditor() {
         depois.
       </p>
 
-      <div className="space-y-3">
+      {/*
+        Cartões recolhíveis: um projeto de seis peças enchia a coluna inteira e
+        obrigava a rolar para comparar a primeira com a última. Fechado, cada um
+        vira uma linha com o que identifica a peça — nome, medida e quantidade.
+
+        `type="multiple"` e não `single`: quem confere duas peças lado a lado
+        precisa das duas abertas ao mesmo tempo, e um acordeão que fecha a
+        anterior transformaria a comparação num vai e volta.
+      */}
+      <Accordion type="multiple" value={abertos} onValueChange={setAbertos} className="gap-3">
         {parts.map((part, indice) => (
           <PartCard
             key={part.id}
@@ -109,14 +137,20 @@ export function CustomPartsEditor() {
             removivel={parts.length > 1}
           />
         ))}
-      </div>
+      </Accordion>
 
       <Button
         type="button"
         variant="outline"
         size="sm"
         className="w-full gap-1.5"
-        onClick={() => addCustomPart("structure")}
+        onClick={() => {
+          // Abre o cartão recém-criado: a peça nasce vazia, e nascer fechada
+          // obrigaria a clicar para preencher o que se acabou de pedir.
+          const id = addCustomPart("structure");
+
+          if (id !== null) setAbertos((atuais) => [...atuais, id]);
+        }}
         disabled={parts.length >= MAX_PECAS}
       >
         <Plus className="size-3.5" />
@@ -177,10 +211,69 @@ function PartCard({
   const areaBruta = consumo ? consumo.structureGrossM2 + consumo.wrapGrossM2 : 0;
 
   return (
-    <div className="space-y-3 rounded-lg border p-3">
-      <div className="flex items-start gap-2">
+    <AccordionItem value={part.id} className="rounded-lg border px-3">
+      {/*
+        O botão de apagar fica FORA do gatilho, não dentro.
+
+        O gatilho do acordeão é um `<button>`, e botão dentro de botão é HTML
+        inválido: o navegador desaninha a árvore e o clique na lixeira acabaria
+        abrindo o cartão em vez de apagar a peça.
+      */}
+      {/*
+        `[&>h3]` estica o cabeçalho do Radix.
+
+        O `AccordionTrigger` já nasce `flex-1`, mas ele vive dentro de um
+        `<h3>` que o primitivo desenha e que não recebe className por fora. Sem
+        esticar esse intermediário, o gatilho encolhe ao conteúdo e a medida
+        fica colada no nome em vez de ir para a direita.
+      */}
+      <div className="flex items-center gap-1 [&>h3]:min-w-0 [&>h3]:flex-1">
+        <AccordionTrigger className="items-center py-2.5 hover:no-underline">
+          {/*
+            O resumo responde, fechado, o que o cartão aberto responderia: qual
+            peça é, que tamanho tem e quantas saem por caixa. Sem isso, recolher
+            economizaria espaço e custaria a leitura — seria preciso abrir cada
+            uma para lembrar qual era qual.
+          */}
+          <span className="flex min-w-0 flex-1 items-center gap-2 pr-2">
+            <span className="shrink-0 font-mono text-xs text-muted-foreground">
+              #{ordem}
+            </span>
+
+            <span className="min-w-0 truncate text-sm font-medium">
+              {part.name.trim() === "" ? (
+                <span className="text-muted-foreground italic">sem nome</span>
+              ) : (
+                part.name
+              )}
+            </span>
+
+            <span className="ml-auto shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+              {part.width_mm} × {part.length_mm}
+              {part.quantity > 1 && ` · ×${part.quantity}`}
+            </span>
+          </span>
+        </AccordionTrigger>
+
+        {/* A última peça não se apaga: lista vazia derruba o cálculo nas duas
+            pontas. Quem quer sair do modelo livre troca de modelo. */}
+        {removivel && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Remover a peça ${ordem}`}
+            onClick={() => removeCustomPart(part.id)}
+            className="size-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        )}
+      </div>
+
+      <AccordionContent className="space-y-3 pb-3">
         {/*
-          O nome vira um CAMPO como os outros, com rótulo em cima e borda.
+          O nome é um CAMPO como os outros, com rótulo em cima e borda.
 
           Ele era um input disfarçado de texto: fundo e borda transparentes, sem
           rótulo, aparecendo só ao receber foco. Ficava bonito e escondia que
@@ -192,45 +285,16 @@ function PartCard({
           peça" duas vezes não diz o que escrever ali, "Fundo, tampa, lateral…"
           diz.
         */}
-        <div className="min-w-0 flex-1 space-y-1">
-          <Label
-            htmlFor={`part-${ordem}-nome`}
-            className="block text-[10px] uppercase tracking-wider text-muted-foreground"
-          >
-            Nome da peça
-          </Label>
-
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono text-xs text-muted-foreground">#{ordem}</span>
-            <Input
-              id={`part-${ordem}-nome`}
-              value={part.name}
-              onChange={(e) => updateCustomPart(part.id, { name: e.target.value })}
-              placeholder="Fundo, tampa, lateral…"
-              maxLength={120}
-              className="h-8 flex-1 text-xs"
-            />
-          </div>
-        </div>
-
-        {/* A última peça não se apaga: lista vazia derruba o cálculo nas duas
-            pontas. Quem quer sair do modelo livre troca de modelo. */}
-        {removivel && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={`Remover a peça ${ordem}`}
-            onClick={() => removeCustomPart(part.id)}
-            // `mt-[1.35rem]` desce o botão à linha do CAMPO, não à do rótulo:
-            // a coluna ao lado ganhou um rótulo em cima, e sem isso a lixeira
-            // ficaria alinhada com o texto "NOME DA PEÇA".
-            className="mt-[1.35rem] size-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
-        )}
-      </div>
+        <Field label="Nome da peça" htmlFor={`part-${ordem}-nome`}>
+          <Input
+            id={`part-${ordem}-nome`}
+            value={part.name}
+            onChange={(e) => updateCustomPart(part.id, { name: e.target.value })}
+            placeholder="Fundo, tampa, lateral…"
+            maxLength={120}
+            className="h-8 text-xs"
+          />
+        </Field>
 
       <div className="grid grid-cols-2 gap-2">
         <Field label="Papel" htmlFor={`part-${ordem}-role`}>
@@ -310,17 +374,18 @@ function PartCard({
         />
       </div>
 
-      {/* A conta desta linha, aberta: área já com a perda do material e o que
-          ela custa em cada caixa. É o número que justifica a peça existir. */}
-      <p className="text-[11px] text-muted-foreground">
+        {/* A conta desta linha, aberta: área já com a perda do material e o que
+            ela custa em cada caixa. É o número que justifica a peça existir. */}
+        <p className="text-[11px] text-muted-foreground">
         <span className="font-mono tabular-nums">{areaBruta.toFixed(4)} m²</span> com{" "}
         <span className="font-mono tabular-nums">{part.waste_percent}%</span> de perda ·{" "}
         <span className="font-mono tabular-nums">
           {formatCurrency(custo, currency, 4)}
         </span>{" "}
-        por caixa
-      </p>
-    </div>
+          por caixa
+        </p>
+      </AccordionContent>
+    </AccordionItem>
   );
 }
 

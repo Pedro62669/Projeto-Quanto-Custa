@@ -334,7 +334,15 @@ interface QuoteState {
   updateComponent: (id: string, patch: Partial<ComponentInput>) => void;
 
   // ── Peças do modelo livre ───────────────────────────────────────────────
-  addCustomPart: (role?: ComponentRole) => void;
+  /**
+   * Acrescenta uma peça e devolve o ID dela.
+   *
+   * O retorno existe para a tela poder ABRIR o cartão recém-criado: os cartões
+   * são recolhíveis, e uma peça nova que nascesse fechada obrigaria a pessoa a
+   * clicar para preencher o que ela acabou de pedir. Null quando não há
+   * material elegível e nenhuma peça foi criada.
+   */
+  addCustomPart: (role?: ComponentRole) => string | null;
   removeCustomPart: (id: string) => void;
   updateCustomPart: (id: string, patch: Partial<CustomPartInput>) => void;
 }
@@ -584,15 +592,17 @@ export const useQuoteStore = create<QuoteState>()(
       const { materials, spec } = get();
       const parts = spec.custom_parts ?? [];
 
-      if (parts.length >= MAX_PECAS) return;
+      if (parts.length >= MAX_PECAS) return null;
 
       const peca = novaPeca(materials, role, parts.length + 1);
 
       // Sem material medido em área não há peça possível. O formulário mostra o
       // que fazer; o botão simplesmente não inventa uma linha inválida.
-      if (!peca) return;
+      if (!peca) return null;
 
       get().updateSpec({ custom_parts: [...parts, peca] });
+
+      return peca.id;
     },
 
     /**
