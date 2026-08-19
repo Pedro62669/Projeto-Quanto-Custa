@@ -89,7 +89,7 @@ export function ListaDeMateriais() {
   return (
     <section className="space-y-3">
       <header className="flex items-center gap-2">
-        <Boxes className="size-4 text-muted-foreground" />
+        <Boxes className="size-4 text-brand" />
         <h2 className="text-sm font-semibold">Lista de materiais</h2>
       </header>
 
@@ -177,7 +177,7 @@ function BotaoAdicionar({
       // conclui que o sistema não faz ferragem, quando faltava um cadastro.
       title={habilitado ? undefined : motivo}
     >
-      <Plus className="size-3.5" />
+      <Plus className="size-3.5 text-brand" />
       {rotulo}
     </Button>
   );

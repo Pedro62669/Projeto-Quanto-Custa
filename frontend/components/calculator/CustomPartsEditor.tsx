@@ -94,7 +94,7 @@ export function CustomPartsEditor() {
   return (
     <section className="space-y-3">
       <header className="flex items-center gap-2">
-        <Layers className="size-4 text-muted-foreground" />
+        <Layers className="size-4 text-brand" />
         <h2 className="text-sm font-semibold">Peças do projeto</h2>
         <span className="ml-auto text-xs text-muted-foreground">
           {parts.length} de {MAX_PECAS}
@@ -153,7 +153,7 @@ export function CustomPartsEditor() {
         }}
         disabled={parts.length >= MAX_PECAS}
       >
-        <Plus className="size-3.5" />
+        <Plus className="size-3.5 text-brand" />
         Adicionar peça
       </Button>
 

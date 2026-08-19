@@ -72,13 +72,11 @@ export function DimensionForm() {
 
   return (
     <div className="space-y-6">
-      {/* ── Dimensões, ou as peças ─────────────────────────────────────── */}
-      {modeloLivre ? (
-        <CustomPartsEditor />
-      ) : (
+      {/* ── Dimensões ──────────────────────────────────────────────────── */}
+      {!modeloLivre && (
         <section className="space-y-3">
           <header className="flex items-center gap-2">
-            <Box className="size-4 text-muted-foreground" />
+            <Box className="size-4 text-brand" />
             <h2 className="text-sm font-semibold">Dimensões internas</h2>
             <span className="ml-auto text-xs text-muted-foreground">mm</span>
           </header>
@@ -126,7 +124,7 @@ export function DimensionForm() {
       {/* ── Material e modelo ──────────────────────────────────────────── */}
       <section className="space-y-3">
         <header className="flex items-center gap-2">
-          <Layers className="size-4 text-muted-foreground" />
+          <Layers className="size-4 text-brand" />
           <h2 className="text-sm font-semibold">Material e modelo</h2>
         </header>
 
@@ -227,6 +225,17 @@ export function DimensionForm() {
         </div>
       </section>
 
+      {/*
+        As peças vêm DEPOIS do material, e não antes.
+
+        No modelo livre o preço de cada peça sai do material dela, e a
+        matéria-prima de referência é escolhida na seção acima — medir primeiro
+        e escolher o papelão depois inverte a ordem em que a decisão acontece.
+        Também põe o seletor de MODELO perto do topo, que é por onde se entra e
+        por onde se sai do modelo livre.
+      */}
+      {modeloLivre && <CustomPartsEditor />}
+
       {/* ── Tampa: bandeja e tubo têm peça separada ─────────────────────── */}
       {hasSeparateLid(spec.box_model) && <LidFields />}
 
@@ -236,7 +245,7 @@ export function DimensionForm() {
       <section className="space-y-3">
         <header className="flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <Percent className="size-4 text-muted-foreground" />
+            <Percent className="size-4 text-brand" />
             <h2 className="text-sm font-semibold">Lucro desejado</h2>
           </span>
           <span className="font-mono text-sm font-semibold tabular-nums">
@@ -291,7 +300,7 @@ export function DimensionForm() {
         <AccordionItem value="advanced" className="border-b-0">
           <AccordionTrigger className="py-2 text-sm">
             <span className="flex items-center gap-2">
-              <Timer className="size-4 text-muted-foreground" />
+              <Timer className="size-4 text-brand" />
               Ajustes de produção
             </span>
           </AccordionTrigger>
@@ -437,7 +446,7 @@ function LidFields() {
   return (
     <section className="space-y-3 rounded-lg border border-dashed p-3">
       <header className="flex items-center gap-2">
-        <PackageOpen className="size-4 text-muted-foreground" />
+        <PackageOpen className="size-4 text-brand" />
         <h2 className="text-sm font-semibold">Tampa</h2>
 
         {manual ? (
