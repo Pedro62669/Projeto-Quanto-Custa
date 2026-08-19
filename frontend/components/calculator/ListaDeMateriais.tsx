@@ -19,7 +19,7 @@ import {
   selectComponents,
   useQuoteStore,
 } from "@/store/useQuoteStore";
-import { formatCurrency, isFree } from "@/lib/pricing/engine";
+import { formatCurrency, isMagnet, isRigid } from "@/lib/pricing/engine";
 import type { ComponentInput, CradleType, Material } from "@/lib/pricing/types";
 
 /**
@@ -54,15 +54,34 @@ export function ListaDeMateriais() {
   );
 
   /*
-   * No modelo livre o revestimento já é uma PEÇA medida à mão, com papel
-   * `wrap` na lista de retângulos. Oferecê-lo aqui também criaria dois caminhos
-   * para o mesmo custo, e o motor somaria os dois — cobrando o papel duas vezes
-   * num número que sai plausível.
+   * O que a caixa comporta depende do MODELO, e não só do que há no cadastro.
+   *
+   * REVESTIMENTO é de cartonagem rígida: papelão cinza coberto com papel. Uma
+   * caixa americana é chapa vincada que se sustenta sozinha, e não tem o que
+   * revestir — a regra já estava escrita no enum BoxModel, no docblock de
+   * `isRigid()`, e a tela não a respeitava.
+   *
+   * FERRAGEM é da família ímã. O ímã fica embutido entre o cinza e o papel da
+   * aba frontal; sem essa aba não há onde alojá-lo. Oferecer ferragem numa
+   * caixa de envio convida a lançar um custo que a peça não tem, e o preço sai
+   * plausível — que é o pior tipo de erro.
+   *
+   * No modelo livre o revestimento já é uma PEÇA medida à mão, com papel `wrap`
+   * na lista de retângulos. Oferecê-lo aqui também criaria dois caminhos para o
+   * mesmo custo, e o motor somaria os dois.
    */
-  const modeloLivre = isFree(boxModel);
 
-  const podeRevestir = !modeloLivre && materiaisParaPapel(materiais, "wrap").length > 0;
-  const podeFerragem = materiaisParaPapel(materiais, "hardware").length > 0;
+  const podeRevestir =
+    isRigid(boxModel) && materiaisParaPapel(materiais, "wrap").length > 0;
+
+  const podeFerragem =
+    isMagnet(boxModel) && materiaisParaPapel(materiais, "hardware").length > 0;
+
+  /*
+   * O berço continua valendo para todo modelo, e isso é deliberado: espuma e
+   * nicho servem tanto para acomodar joia em caixa rígida quanto para proteger
+   * peça frágil dentro de uma caixa de envio.
+   */
   const podeBerco = materiaisParaPapel(materiais, "cradle").length > 0;
 
   const temBerco = componentes.some((c) => c.role === "cradle");
@@ -92,8 +111,16 @@ export function ListaDeMateriais() {
         </div>
       )}
 
-      <div className={modeloLivre ? "grid grid-cols-2 gap-2" : "grid grid-cols-3 gap-2"}>
-        {!modeloLivre && (
+      {/*
+        Os botões que o modelo não comporta somem, e não aparecem cinzas.
+
+        Desabilitado com explicação serve para falta de CADASTRO, que é coisa
+        que o usuário resolve. Aqui a ausência é permanente enquanto o modelo
+        for este, e um botão eternamente apagado só ensina a ignorar a fileira.
+      */}
+      <div className="flex flex-wrap gap-2">
+        {/* `isRigid` já exclui o modelo livre — ele não é cartonagem rígida. */}
+        {isRigid(boxModel) && (
           <BotaoAdicionar
             rotulo="Revestimento"
             habilitado={podeRevestir}
@@ -101,12 +128,16 @@ export function ListaDeMateriais() {
             onClick={() => addComponent("wrap")}
           />
         )}
-        <BotaoAdicionar
-          rotulo="Ferragem"
-          habilitado={podeFerragem}
-          motivo="Cadastre um material cotado por peça (ímã, fecho, fita)."
-          onClick={() => addComponent("hardware")}
-        />
+
+        {isMagnet(boxModel) && (
+          <BotaoAdicionar
+            rotulo="Ferragem"
+            habilitado={podeFerragem}
+            motivo="Cadastre um material cotado por peça (ímã, fecho, fita)."
+            onClick={() => addComponent("hardware")}
+          />
+        )}
+
         <BotaoAdicionar
           rotulo="Berço"
           habilitado={podeBerco}

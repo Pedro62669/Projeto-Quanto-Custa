@@ -1,7 +1,13 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { api } from "@/lib/api";
-import { calculatePricing, ENGINE_VERSION, isFree } from "@/lib/pricing/engine";
+import {
+  calculatePricing,
+  ENGINE_VERSION,
+  isFree,
+  isMagnet,
+  isRigid,
+} from "@/lib/pricing/engine";
 import type {
   BoxModel,
   ComponentInput,
@@ -478,8 +484,28 @@ export const useQuoteStore = create<QuoteState>()(
       const precisaSemear = isFree(model) && (spec.custom_parts ?? []).length === 0;
       const primeira = precisaSemear ? novaPeca(materials, "structure", 1) : null;
 
+      /*
+       * A lista de materiais é filtrada pelo modelo NOVO.
+       *
+       * Sem isto, montar uma caixa ímã com quatro ímãs e depois trocar para
+       * caixa americana deixaria a ferragem no orçamento: o botão some da tela,
+       * a linha continua sendo cobrada, e o usuário não tem por onde removê-la.
+       * O custo fica preso num preço que parece certo.
+       *
+       * As mesmas regras dos botões, e do mesmo lugar — revestimento é de
+       * cartonagem rígida, ferragem é da família ímã. Berço fica: espuma serve
+       * tanto para acomodar joia quanto para proteger peça frágil no envio.
+       */
+      const compativeis = (spec.components ?? []).filter((c) => {
+        if (c.role === "wrap") return isRigid(model);
+        if (c.role === "hardware") return isMagnet(model);
+
+        return true;
+      });
+
       get().updateSpec({
         box_model: model,
+        components: compativeis,
         ...(primeira ? { custom_parts: [primeira] } : {}),
       });
     },
