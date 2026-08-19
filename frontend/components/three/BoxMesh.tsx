@@ -483,10 +483,24 @@ function LivroMesh({
       tampaRef.current.rotation.x = -(Math.PI * 0.555) * suave.current;
     }
 
-    // A aba abre ANTES da tampa (ela precisa liberar a lateral primeiro), e por
-    // isso satura na primeira metade do curso.
+    /*
+     * A aba vai de DOBRADA para reta, e não o contrário.
+     *
+     * O repouso da peça é a caixa fechada, e nela a aba desce sobre a parede da
+     * frente — é lá que o ímã dela encontra o par embutido no corpo. Começar em
+     * zero deixava a língua esticada para fora com a caixa fechada, apontando
+     * para o nada.
+     *
+     * Positivo em X porque a aba se estende em +Z a partir da dobradiça, e um
+     * giro positivo nesse eixo leva +Z para baixo.
+     *
+     * Ela ainda sai ANTES da tampa: precisa soltar da parede para a capa poder
+     * girar. Por isso termina o movimento na primeira metade do curso — o que
+     * agora significa chegar a zero, não sair dele.
+     */
     if (abaRef.current) {
-      abaRef.current.rotation.x = (Math.PI / 2) * Math.min(suave.current * 2, 1);
+      abaRef.current.rotation.x =
+        (Math.PI / 2) * (1 - Math.min(suave.current * 2, 1));
     }
 
     /*

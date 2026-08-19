@@ -82,29 +82,7 @@ export function PartsPreview() {
             {/* O rótulo só cabe em peça grande o bastante. Numa peça pequena ele
                 sairia por cima das vizinhas e atrapalharia justamente a
                 comparação de tamanho que o desenho existe para fazer. */}
-            {part.width_mm > layout.fonte * 6 && part.length_mm > layout.fonte * 3 && (
-              <text
-                x={x + part.width_mm / 2}
-                y={y + part.length_mm / 2}
-                textAnchor="middle"
-                fill="currentColor"
-                fontSize={layout.fonte}
-                className="font-mono"
-              >
-                <tspan x={x + part.width_mm / 2} dy={-layout.fonte * 0.2}>
-                  {part.width_mm} × {part.length_mm}
-                </tspan>
-                {part.quantity > 1 && (
-                  <tspan
-                    x={x + part.width_mm / 2}
-                    dy={layout.fonte * 1.2}
-                    fillOpacity={0.7}
-                  >
-                    ×{part.quantity}
-                  </tspan>
-                )}
-              </text>
-            )}
+            <RotuloDaPeca part={part} x={x} y={y} fonte={layout.fonte} />
           </g>
         ))}
       </svg>
@@ -114,6 +92,92 @@ export function PartsPreview() {
         folha do material, com perda real, sai na ficha técnica.
       </p>
     </div>
+  );
+}
+
+/**
+ * O rótulo dentro da peça: nome em cima, medida embaixo.
+ *
+ * O NOME é o que identifica a peça para quem a desenhou — "fundo", "tampa",
+ * "lateral longa" — e é ele que a ficha técnica leva para a bancada. A prévia
+ * mostrava só a medida, e num projeto de seis retângulos parecidos duas peças de
+ * 200 × 200 ficavam indistinguíveis: dava para conferir o tamanho e não dava
+ * para saber qual era qual.
+ *
+ * As linhas entram por ORDEM DE IMPORTÂNCIA e saem por ordem inversa conforme o
+ * espaço aperta. Numa peça baixa cai primeiro a quantidade, depois o nome, e a
+ * medida fica até o fim — ela é a razão de o desenho existir.
+ *
+ * O bloco é centrado a partir do número de linhas que sobreviveram, e não por
+ * deslocamentos fixos: com o nome opcional, um `dy` cravado deixaria o texto
+ * fora do centro em metade dos casos.
+ */
+function RotuloDaPeca({
+  part,
+  x,
+  y,
+  fonte,
+}: {
+  part: CustomPartInput;
+  x: number;
+  y: number;
+  fonte: number;
+}) {
+  const centroX = x + part.width_mm / 2;
+
+  // Largura suficiente para a medida — se ela não cabe, nada cabe.
+  if (part.width_mm < fonte * 6 || part.length_mm < fonte * 3) return null;
+
+  const nome = part.name.trim();
+
+  const linhas: Array<{ texto: string; classe: string; opacidade: number }> = [];
+
+  // Cada linha extra pede 1,2 de altura. Os limites abaixo são esse custo somado
+  // ao mínimo da medida, e é por isso que crescem de 1,2 em 1,2.
+  if (nome !== "" && part.length_mm > fonte * 4.2) {
+    linhas.push({ texto: nome, classe: "font-sans font-medium", opacidade: 1 });
+  }
+
+  linhas.push({
+    texto: `${part.width_mm} × ${part.length_mm}`,
+    classe: "font-mono",
+    // Com nome acima, a medida recua para segundo plano.
+    opacidade: linhas.length > 0 ? 0.75 : 1,
+  });
+
+  if (part.quantity > 1 && part.length_mm > fonte * 5.4) {
+    linhas.push({ texto: `×${part.quantity}`, classe: "font-mono", opacidade: 0.7 });
+  }
+
+  /*
+   * Baseline da primeira linha.
+   *
+   * O `y` recebido é o centro vertical da peça. Sobe-se metade do bloco e
+   * desce-se um terço da fonte, que é o ajuste entre o centro geométrico do
+   * texto e a linha de base onde o SVG o assenta.
+   */
+  const topo = -((linhas.length - 1) / 2) * 1.2 * fonte + fonte * 0.34;
+
+  return (
+    <text
+      x={centroX}
+      y={y + part.length_mm / 2}
+      textAnchor="middle"
+      fill="currentColor"
+      fontSize={fonte}
+    >
+      {linhas.map((linha, indice) => (
+        <tspan
+          key={indice}
+          x={centroX}
+          dy={indice === 0 ? topo : fonte * 1.2}
+          className={linha.classe}
+          fillOpacity={linha.opacidade}
+        >
+          {linha.texto}
+        </tspan>
+      ))}
+    </text>
   );
 }
 
