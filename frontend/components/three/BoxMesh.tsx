@@ -9,7 +9,7 @@ import {
   Suspense,
   type ReactNode,
 } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Edges, useTexture, useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
 import type { BoxModel } from "@/lib/pricing/types";
@@ -32,6 +32,21 @@ const SCENE_MAX_UNITS = 2;
 
 /** Velocidade da interpolação — maior = mais responsivo, menor = mais suave. */
 const LERP_SPEED = 8;
+
+/** Teto do delta de um quadro, em segundos. */
+const DELTA_MAXIMO = 1 / 30;
+
+/**
+ * Delta do quadro, limitado.
+ *
+ * Em frameloop="demand" o relógio corre enquanto nada é desenhado: o primeiro
+ * quadro depois de a cena ficar parada chega com o tempo ocioso inteiro como
+ * delta — segundos —, o fator do lerp vai a 1 e a animação salta direto para o
+ * fim. O teto faz esse quadro valer como um quadro comum.
+ */
+export function deltaDeQuadro(delta: number): number {
+  return Math.min(delta, DELTA_MAXIMO);
+}
 
 /**
  * Espessura mínima de parede, em unidades de cena.
@@ -189,11 +204,25 @@ const SLIDE_RATIO = 0.45;
  */
 function useAberturaSuave(alvo: number) {
   const atual = useRef(alvo);
+  const invalidate = useThree((s) => s.invalidate);
 
-  useFrame((_, delta) => {
+  // O alvo muda só nesta closure, sem tocar prop de objeto three — o R3F não
+  // percebe a mudança e, em frameloop="demand", o primeiro quadro da
+  // interpolação nunca viria. O invalidate do useFrame cuida dos seguintes.
+  useEffect(() => {
+    invalidate();
+  }, [alvo, invalidate]);
+
+  useFrame((state, delta) => {
     // Fator dependente do delta: a suavidade não muda com o FPS da máquina.
-    const alpha = 1 - Math.exp(-LERP_SPEED * delta);
+    const alpha = 1 - Math.exp(-LERP_SPEED * deltaDeQuadro(delta));
     atual.current += (alvo - atual.current) * alpha;
+
+    // Em frameloop="demand" nada redesenha sozinho: enquanto a interpolação
+    // não chegou ao alvo, é preciso pedir o próximo quadro explicitamente.
+    if (Math.abs(alvo - atual.current) > 0.0005) {
+      state.invalidate();
+    }
   });
 
   return atual;
@@ -1876,12 +1905,25 @@ export function BoxMesh({
    */
   const atual = useRef(new THREE.Vector3(0.001, 0.001, 0.001));
 
-  useFrame((_, delta) => {
+  // Mesmo motivo de useAberturaSuave: medida nova não muda prop three nenhuma,
+  // então o primeiro quadro do redimensionamento precisa ser pedido aqui.
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    invalidate();
+  }, [alvo.x, alvo.y, alvo.z, invalidate]);
+
+  useFrame((state, delta) => {
     if (!grupo.current) return;
 
     // Fator dependente do delta => a suavidade não muda com o FPS da máquina.
-    const alpha = 1 - Math.exp(-LERP_SPEED * delta);
+    const alpha = 1 - Math.exp(-LERP_SPEED * deltaDeQuadro(delta));
     atual.current.lerp(alvo, alpha);
+
+    // Mesma lógica de useAberturaSuave: sem isto o redimensionamento para no
+    // primeiro quadro em frameloop="demand".
+    if (atual.current.distanceTo(alvo) > 0.0005) {
+      state.invalidate();
+    }
 
     const w = atual.current.x;
     const h = atual.current.y;

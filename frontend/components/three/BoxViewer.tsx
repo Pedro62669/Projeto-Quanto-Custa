@@ -14,6 +14,7 @@ import {
   BoxMesh,
   assemblyHeightUnits,
   assemblyRadiusUnits,
+  deltaDeQuadro,
   hasAperture,
   type BoxMeshProps,
 } from "./BoxMesh";
@@ -57,6 +58,12 @@ export function BoxViewer({
     <div className={`relative h-full w-full ${className}`}>
       <Canvas
         shadows
+        // Redesenha só quando algo pede (interação, ou os `invalidate()` das
+        // animações de abertura/câmera) em vez de um loop de requestAnimationFrame
+        // contínuo. Parado, este preview não tem nada mudando quadro a quadro —
+        // o loop "always" mantinha a aba ocupada renderizando o mesmo frame sem
+        // parar, disputando a thread principal até com um clique para sair da tela.
+        frameloop="demand"
         // Posição inicial em 3/4: mostra três faces de uma vez, deixando as
         // proporções evidentes sem que o usuário precise girar nada. A
         // DISTÂNCIA é ajustada logo depois pelo <CameraFit />, conforme o
@@ -205,7 +212,7 @@ const MARGEM_DE_QUADRO = 1.25;
  * cada quadro seria arrancar o controle da mão dele.
  */
 function CameraFit({ raio, alvoY }: { raio: number; alvoY: number }) {
-  const { camera, size } = useThree();
+  const { camera, size, invalidate } = useThree();
 
   const alvo = useRef<number | null>(null);
   const centro = useRef(new THREE.Vector3());
@@ -223,20 +230,26 @@ function CameraFit({ raio, alvoY }: { raio: number; alvoY: number }) {
     const distancia = (raio / Math.sin(campo / 2)) * MARGEM_DE_QUADRO;
 
     alvo.current = Math.min(Math.max(distancia, DISTANCIA_MINIMA), DISTANCIA_MAXIMA);
-  }, [raio, camera, size.width, size.height]);
+    // Em frameloop="demand", sem este pedido o useFrame abaixo só veria o
+    // alvo novo na próxima interação do usuário.
+    invalidate();
+  }, [raio, camera, size.width, size.height, invalidate]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (alvo.current === null) return;
 
     centro.current.set(0, alvoY, 0);
 
     const atual = camera.position.distanceTo(centro.current);
-    const proxima = THREE.MathUtils.damp(atual, alvo.current, 6, delta);
+    const proxima = THREE.MathUtils.damp(atual, alvo.current, 6, deltaDeQuadro(delta));
 
     // Chegou: solta o controle. Sem isto, cada quadro reimporia a distância e
     // o scroll do usuário voltaria sozinho para onde a câmera "queria" estar.
     if (Math.abs(proxima - alvo.current) < 0.005) {
       alvo.current = null;
+    } else {
+      // Em frameloop="demand" o quadro seguinte só existe se for pedido.
+      state.invalidate();
     }
 
     camera.position
