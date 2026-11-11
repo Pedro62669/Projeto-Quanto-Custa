@@ -65,7 +65,7 @@ export function DataTable<T>({
   if (rows.length === 0) return <>{empty}</>;
 
   return (
-    <div className="rounded-lg border" data-loading={loading || undefined}>
+    <div className="overflow-hidden rounded-xl border bg-card shadow-card" data-loading={loading || undefined}>
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">

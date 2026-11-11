@@ -1,4 +1,8 @@
+import type { CSSProperties } from "react";
+
 import { formatCurrency } from "@/lib/pricing/engine";
+
+import { Contador } from "./Contador";
 
 /**
  * O resumo de preço, como ele sai da calculadora.
@@ -36,46 +40,66 @@ const COMPOSICAO = [
 
 const UNITARIO = COMPOSICAO.reduce((total, item) => total + item.valor, 0);
 
+/** A barra começa a crescer depois que o cartão pousou. */
+const INICIO_DA_BARRA = 900;
+const ENTRE_TRECHOS = 110;
+
+const atraso = (ms: number) => ({ "--atraso": `${ms}ms` }) as CSSProperties;
+
 export function CartaoDePreco() {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-elevado">
       <p className="text-xs text-muted-foreground">
         Caixa rígida com tampa · 200 × 150 × 80 mm ·{" "}
         <span className="tabular-nums">{QUANTIDADE}</span> peças
       </p>
 
-      <div className="mt-4 flex items-end justify-between gap-4">
+      {/* `flex-wrap`: na coluna estreita do herói o total desce para a linha
+          de baixo em vez de vazar pela borda do cartão. */}
+      <div className="mt-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div>
           <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">
             Preço por peça
           </p>
-          <p className="font-mono text-3xl font-semibold tabular-nums">
-            {formatCurrency(UNITARIO)}
+          {/* O preço conta até o valor ao entrar na tela — é o instante em que
+              a calculadora "responde", e o único número da página que merece
+              esse destaque. */}
+          <p className="font-mono text-[1.75rem] leading-tight font-semibold tabular-nums">
+            <Contador valor={UNITARIO} formato="moeda" />
           </p>
         </div>
 
         <div className="text-right">
           <p className="text-[0.7rem] uppercase tracking-wide text-muted-foreground">Total</p>
-          <p className="font-mono text-lg tabular-nums">
+          <p className="font-mono text-base tabular-nums">
             {formatCurrency(UNITARIO * QUANTIDADE)}
           </p>
         </div>
       </div>
 
-      {/* A barra: onde o dinheiro do cliente vai parar, na proporção real. */}
-      <div className="mt-5 flex h-2 overflow-hidden rounded-full">
-        {COMPOSICAO.map((item) => (
+      {/* A barra: onde o dinheiro do cliente vai parar, na proporção real.
+          Cada trecho cresce da esquerda, em fila — a composição se monta na
+          ordem em que o preço é somado. */}
+      <div className="mt-5 flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+        {COMPOSICAO.map((item, indice) => (
           <div
             key={item.rotulo}
-            className={item.tom}
-            style={{ width: `${(item.valor / UNITARIO) * 100}%` }}
+            className={`barra ${item.tom}`}
+            style={{
+              width: `${(item.valor / UNITARIO) * 100}%`,
+              ...atraso(INICIO_DA_BARRA + indice * ENTRE_TRECHOS),
+            }}
           />
         ))}
       </div>
 
       <dl className="mt-4 space-y-2">
-        {COMPOSICAO.map((item) => (
-          <div key={item.rotulo} className="flex items-center gap-2.5 text-sm">
+        {COMPOSICAO.map((item, indice) => (
+          <div
+            key={item.rotulo}
+            className="entra flex items-center gap-2.5 text-sm"
+            style={atraso(INICIO_DA_BARRA + indice * ENTRE_TRECHOS)}
+          >
             <span className={`size-2 shrink-0 rounded-sm ${item.tom}`} aria-hidden />
             <dt className="flex-1 text-muted-foreground">{item.rotulo}</dt>
             <dd className="font-mono tabular-nums">{formatCurrency(item.valor)}</dd>

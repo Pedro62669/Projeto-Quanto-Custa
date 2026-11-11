@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  createContext,
+  useContext,
   useRef,
   useMemo,
   useEffect,
@@ -33,19 +35,34 @@ const SCENE_MAX_UNITS = 2;
 /** Velocidade da interpolação — maior = mais responsivo, menor = mais suave. */
 const LERP_SPEED = 8;
 
-/** Teto do delta de um quadro, em segundos. */
-const DELTA_MAXIMO = 1 / 30;
+/** O que um quadro vale quando a animação retoma depois de uma pausa. */
+const DELTA_DE_RETOMADA = 1 / 60;
 
 /**
- * Delta do quadro, limitado.
+ * Teto do delta de um quadro em andamento, em segundos.
+ *
+ * Folgado de propósito: existe só para a aba que ficou em segundo plano e
+ * voltou não entregar meio minuto de uma vez. Um computador lento, a 10 quadros
+ * por segundo, passa por baixo dele e anima no tempo certo.
+ */
+const DELTA_MAXIMO = 0.25;
+
+/**
+ * O delta que a animação deve usar neste quadro.
  *
  * Em frameloop="demand" o relógio corre enquanto nada é desenhado: o primeiro
  * quadro depois de a cena ficar parada chega com o tempo ocioso inteiro como
  * delta — segundos —, o fator do lerp vai a 1 e a animação salta direto para o
- * fim. O teto faz esse quadro valer como um quadro comum.
+ * fim. Esse quadro passa a valer como um quadro comum.
+ *
+ * Quem diz se houve pausa é a própria animação (`emAndamento`), e não o tamanho
+ * do delta. Um limiar confundia as duas coisas: numa máquina lenta TODO quadro
+ * é longo, cada um era tratado como retomada e a caixa levava dez vezes mais
+ * para abrir — justamente onde a espera já é maior. Sabendo que o quadro
+ * anterior foi dela, a animação pode confiar no tempo que de fato passou.
  */
-export function deltaDeQuadro(delta: number): number {
-  return Math.min(delta, DELTA_MAXIMO);
+export function deltaDeQuadro(delta: number, emAndamento: boolean): number {
+  return emAndamento ? Math.min(delta, DELTA_MAXIMO) : DELTA_DE_RETOMADA;
 }
 
 /**
@@ -204,6 +221,7 @@ const SLIDE_RATIO = 0.45;
  */
 function useAberturaSuave(alvo: number) {
   const atual = useRef(alvo);
+  const animando = useRef(false);
   const invalidate = useThree((s) => s.invalidate);
 
   // O alvo muda só nesta closure, sem tocar prop de objeto three — o R3F não
@@ -215,14 +233,13 @@ function useAberturaSuave(alvo: number) {
 
   useFrame((state, delta) => {
     // Fator dependente do delta: a suavidade não muda com o FPS da máquina.
-    const alpha = 1 - Math.exp(-LERP_SPEED * deltaDeQuadro(delta));
+    const alpha = 1 - Math.exp(-LERP_SPEED * deltaDeQuadro(delta, animando.current));
     atual.current += (alvo - atual.current) * alpha;
 
     // Em frameloop="demand" nada redesenha sozinho: enquanto a interpolação
     // não chegou ao alvo, é preciso pedir o próximo quadro explicitamente.
-    if (Math.abs(alvo - atual.current) > 0.0005) {
-      state.invalidate();
-    }
+    animando.current = Math.abs(alvo - atual.current) > 0.0005;
+    if (animando.current) state.invalidate();
   });
 
   return atual;
@@ -298,11 +315,125 @@ export function assemblyHeightMm(props: BoxMeshProps): number {
   return props.heightMm * (1 + LID_GAP_RATIO) + tampa.heightMm;
 }
 
+/**
+ * Giro da capa do livro totalmente aberta, em radianos (~100°).
+ *
+ * Passa um pouco do reto: capa dura aberta cai além dos 90° por causa da
+ * espessura da lombada, e parar exatamente no reto deixa a peça com cara de
+ * papel. Constante porque DOIS lugares dependem dela — a dobradiça, que gira
+ * até aqui, e o envelope abaixo, que precisa saber até onde a tampa sobe.
+ */
+const LIVRO_GIRO_ABERTO = Math.PI * 0.555;
+
+/** Quanto a tampa do livro alcança para cima e para trás, por unidade de comprimento. */
+const LIVRO_ALCANCE = {
+  sobe: Math.sin(LIVRO_GIRO_ABERTO),
+  recua: Math.abs(Math.cos(LIVRO_GIRO_ABERTO)),
+};
+
+/**
+ * A caixa que envolve o livro ABERTO, em mm.
+ *
+ * Aberta, a tampa fica quase em pé: sobe o próprio comprimento (mais a aba,
+ * que estica junto) e recua só uma fração dele. A conta anterior somava
+ * `capaD + lombada + capaW` como se a tampa deitasse para trás — o que ela
+ * nunca faz —, e a peça era reduzida a quase metade do tamanho para caber num
+ * espaço que não ocupava. Era por isso que a família livro aparecia pequena no
+ * meio do quadro enquanto os outros modelos o preenchiam.
+ */
+function livroEnvelopeMm(l: ReturnType<typeof bookLayout>, espessuraMm: number) {
+  const braco = l.capaD + l.aba + l.magnetFlap;
+
+  return {
+    w: l.capaW + 2 * l.sideFlap,
+    h: l.lombada + LIVRO_ALCANCE.sobe * braco,
+    d: l.capaD + espessuraMm + LIVRO_ALCANCE.recua * braco,
+  };
+}
+
+/** Até onde as abas do RSC abrem sem furar o chão, e o que isso ocupa em planta. */
+function rscAberto(widthMm: number, heightMm: number, depthMm: number) {
+  const abaMm = depthMm / 2;
+
+  /*
+   * A aba aberta não pode furar o chão.
+   *
+   * A 120° a ponta desce `aba × |cos 120°|` abaixo do vinco — meia aba. Numa
+   * caixa rasa e funda (40mm de altura, 400 de profundidade) isso passa do
+   * fundo e a peça atravessa o piso da cena. O limite abre o quanto der até a
+   * ponta raspar o chão, e só então para.
+   */
+  const anguloAberto = Math.min(
+    ABA_ABERTA,
+    Math.acos(-Math.min(1, abaMm > 0 ? heightMm / abaMm : 1)),
+  );
+
+  const alcance = Math.sin(anguloAberto);
+
+  return {
+    abaMm,
+    anguloAberto,
+    w: widthMm + 2 * Math.min(abaMm, widthMm / 2) * alcance,
+    d: depthMm + 2 * abaMm * alcance,
+  };
+}
+
+/**
+ * A caixa que envolve o conjunto na pose TOTALMENTE ABERTA, em mm.
+ *
+ * É a fonte única do enquadramento. Cada modelo se normaliza pela própria pose
+ * aberta (a gaveta puxada, as abas do RSC escancaradas, a capa do livro de
+ * pé), e a câmera precisa enxergar a MESMA caixa — senão mira no meio de uma
+ * peça e calcula a distância para outra. Antes, o enquadramento usava só as
+ * três medidas digitadas: acertava nos modelos de painéis parados e errava em
+ * todos os que têm peça móvel.
+ *
+ * Mede sempre a pose aberta, nunca a atual: se acompanhasse o slider, a caixa
+ * mudaria de tamanho enquanto o usuário a fecha.
+ */
+function envelopeAbertoMm(props: BoxMeshProps): { w: number; h: number; d: number } {
+  const modelo = props.boxModel ?? "rsc";
+
+  if (isBook(modelo)) {
+    const espessura = props.thicknessMm ?? 0;
+
+    return livroEnvelopeMm(
+      bookLayout(modelo, props.widthMm, props.heightMm, props.depthMm, espessura),
+      espessura,
+    );
+  }
+
+  if (modelo === "drawer") {
+    return {
+      w: props.widthMm,
+      h: props.heightMm,
+      d: props.depthMm * (1 + SLIDE_RATIO),
+    };
+  }
+
+  if (modelo === "rsc") {
+    const aberto = rscAberto(props.widthMm, props.heightMm, props.depthMm);
+
+    return { w: aberto.w, h: props.heightMm, d: aberto.d };
+  }
+
+  return {
+    w: props.widthMm,
+    h: assemblyHeightMm(props),
+    d: isCylindrical(modelo) ? props.widthMm : props.depthMm,
+  };
+}
+
+/** mm → unidades de cena, pelo mesmo fator que desenha a peça. */
+function fatorDoEnvelope(e: { w: number; h: number; d: number }): number {
+  return SCENE_MAX_UNITS / Math.max(e.w, e.h, e.d, 1); // guarda contra 0
+}
+
 /** Altura do conjunto já convertida para unidades de cena (≤ SCENE_MAX_UNITS). */
 export function assemblyHeightUnits(props: BoxMeshProps): number {
-  const alturaMm = assemblyHeightMm(props);
+  const envelope = envelopeAbertoMm(props);
 
-  return (alturaMm * SCENE_MAX_UNITS) / maiorAresta(props);
+  return envelope.h * fatorDoEnvelope(envelope);
 }
 
 /**
@@ -320,23 +451,9 @@ export function assemblyHeightUnits(props: BoxMeshProps): number {
  * que erra por um múltiplo, e o erro só apareceria em medidas extremas.
  */
 export function assemblyRadiusUnits(props: BoxMeshProps): number {
-  const cilindro = isCylindrical(props.boxModel ?? "rsc");
-  const fator = SCENE_MAX_UNITS / maiorAresta(props);
+  const envelope = envelopeAbertoMm(props);
 
-  const meiaLargura = (props.widthMm * fator) / 2;
-  const meiaProfundidade = ((cilindro ? props.widthMm : props.depthMm) * fator) / 2;
-  const meiaAltura = (assemblyHeightMm(props) * fator) / 2;
-
-  return Math.hypot(meiaLargura, meiaProfundidade, meiaAltura);
-}
-
-/** A aresta que serve de referência para a normalização. Nunca zero. */
-function maiorAresta(props: BoxMeshProps): number {
-  const profundidade = isCylindrical(props.boxModel ?? "rsc")
-    ? props.widthMm
-    : props.depthMm;
-
-  return Math.max(props.widthMm, profundidade, assemblyHeightMm(props), 1);
+  return (Math.hypot(envelope.w, envelope.h, envelope.d) / 2) * fatorDoEnvelope(envelope);
 }
 
 /**
@@ -375,12 +492,97 @@ function TexturedMaterial({
     <meshStandardMaterial
       map={texture}
       color={colorHex}
-      roughness={0.85}
-      metalness={0.02}
+      {...PAPEL}
       side={side}
     />
   );
 }
+
+/**
+ * Grão de papel, escrito no shader do material padrão.
+ *
+ * Uma chapa de papelão nunca é de uma cor só: a fibra clareia e escurece em
+ * manchas largas, e por cima delas há um pontilhado fino. Sem isso cada face
+ * sai um polígono liso, e a peça lê como plástico pintado — por mais certa que
+ * a geometria esteja.
+ *
+ * É ruído PROCEDURAL, e não uma textura mapeada, por causa de como os painéis
+ * são feitos: cada um é um cubo unitário esticado por escala, e um mapa UV
+ * esticaria junto — o grão sairia riscado numa parede comprida e miúdo numa
+ * aba curta. Aqui a coordenada do ruído é a posição no espaço DA PEÇA
+ * multiplicada pela escala de mundo dela: o grão tem o mesmo tamanho em todo
+ * painel, e viaja com a tampa quando ela gira em vez de escorrer por baixo.
+ *
+ * A amplitude é baixa de propósito (±4% na cor). A cor é dado do cadastro: o
+ * grão pode dar textura a ela, não mudá-la.
+ */
+function graoDePapel(shader: { vertexShader: string; fragmentShader: string }) {
+  shader.vertexShader = shader.vertexShader
+    .replace("#include <common>", "#include <common>\nvarying vec3 vGrao;")
+    .replace(
+      "#include <begin_vertex>",
+      `#include <begin_vertex>
+      vGrao = position * vec3(
+        length(modelMatrix[0].xyz),
+        length(modelMatrix[1].xyz),
+        length(modelMatrix[2].xyz)
+      );`,
+    );
+
+  shader.fragmentShader = shader.fragmentShader
+    .replace(
+      "#include <common>",
+      `#include <common>
+      varying vec3 vGrao;
+
+      float graoHash(vec3 p) {
+        p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
+        p *= 17.0;
+        return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+      }
+
+      // Ruído de valor, interpolado: sem a interpolação o pontilhado cintila
+      // quando a câmera gira, porque cada ponto pisca de um pixel para outro.
+      float graoRuido(vec3 p) {
+        vec3 i = floor(p);
+        vec3 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+
+        return mix(
+          mix(mix(graoHash(i), graoHash(i + vec3(1, 0, 0)), f.x),
+              mix(graoHash(i + vec3(0, 1, 0)), graoHash(i + vec3(1, 1, 0)), f.x), f.y),
+          mix(mix(graoHash(i + vec3(0, 0, 1)), graoHash(i + vec3(1, 0, 1)), f.x),
+              mix(graoHash(i + vec3(0, 1, 1)), graoHash(i + vec3(1, 1, 1)), f.x), f.y),
+          f.z
+        );
+      }`,
+    )
+    .replace(
+      "#include <color_fragment>",
+      `#include <color_fragment>
+      float graoFino = graoRuido(vGrao * 46.0);
+      float graoLargo = graoRuido(vGrao * 7.0);
+      float grao = graoFino * 0.55 + graoLargo * 0.45;
+      diffuseColor.rgb *= 0.96 + 0.08 * grao;`,
+    )
+    .replace(
+      "#include <roughnessmap_fragment>",
+      `#include <roughnessmap_fragment>
+      roughnessFactor = clamp(roughnessFactor + (grao - 0.5) * 0.14, 0.0, 1.0);`,
+    );
+}
+
+/**
+ * Os números do papel, num lugar só.
+ *
+ * Três materiais são criados neste arquivo (o dos painéis, o do tubo e o da
+ * mailer, que vem do Blender). Com os valores escritos em cada um, bastava
+ * ajustar um para a mailer ficar com um brilho que as outras caixas não têm.
+ *
+ * Fosco, mas não morto: 0,82 de rugosidade ainda deixa o ambiente desenhar um
+ * degradê na face, que é o que dá a ela aparência de chapa.
+ */
+const PAPEL = { roughness: 0.82, metalness: 0, envMapIntensity: 0.9 } as const;
 
 function FlatMaterial({
   colorHex,
@@ -394,11 +596,46 @@ function FlatMaterial({
       color={colorHex}
       // Papelão/papel são superfícies foscas: brilho especular alto faria a
       // peça parecer plástico e distorceria a leitura do material escolhido.
-      roughness={0.9}
-      metalness={0.0}
+      {...PAPEL}
       side={side}
+      onBeforeCompile={graoDePapel}
     />
   );
+}
+
+/**
+ * A cor da peça, para quem desenha os vincos.
+ *
+ * Contexto e não prop porque os vincos são criados em seis lugares, três
+ * níveis abaixo de quem conhece a cor — e todos eles recebem o material já
+ * pronto, como nó React. Passar a cor por prop seria abrir a assinatura de
+ * cada modelo para um dado que só o traço usa.
+ */
+const COR_PADRAO = "#C8A06A";
+
+const CorDaPeca = createContext(COR_PADRAO);
+
+/**
+ * Os vincos de dobra, realçados.
+ *
+ * O traço é a própria cor do material ESCURECIDA, e não preto: um vinco é
+ * papel amassado, que fica mais escuro que a face — num kraft ele é marrom, num
+ * papel branco é cinza. Preto puro sobre papel claro desenha uma grade por cima
+ * da peça em vez de uma dobra nela.
+ *
+ * (Aqui morava `color="#00000030"`. O three não lê hexadecimal de oito dígitos:
+ * descartava o valor com um aviso no console e o traço saía BRANCO, que é a cor
+ * padrão da linha. As arestas claras que a peça tinha eram esse defeito.)
+ */
+function Vincos({ threshold = 15 }: { threshold?: number }) {
+  const cor = useContext(CorDaPeca);
+
+  const traco = useMemo(
+    () => "#" + new THREE.Color(cor).multiplyScalar(0.42).getHexString(),
+    [cor],
+  );
+
+  return <Edges threshold={threshold} color={traco} transparent opacity={0.55} lineWidth={1} />;
 }
 
 /**
@@ -421,7 +658,7 @@ const Painel = ({
     <boxGeometry args={[1, 1, 1]} />
     {material}
     {/* Arestas escurecidas: sugerem os vincos de dobra da planificação. */}
-    {showEdges && <Edges threshold={15} color="#00000030" />}
+    {showEdges && <Vincos />}
   </mesh>
 );
 
@@ -461,14 +698,12 @@ function LivroMesh({
   /*
    * O enquadramento usa a capa ABERTA, não a caixa fechada.
    *
-   * Aberta, a tampa deita para trás e a peça ocupa quase o dobro da
-   * profundidade. Normalizar pela caixa fechada faria a tampa sair do
-   * enquadramento no meio da animação — o mesmo cuidado que a gaveta toma com
-   * o deslize máximo.
+   * Aberta, a tampa fica de pé e a peça passa a ter quase o triplo da altura.
+   * Normalizar pela caixa fechada faria a tampa sair do enquadramento no meio
+   * da animação — o mesmo cuidado que a gaveta toma com o deslize máximo. O
+   * envelope é o mesmo que a câmera lê (ver envelopeAbertoMm).
    */
-  const extensaoAberta = l.capaD + l.lombada + l.capaW;
-  const fator =
-    SCENE_MAX_UNITS / Math.max(l.capaW, l.bercoH + l.lombada, extensaoAberta, 1);
+  const fator = fatorDoEnvelope(livroEnvelopeMm(l, espessuraMm));
 
   const capaW = l.capaW * fator;
   const capaD = l.capaD * fator;
@@ -476,7 +711,7 @@ function LivroMesh({
 
   // Livro e ímã nunca têm as duas: uma soma resolve os dois casos sem um
   // condicional que teria que ser repetido em cada uso abaixo.
-  const abaDianteira = (l.aba + l.magnetFlap) * fator;
+  const abaTotal = (l.aba + l.magnetFlap) * fator;
   const sideFlap = l.sideFlap * fator;
 
   const imas = suggestedMagnets(boxModel);
@@ -492,8 +727,27 @@ function LivroMesh({
     bercoH / 2,
   );
 
+  /*
+   * A aba ENVOLVENTE tem dois lances, e não um.
+   *
+   * Ela desce pela frente e dobra por baixo do fundo — é o quanto ela avança
+   * ali que a separa das outras duas caixas ímã, e é esse trecho a mais que o
+   * motor cobra. Desenhada como um painel só, o comprimento inteiro descia
+   * reto: fechada, a aba atravessava o chão e pendia um quarto da profundidade
+   * abaixo da caixa, como se a peça estivesse suspensa no ar.
+   *
+   * O primeiro lance cobre exatamente a frente (lombada + uma espessura, para
+   * chegar à face de baixo da contracapa); o que sobra do comprimento cobrado
+   * é o segundo lance, que gira mais 90° e deita sob o fundo. A soma dos dois
+   * continua sendo `magnetFlap` — o desenho não ganha nem perde papel.
+   */
+  const envolvente = boxModel === "rigid_magnet_wrap";
+  const abaSob = envolvente ? Math.max(abaTotal - (lombada + t), 0) : 0;
+  const abaDianteira = abaTotal - abaSob;
+
   const tampaRef = useRef<THREE.Group>(null);
   const abaRef = useRef<THREE.Group>(null);
+  const abaSobRef = useRef<THREE.Group>(null);
   const lateralEsqRef = useRef<THREE.Group>(null);
   const lateralDirRef = useRef<THREE.Group>(null);
   const suave = useAberturaSuave(abertura);
@@ -509,7 +763,7 @@ function LivroMesh({
      * reto deixa a peça com cara de papel.
      */
     if (tampaRef.current) {
-      tampaRef.current.rotation.x = -(Math.PI * 0.555) * suave.current;
+      tampaRef.current.rotation.x = -LIVRO_GIRO_ABERTO * suave.current;
     }
 
     /*
@@ -530,6 +784,17 @@ function LivroMesh({
     if (abaRef.current) {
       abaRef.current.rotation.x =
         (Math.PI / 2) * (1 - Math.min(suave.current * 2, 1));
+    }
+
+    /*
+     * O lance de baixo da envolvente solta primeiro de todos: ele está preso
+     * sob o fundo, e enquanto não sair a aba da frente não tem como subir.
+     * Mesmo sentido de giro da aba — os dois lances desenrolam para o mesmo
+     * lado, como uma cinta sendo aberta.
+     */
+    if (abaSobRef.current) {
+      abaSobRef.current.rotation.x =
+        (Math.PI / 2) * (1 - Math.min(suave.current * 3, 1));
     }
 
     /*
@@ -555,15 +820,43 @@ function LivroMesh({
     <mesh key={key} scale={[sx, sy, sz]} position={[px, py, pz]} castShadow receiveShadow>
       <boxGeometry args={[1, 1, 1]} />
       {material}
-      {showEdges && <Edges threshold={15} color="#00000030" />}
+      {showEdges && <Vincos />}
     </mesh>
   );
+
+  /*
+   * Os ímãs, na ponta da aba. Desenhados porque são a razão do modelo: sem
+   * eles a peça parece uma caixa livro, e o usuário não enxerga o que está
+   * pagando na lista de materiais.
+   *
+   * Recebe o comprimento do lance em que ficam: na envolvente eles vão no
+   * lance de baixo, que é o que encosta no fundo.
+   */
+  const imasNaPonta = (comprimento: number) =>
+    imas > 0 &&
+    Array.from({ length: imas }, (_, i) => (
+      <mesh
+        key={`ima-${i}`}
+        position={[
+          // Espalhados na largura, simétricos em torno do centro.
+          ((i + 0.5) / imas - 0.5) * capaW * 0.6,
+          -t * 0.6,
+          comprimento * 0.82,
+        ]}
+        castShadow
+      >
+        <cylinderGeometry args={[t * 0.9, t * 0.9, t * 0.5, 16]} />
+        <meshStandardMaterial color="#8A8F98" roughness={0.35} metalness={0.85} />
+      </mesh>
+    ));
 
   // A lombada fica na borda TRASEIRA: é onde o livro abre.
   const zLombada = -capaD / 2 - t / 2;
 
   return (
-    <group position={[0, t / 2, 0]}>
+    // A envolvente sobe uma espessura: é o vão por onde o lance de baixo da
+    // aba passa entre o fundo e o chão.
+    <group position={[0, t / 2 + (abaSob > 0 ? t : 0), 0]}>
       {/* ── Contracapa: o painel que apoia no chão ─────────────────────── */}
       {painel(capaW, t, capaD, 0, 0, 0, "contracapa")}
 
@@ -591,27 +884,15 @@ function LivroMesh({
           <group ref={abaRef} position={[0, 0, capaD]}>
             {painel(capaW, t, abaDianteira, 0, 0, abaDianteira / 2, "aba")}
 
-            {/*
-             * Os ímãs, na ponta da aba. Desenhados porque são a razão do
-             * modelo: sem eles a peça parece uma caixa livro, e o usuário não
-             * enxerga o que está pagando na lista de materiais.
-             */}
-            {imas > 0 &&
-              Array.from({ length: imas }, (_, i) => (
-                <mesh
-                  key={`ima-${i}`}
-                  position={[
-                    // Espalhados na largura, simétricos em torno do centro.
-                    ((i + 0.5) / imas - 0.5) * capaW * 0.6,
-                    -t * 0.6,
-                    abaDianteira * 0.82,
-                  ]}
-                  castShadow
-                >
-                  <cylinderGeometry args={[t * 0.9, t * 0.9, t * 0.5, 16]} />
-                  <meshStandardMaterial color="#8A8F98" roughness={0.35} metalness={0.85} />
-                </mesh>
-              ))}
+            {/* Sem segundo lance, os ímãs ficam na ponta desta aba. */}
+            {abaSob === 0 && imasNaPonta(abaDianteira)}
+
+            {abaSob > 0 && (
+              <group ref={abaSobRef} position={[0, 0, abaDianteira]}>
+                {painel(capaW, t, abaSob, 0, 0, abaSob / 2, "aba-sob")}
+                {imasNaPonta(abaSob)}
+              </group>
+            )}
           </group>
         )}
 
@@ -721,7 +1002,7 @@ function GavetaMesh({
     <mesh key={key} scale={[sx, sy, sz]} position={[px, py, pz]} castShadow receiveShadow>
       <boxGeometry args={[1, 1, 1]} />
       {material}
-      {showEdges && <Edges threshold={15} color="#00000030" />}
+      {showEdges && <Vincos />}
     </mesh>
   );
 
@@ -847,37 +1128,15 @@ function CaixaEnvioMesh({
   material: ReactNode;
   showEdges: boolean;
 }) {
-  const abaMm = depthMm / 2;
-
-  /*
-   * A aba aberta não pode furar o chão.
-   *
-   * A 120° a ponta desce `aba × |cos 120°|` abaixo do vinco — meia aba. Numa
-   * caixa rasa e funda (40mm de altura, 400 de profundidade) isso passa do
-   * fundo e a peça atravessa o piso da cena. O limite abre o quanto der até a
-   * ponta raspar o chão, e só então para.
-   */
-  const anguloAberto = Math.min(
-    ABA_ABERTA,
-    Math.acos(-Math.min(1, abaMm > 0 ? heightMm / abaMm : 1)),
-  );
-
   /*
    * Normaliza pela pose TOTALMENTE ABERTA, nunca pela atual — se o fator
    * acompanhasse o slider, a caixa mudaria de tamanho enquanto o usuário a
-   * fecha, e pareceria que as medidas mudaram junto.
+   * fecha, e pareceria que as medidas mudaram junto. A conta mora em
+   * rscAberto() porque a câmera precisa do mesmo envelope.
    */
-  const abaLateralMm = Math.min(abaMm, widthMm / 2);
-  const alcance = Math.sin(anguloAberto);
+  const { abaMm, anguloAberto, ...planta } = rscAberto(widthMm, heightMm, depthMm);
 
-  const fator =
-    SCENE_MAX_UNITS /
-    Math.max(
-      widthMm + 2 * abaLateralMm * alcance,
-      depthMm + 2 * abaMm * alcance,
-      heightMm,
-      1,
-    );
+  const fator = fatorDoEnvelope({ ...planta, h: heightMm });
 
   const w = widthMm * fator;
   const h = heightMm * fator;
@@ -941,7 +1200,7 @@ function CaixaEnvioMesh({
     <mesh key={key} scale={escala} position={posicao} castShadow receiveShadow>
       <boxGeometry args={[1, 1, 1]} />
       {material}
-      {showEdges && <Edges threshold={15} color="#00000030" />}
+      {showEdges && <Vincos />}
     </mesh>
   );
 
@@ -1074,7 +1333,7 @@ const MAILER_T_ABERTA = 220 / 24;
 const MAILER_T_FECHADA = 312 / 24;
 
 /** Opacidade dos vincos realçados. */
-const MAILER_VINCO_OPACIDADE = 0.19;
+const MAILER_VINCO_OPACIDADE = 0.55;
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -1432,16 +1691,19 @@ function MailerModelo({
    * escolhida na calculadora — senão trocar para papel branco não mudaria nada
    * na tela.
    */
-  const material = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: colorHex,
-        map: textura ?? null,
-        roughness: 0.9,
-        metalness: 0,
-      }),
-    [colorHex, textura],
-  );
+  const material = useMemo(() => {
+    const papel = new THREE.MeshStandardMaterial({
+      color: colorHex,
+      map: textura ?? null,
+      ...PAPEL,
+    });
+
+    // Com textura o grão sai: a foto do material já traz a própria fibra, e
+    // dois grãos sobrepostos viram sujeira.
+    if (!textura) papel.onBeforeCompile = graoDePapel;
+
+    return papel;
+  }, [colorHex, textura]);
 
   const razoes = useMemo(
     () => razoesDoModelo(widthMm, heightMm, depthMm, espessuraMm),
@@ -1486,6 +1748,8 @@ function MailerModelo({
           color: 0x000000,
           transparent: true,
           opacity: MAILER_VINCO_OPACIDADE,
+          // A cor de verdade entra no efeito abaixo, junto com o material:
+          // ela depende da matéria-prima escolhida, e este clone é um só.
         }),
       );
       arestas.name = "vincos";
@@ -1512,9 +1776,15 @@ function MailerModelo({
   useMemo(() => {
     peca.traverse((obj) => {
       if (obj instanceof THREE.Mesh && obj.name !== "vincos") obj.material = material;
-      if (obj.name === "vincos") obj.visible = showEdges;
+
+      if (obj.name === "vincos" && obj instanceof THREE.LineSegments) {
+        obj.visible = showEdges;
+
+        // Mesmo traço dos outros modelos: a cor da peça, escurecida.
+        (obj.material as THREE.LineBasicMaterial).color.set(colorHex).multiplyScalar(0.42);
+      }
     });
-  }, [peca, material, showEdges]);
+  }, [peca, material, showEdges, colorHex]);
 
   useEffect(
     () => () => {
@@ -1658,26 +1928,47 @@ useGLTF.preload(MAILER_MODELO);
  * "U" produz um tubo com parede real, coerente com as caixas ocas.
  */
 function perfilCopo(rInterno: number, rExterno: number, altura: number, fundo: number) {
-  return [
+  return comQuinasVivas([
     new THREE.Vector2(0, 0),
     new THREE.Vector2(rExterno, 0),
     new THREE.Vector2(rExterno, altura),
     new THREE.Vector2(rInterno, altura),
     new THREE.Vector2(rInterno, fundo),
     new THREE.Vector2(0, fundo),
-  ];
+  ]);
 }
 
 /** Perfil da tampa: um copo invertido, aberto embaixo. */
 function perfilTampa(rInterno: number, rExterno: number, altura: number, topo: number) {
-  return [
+  return comQuinasVivas([
     new THREE.Vector2(0, altura),
     new THREE.Vector2(rExterno, altura),
     new THREE.Vector2(rExterno, 0),
     new THREE.Vector2(rInterno, 0),
     new THREE.Vector2(rInterno, altura - topo),
     new THREE.Vector2(0, altura - topo),
-  ];
+  ]);
+}
+
+/**
+ * Duplica cada quina do perfil, para a revolução sair com aresta VIVA.
+ *
+ * O LatheGeometry calcula a normal de cada ponto pela média dos dois trechos
+ * que se encontram nele. Numa quina de 90° isso dá uma normal a 45° — e o
+ * shader, interpolando de uma quina à outra, pintava a parede reta do tubo como
+ * se fosse abaulada: clara em cima, onde a normal apontava para o céu, e quase
+ * preta embaixo, onde apontava para o chão. O tubo parecia um barril sujo.
+ *
+ * Com o ponto repetido, o trecho entre os dois gêmeos tem comprimento zero e
+ * não contribui para a média: cada face fica com a normal dela, e a parede sai
+ * com uma luz só de cima a baixo, que é o que um cilindro de papelão tem.
+ *
+ * As pontas (sobre o eixo) não são quinas e ficam como estão.
+ */
+function comQuinasVivas(perfil: THREE.Vector2[]): THREE.Vector2[] {
+  return perfil.flatMap((ponto, i) =>
+    i === 0 || i === perfil.length - 1 ? [ponto] : [ponto, ponto.clone()],
+  );
 }
 
 /**
@@ -1787,14 +2078,14 @@ function TuboMesh({
       <mesh castShadow receiveShadow>
         <latheGeometry args={[corpo, TUBO_SEGMENTOS]} />
         {material}
-        {showEdges && <Edges threshold={30} color="#00000030" />}
+        {showEdges && <Vincos threshold={30} />}
       </mesh>
 
       {tampa && (
         <mesh ref={tampaRef} position={[0, tampa.y, 0]} castShadow receiveShadow>
           <latheGeometry args={[tampa.perfil, TUBO_SEGMENTOS]} />
           {material}
-          {showEdges && <Edges threshold={30} color="#00000030" />}
+          {showEdges && <Vincos threshold={30} />}
         </mesh>
       )}
     </group>
@@ -1813,13 +2104,25 @@ function TuboMesh({
  * Não conhece Canvas, câmera, luzes nem estado da aplicação — o que permite
  * reusá-la em thumbnails, no PDF do orçamento ou em testes.
  */
-export function BoxMesh({
+export function BoxMesh(props: BoxMeshProps) {
+  return (
+    <CorDaPeca value={props.colorHex ?? COR_PADRAO}>
+      <Embalagem {...props} />
+    </CorDaPeca>
+  );
+}
+
+/**
+ * O desenho em si. Separado de <BoxMesh /> só para que a cor chegue aos vincos
+ * por contexto: um componente não lê o contexto que ele mesmo fornece.
+ */
+function Embalagem({
   widthMm,
   heightMm,
   depthMm,
   boxModel = "rsc",
   thicknessMm,
-  colorHex = "#C8A06A",
+  colorHex = COR_PADRAO,
   textureUrl,
   showEdges = true,
   aperture = 1,
@@ -1904,6 +2207,7 @@ export function BoxMesh({
    * crescimento contínuo e legível.
    */
   const atual = useRef(new THREE.Vector3(0.001, 0.001, 0.001));
+  const redimensionando = useRef(false);
 
   // Mesmo motivo de useAberturaSuave: medida nova não muda prop three nenhuma,
   // então o primeiro quadro do redimensionamento precisa ser pedido aqui.
@@ -1916,14 +2220,14 @@ export function BoxMesh({
     if (!grupo.current) return;
 
     // Fator dependente do delta => a suavidade não muda com o FPS da máquina.
-    const alpha = 1 - Math.exp(-LERP_SPEED * deltaDeQuadro(delta));
+    const alpha =
+      1 - Math.exp(-LERP_SPEED * deltaDeQuadro(delta, redimensionando.current));
     atual.current.lerp(alvo, alpha);
 
     // Mesma lógica de useAberturaSuave: sem isto o redimensionamento para no
     // primeiro quadro em frameloop="demand".
-    if (atual.current.distanceTo(alvo) > 0.0005) {
-      state.invalidate();
-    }
+    redimensionando.current = atual.current.distanceTo(alvo) > 0.0005;
+    if (redimensionando.current) state.invalidate();
 
     const w = atual.current.x;
     const h = atual.current.y;

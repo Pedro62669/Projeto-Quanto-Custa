@@ -75,9 +75,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <AppHeader />
 
         <div className="flex min-h-0 flex-1">
+          {/*
+            Nas telas que rolam a página inteira, a barra lateral fica PRESA
+            logo abaixo do cabeçalho: numa lista de trezentos orçamentos, rolar
+            até o fim levava o menu embora junto, e trocar de módulo exigia
+            voltar ao topo. Na calculadora a casca já tem a altura da janela e
+            a barra rola por dentro — prender ali cortaria o último item sempre
+            que o aviso de e-mail estivesse no alto.
+          */}
           <aside
             data-slot="app-sidebar"
-            className="hidden w-56 shrink-0 border-r lg:block lg:overflow-y-auto"
+            className={
+              telaCheia
+                ? "hidden w-56 shrink-0 border-r bg-sidebar lg:block lg:overflow-y-auto"
+                : "hidden w-56 shrink-0 border-r bg-sidebar lg:sticky lg:top-14 lg:block lg:h-[calc(100dvh-3.5rem)] lg:self-start lg:overflow-y-auto"
+            }
           >
             <Sidebar />
           </aside>

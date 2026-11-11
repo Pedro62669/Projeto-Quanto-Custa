@@ -3,12 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Package } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { TelaPublica } from "@/components/auth/TelaPublica";
 
 import { session } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
@@ -49,64 +49,16 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-muted/30 p-6">
-      <div className="w-full max-w-sm space-y-6">
-        <header className="space-y-2 text-center">
-          <div className="mx-auto flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Package className="size-5" />
-          </div>
-          <h1 className="text-xl font-semibold tracking-tight">quantoCusta</h1>
-          <p className="text-sm text-muted-foreground">
-            Orçamento e precificação de embalagens sob medida
-          </p>
-        </header>
-
-        <Card>
-          <CardContent className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  aria-invalid={Boolean(error)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  aria-invalid={Boolean(error)}
-                />
-              </div>
-
-              {error && (
-                <p role="alert" className="text-sm text-destructive">
-                  {error}
-                </p>
-              )}
-
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-                Entrar
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* As duas saídas que faltavam: quem esqueceu a senha ficava sem
-            caminho, e quem ainda não tem empresa não tinha por onde criar uma. */}
-        <div className="space-y-2 text-center text-sm">
+    // A mesma moldura do cadastro e da recuperação de senha. O login trazia
+    // uma cópia própria dela, e foi a única das quatro telas que ficou para
+    // trás quando a moldura mudou — que é exatamente o que cópia faz.
+    <TelaPublica
+      titulo="quantoCusta"
+      descricao="Orçamento e precificação de embalagens sob medida"
+      rodape={
+        /* As duas saídas que faltavam: quem esqueceu a senha ficava sem
+           caminho, e quem ainda não tem empresa não tinha por onde criar uma. */
+        <div className="space-y-2">
           <p>
             <Link
               href="/recuperar-senha"
@@ -117,12 +69,54 @@ export default function LoginPage() {
           </p>
           <p className="text-muted-foreground">
             Ainda não tem conta?{" "}
-            <Link href="/cadastro" className="font-medium text-foreground underline-offset-4 hover:underline">
+            <Link
+              href="/cadastro"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
               Cadastre sua empresa
             </Link>
           </p>
         </div>
-      </div>
-    </main>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">E-mail</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={Boolean(error)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="password">Senha</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            aria-invalid={Boolean(error)}
+          />
+        </div>
+
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+
+        <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+          Entrar
+        </Button>
+      </form>
+    </TelaPublica>
   );
 }

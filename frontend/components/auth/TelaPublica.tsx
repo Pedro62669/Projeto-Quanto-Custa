@@ -27,21 +27,35 @@ export function TelaPublica({
   largura?: string;
 }) {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-muted/30 p-6">
-      <div className={`w-full space-y-6 ${largura}`}>
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden p-6">
+      {/*
+        O mesmo fundo do herói da página de vendas: malha de desenho técnico e
+        as duas manchas de cor. Quem clica em "Criar conta" lá chega aqui, e a
+        tela precisa parecer a continuação daquela — não a porta dos fundos de
+        outro sistema.
+      */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="malha absolute inset-0" />
+        <div className="deriva absolute -top-40 right-[-12%] size-[32rem] rounded-full bg-brand/14 blur-3xl" />
+        <div className="deriva-lenta absolute bottom-[-22%] left-[-12%] size-[28rem] rounded-full bg-kraft/22 blur-3xl" />
+      </div>
+
+      <div className={`entra relative w-full space-y-6 ${largura}`}>
         <header className="space-y-2 text-center">
+          {/* Quadrado de tinta, caixa azul — a logo, igual em todo lugar. Leva
+              à página de vendas: quem chegou aqui por engano tem como voltar. */}
           <Link
-            href="/login"
-            className="mx-auto flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground"
-            aria-label="Início"
+            href="/"
+            className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary shadow-elevado transition-[rotate] duration-300 hover:-rotate-6"
+            aria-label="quantoCusta, início"
           >
-            <Package className="size-5" />
+            <Package className="size-6 text-brand-on-inverted" />
           </Link>
-          <h1 className="text-xl font-semibold tracking-tight">{titulo}</h1>
+          <h1 className="pt-2 text-2xl font-semibold tracking-tight">{titulo}</h1>
           {descricao && <p className="text-sm text-muted-foreground">{descricao}</p>}
         </header>
 
-        <Card>
+        <Card className="shadow-elevado">
           <CardContent className="p-6">{children}</CardContent>
         </Card>
 

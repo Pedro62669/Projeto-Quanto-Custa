@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
-import { CloudOff, Loader2, LogOut, Menu, User } from "lucide-react";
+import { ChevronDown, CloudOff, Loader2, LogOut, Menu, Package } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -47,9 +47,12 @@ export function AppHeader() {
   return (
     <header
       data-slot="app-header"
-      className="flex h-14 shrink-0 items-center justify-between gap-3 border-b px-3 sm:px-4"
+      // Preso no topo e translúcido: o conteúdo passa por baixo e o cabeçalho
+      // continua dizendo de qual empresa são os números. `z-30` fica abaixo de
+      // diálogos e gavetas (z-50), que precisam cobri-lo.
+      className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-background/85 px-3 backdrop-blur-md sm:px-4"
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2.5">
         {/* Gaveta: a barra lateral inteira, no celular. */}
         <Sheet open={menuAberto} onOpenChange={setMenuAberto}>
           <SheetTrigger asChild>
@@ -67,6 +70,21 @@ export function AppHeader() {
           </SheetContent>
         </Sheet>
 
+        {/*
+          A marca, como atalho para o painel.
+
+          Mesmo quadrado da página de vendas e do login — tinta com a caixa
+          azul. É a única assinatura do produto dentro do sistema; o texto ao
+          lado é da EMPRESA, e é ele que a pessoa lê.
+        */}
+        <Link
+          href="/painel"
+          aria-label="Painel inicial"
+          className="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-primary shadow-xs transition-[rotate] duration-300 hover:-rotate-6 sm:flex"
+        >
+          <Package className="size-4 text-brand-on-inverted" />
+        </Link>
+
         <div className="min-w-0">
           <h1 className="truncate text-sm font-semibold">
             {empresa ?? "quantoCusta"}
@@ -82,11 +100,19 @@ export function AppHeader() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-1.5">
-              <User className="size-4" />
+            <Button variant="ghost" size="sm" className="h-9 gap-2 rounded-full pr-2 pl-1">
+              {/* As iniciais dizem QUEM está logado num relance — um ícone de
+                  pessoa genérico dizia só que alguém estava. */}
+              <span
+                aria-hidden
+                className="flex size-7 items-center justify-center rounded-full bg-brand/12 text-[11px] font-semibold text-brand-strong"
+              >
+                {iniciais(usuario?.name)}
+              </span>
               <span className="hidden max-w-32 truncate sm:inline">
                 {usuario?.name ?? "Conta"}
               </span>
+              <ChevronDown className="size-3.5 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
 
@@ -124,6 +150,21 @@ export function AppHeader() {
       </div>
     </header>
   );
+}
+
+/**
+ * As iniciais de um nome: a primeira letra do primeiro e do último.
+ *
+ * Do último, e não do segundo: em "Maria das Dores Silva" o segundo nome é
+ * "das", e "MD" não é como ninguém assina.
+ */
+function iniciais(nome: string | undefined): string {
+  const partes = (nome ?? "").trim().split(/\s+/).filter(Boolean);
+
+  if (partes.length === 0) return "–";
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
 }
 
 /**

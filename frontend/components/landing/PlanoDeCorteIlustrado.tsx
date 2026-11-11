@@ -14,6 +14,10 @@
  * sobre a única conta que ele existe para acertar.
  */
 
+import type { CSSProperties } from "react";
+
+import { Contador } from "./Contador";
+
 /** Peças em milímetros, dentro de uma chapa de 1000 × 700 mm. */
 const CHAPA = { largura: 1000, altura: 700 };
 
@@ -28,14 +32,41 @@ const PECAS = [
   { x: 760, y: 290, l: 235, a: 355, rotulo: "Base", girada: true },
 ];
 
+/**
+ * O ritmo da entrada, em milissegundos.
+ *
+ * As peças caem na chapa uma a uma, na ordem em que o módulo de corte as
+ * colocaria — é a animação contando o que o produto faz, e não um enfeite por
+ * cima dele. Só depois de todas pousarem a lâmina passa: cortar antes de
+ * arranjar seria a ordem errada.
+ */
+const PRIMEIRA_PECA = 350;
+const ENTRE_PECAS = 95;
+const LAMINA = PRIMEIRA_PECA + PECAS.length * ENTRE_PECAS + 250;
+
+const atraso = (ms: number) => ({ "--atraso": `${ms}ms` }) as CSSProperties;
+
 /** Perda: o que da chapa não virou peça. Calculada, não escrita. */
 const AREA_USADA = PECAS.reduce((total, p) => total + p.l * p.a, 0);
 const PERDA = 1 - AREA_USADA / (CHAPA.largura * CHAPA.altura);
 
 export function PlanoDeCorteIlustrado() {
   return (
-    <figure className="space-y-3">
-      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+    <figure className="overflow-hidden rounded-2xl border border-border bg-card shadow-elevado">
+      {/* A barra de título da janela: situa a figura como TELA do produto, e
+          não como diagrama solto — é o plano de corte que a ficha técnica
+          mostra, com o mesmo nome que ele tem lá. */}
+      <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-muted/50 px-4 py-2.5">
+        <span className="flex items-center gap-2 text-xs font-medium">
+          <span className="size-2 rounded-full bg-brand" aria-hidden />
+          Plano de corte
+        </span>
+        <span className="font-mono text-[0.7rem] text-muted-foreground tabular-nums">
+          chapa 1 de 1
+        </span>
+      </div>
+
+      <div className="p-4">
         <svg
           viewBox={`-12 -12 ${CHAPA.largura + 24} ${CHAPA.altura + 24}`}
           className="w-full"
@@ -74,13 +105,19 @@ export function PlanoDeCorteIlustrado() {
           />
 
           {PECAS.map((peca, indice) => (
-            <g key={indice}>
+            <g
+              key={indice}
+              className="peca"
+              style={atraso(PRIMEIRA_PECA + indice * ENTRE_PECAS)}
+            >
+              {/* Kraft claro, e não branco: a peça é papelão, e é a cor que a
+                  separa da chapa por baixo sem depender só do contorno. */}
               <rect
                 x={peca.x}
                 y={peca.y}
                 width={peca.l}
                 height={peca.a}
-                className="fill-background stroke-foreground/45"
+                className="fill-kraft-suave stroke-foreground/45"
                 strokeWidth="3"
                 rx="4"
               />
@@ -126,10 +163,29 @@ export function PlanoDeCorteIlustrado() {
               </text>
             </g>
           ))}
+
+          {/*
+            A lâmina: uma passada da esquerda para a direita, depois some.
+
+            `--curso` é a largura da chapa em unidades do SVG — dentro de um
+            <svg> o `px` do CSS é a unidade do viewBox, então a linha atravessa
+            exatamente a chapa em qualquer tamanho de tela.
+          */}
+          <line
+            className="lamina stroke-brand"
+            style={{ ...atraso(LAMINA), "--curso": `${CHAPA.largura}px` } as CSSProperties}
+            x1="0"
+            y1="-10"
+            x2="0"
+            y2={CHAPA.altura + 10}
+            strokeWidth="5"
+            strokeLinecap="round"
+            opacity="0"
+          />
         </svg>
       </div>
 
-      <figcaption className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
+      <figcaption className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border/70 px-4 py-3 text-xs text-muted-foreground">
         <span>
           Chapa <strong className="font-medium text-foreground tabular-nums">1000 × 700 mm</strong>
         </span>
@@ -139,8 +195,9 @@ export function PlanoDeCorteIlustrado() {
         </span>
         <span>
           Perda real{" "}
+          {/* Conta até o valor: o número que a planilha chuta é o que aqui se mede. */}
           <strong className="font-medium text-destructive tabular-nums">
-            {(PERDA * 100).toFixed(1).replace(".", ",")}%
+            <Contador valor={PERDA * 100} formato="percentual" duracao={1400} />
           </strong>
         </span>
       </figcaption>

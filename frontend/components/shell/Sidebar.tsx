@@ -33,7 +33,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     return (
       <div className="space-y-2 p-3" aria-busy aria-label="Carregando a navegação">
         {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="h-7 animate-pulse rounded-lg bg-muted" />
+          <div key={i} className="h-7 animate-pulse rounded-lg bg-sidebar-accent" />
         ))}
       </div>
     );
@@ -48,7 +48,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
         return (
           <div key={grupo.label} className="space-y-1">
-            <p className="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="px-2.5 pb-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/80">
               {grupo.label}
             </p>
 
@@ -62,10 +62,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={onNavigate}
                   aria-current={ativo ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
+                    "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
                     ativo
-                      ? "bg-foreground font-medium text-background"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                      ? "bg-foreground font-medium text-background shadow-xs"
+                      : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
                   )}
                 >
                   {/*
@@ -98,10 +98,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             aria-current={estaAtivo("/plataforma", caminho) ? "page" : undefined}
             className={cn(
-              "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
+              "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
               estaAtivo("/plataforma", caminho)
-                ? "bg-foreground font-medium text-background"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                ? "bg-foreground font-medium text-background shadow-xs"
+                : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
             )}
           >
             <ShieldCheck

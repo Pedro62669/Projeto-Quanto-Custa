@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { Vitrine } from "@/lib/api";
 
 import { ESTILO_CTA, ESTILO_CTA_SECUNDARIO } from "./estilos";
+import { Revelar } from "./Revelar";
 
 /**
  * A tabela de preços — desenhada a partir do que o servidor respondeu.
@@ -21,7 +22,7 @@ import { ESTILO_CTA, ESTILO_CTA_SECUNDARIO } from "./estilos";
 export function TabelaDePrecos({ vitrine }: { vitrine: Vitrine | null }) {
   if (!vitrine) {
     return (
-      <div className="rounded-xl border border-dashed border-border p-8 text-center">
+      <div className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center">
         <p className="text-sm text-muted-foreground">
           A tabela de preços está indisponível no momento.
         </p>
@@ -36,87 +37,91 @@ export function TabelaDePrecos({ vitrine }: { vitrine: Vitrine | null }) {
   }
 
   return (
-    <div className="grid gap-5 md:grid-cols-3">
-      {vitrine.planos.map((plano) => {
+    <div className="grid items-stretch gap-5 md:grid-cols-3">
+      {vitrine.planos.map((plano, indice) => {
         const destacado = plano.tipo === "pro";
 
         return (
-          <div
-            key={plano.tipo}
-            className={cn(
-              "flex flex-col rounded-xl border p-6",
-              /*
-                O plano recomendado se separa por COR, não só por peso.
-
-                Borda preta contra bordas cinzas é diferença de intensidade, e o
-                olho lê isso como "mais forte" — não como "este". Em azul ele
-                passa a ser reconhecido pela marca, na única seção da página em
-                que a decisão de fato acontece.
-              */
-              destacado
-                ? "border-brand bg-card shadow-md ring-1 ring-brand/20"
-                : "border-border bg-card",
-            )}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="font-medium">{plano.rotulo}</h3>
-              {/*
-                O selo acompanha a borda: preenchido com a marca e texto branco
-                (5,33:1), e não `--brand-on-inverted` — aqui o fundo é o AZUL,
-                não a superfície invertida.
-              */}
-              {destacado && (
-                <span className="rounded-full bg-brand px-2.5 py-0.5 text-[0.7rem] font-medium text-white">
-                  Sem limites
-                </span>
-              )}
-            </div>
-
-            <p className="mt-4 flex items-baseline gap-1.5">
-              <span className="font-mono text-3xl font-semibold tabular-nums">
-                {plano.pago ? formatCurrency(plano.mensalidade) : "Grátis"}
-              </span>
-              {plano.pago && <span className="text-sm text-muted-foreground">/mês</span>}
-            </p>
-
-            <ul className="mt-6 flex-1 space-y-2.5 text-sm">
-              <ItemDeCota
-                rotulo="orçamentos por mês"
-                semTeto="Ilimitados"
-                valor={plano.limites.orcamentos_por_mes}
-              />
-              <ItemDeCota
-                rotulo="matérias-primas"
-                semTeto="Ilimitadas"
-                valor={plano.limites.materiais}
-              />
-              <ItemDeCota rotulo="clientes" semTeto="Ilimitados" valor={plano.limites.clientes} />
-
-              {/*
-                A frase mais importante da tabela, e ela é verificável: no
-                servidor, o plano decide APENAS cota. Nenhum recurso é destravado
-                por preço — ver PlanType, onde só existem os três tetos acima.
-              */}
-              <li className="flex items-start gap-2 text-muted-foreground">
-                <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
-                <span>Todos os recursos, inclusive no gratuito</span>
-              </li>
-              <li className="flex items-start gap-2 text-muted-foreground">
-                <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
-                <span>Usuários da equipe sem cobrança por pessoa</span>
-              </li>
-            </ul>
-
-            <Link
-              href="/cadastro"
+          // A entrada (Revelar) fica num invólucro, e o cartão dentro dele: as
+          // duas coisas mexem em `transition`, e no mesmo elemento a entrada
+          // venceria — o cartão subiria ao passar o mouse sem animar.
+          <Revelar key={plano.tipo} atraso={indice * 110} className="flex">
+            <div
               className={cn(
-                destacado ? ESTILO_CTA : ESTILO_CTA_SECUNDARIO,
-                "mt-6 h-11 w-full px-5 text-[0.95rem]",
+                "flex w-full flex-col rounded-2xl border p-6 transition-[translate,box-shadow] duration-300 hover:-translate-y-1",
+                /*
+                  O plano recomendado se separa por COR, não só por peso.
+
+                  Borda preta contra bordas cinzas é diferença de intensidade, e o
+                  olho lê isso como "mais forte" — não como "este". Em azul ele
+                  passa a ser reconhecido pela marca, na única seção da página em
+                  que a decisão de fato acontece.
+                */
+                destacado
+                  ? "border-brand bg-[linear-gradient(180deg,color-mix(in_oklch,var(--brand)_8%,var(--card)),var(--card)_42%)] shadow-marca ring-1 ring-brand/20"
+                  : "border-border bg-card shadow-card hover:shadow-elevado",
               )}
             >
-              {plano.pago ? `Testar ${vitrine.dias_de_teste} dias` : "Começar grátis"}
-            </Link>
-          </div>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-heading text-lg font-semibold">{plano.rotulo}</h3>
+                {/*
+                  O selo acompanha a borda: preenchido com a marca e texto branco
+                  (5,33:1), e não `--brand-on-inverted` — aqui o fundo é o AZUL,
+                  não a superfície invertida.
+                */}
+                {destacado && (
+                  <span className="rounded-full bg-brand px-2.5 py-0.5 text-[0.7rem] font-medium text-white">
+                    Sem limites
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-4 flex items-baseline gap-1.5">
+                <span className="font-mono text-[2rem] font-semibold tracking-tight tabular-nums">
+                  {plano.pago ? formatCurrency(plano.mensalidade) : "Grátis"}
+                </span>
+                {plano.pago && <span className="text-sm text-muted-foreground">/mês</span>}
+              </p>
+
+              <ul className="mt-6 flex-1 space-y-2.5 text-sm">
+                <ItemDeCota
+                  rotulo="orçamentos por mês"
+                  semTeto="Ilimitados"
+                  valor={plano.limites.orcamentos_por_mes}
+                />
+                <ItemDeCota
+                  rotulo="matérias-primas"
+                  semTeto="Ilimitadas"
+                  valor={plano.limites.materiais}
+                />
+                <ItemDeCota rotulo="clientes" semTeto="Ilimitados" valor={plano.limites.clientes} />
+
+                {/*
+                  A frase mais importante da tabela, e ela é verificável: no
+                  servidor, o plano decide APENAS cota. Nenhum recurso é destravado
+                  por preço — ver PlanType, onde só existem os três tetos acima.
+                */}
+                <li className="flex items-start gap-2 text-muted-foreground">
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                  <span>Todos os recursos, inclusive no gratuito</span>
+                </li>
+                <li className="flex items-start gap-2 text-muted-foreground">
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                  <span>Usuários da equipe sem cobrança por pessoa</span>
+                </li>
+              </ul>
+
+              <Link
+                href="/cadastro"
+                className={cn(
+                  destacado ? ESTILO_CTA : ESTILO_CTA_SECUNDARIO,
+                  "mt-6 h-11 w-full px-5 text-[0.95rem]",
+                )}
+              >
+                {plano.pago ? `Testar ${vitrine.dias_de_teste} dias` : "Começar grátis"}
+              </Link>
+            </div>
+          </Revelar>
         );
       })}
     </div>

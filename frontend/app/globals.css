@@ -8,33 +8,55 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   /*
-   * Helvetica, com as escadas de sempre.
+   * O texto: Geist, com Helvetica e Arial de rede de segurança.
    *
    * Aqui morava `--font-sans: var(--font-sans)` — a variável apontando para si
-   * mesma. Nada a definia (o layout declarava `--font-geist-sans`), então
-   * `font-family: var(--font-sans)` era inválida e o navegador caía no padrão
-   * DELE, que é serifado. O sistema inteiro vinha sendo lido em Times enquanto
-   * baixava uma fonte que nunca aplicava.
+   * mesma — e depois uma pilha só de fontes locais. A pilha local resolve o
+   * primeiro quadro, mas entrega três sistemas com três caras: Helvetica Neue
+   * no macOS, Arial no Windows, e no Linux o que a distribuição tiver. O
+   * produto parecia outro em cada máquina.
    *
-   * A ordem cobre os três sistemas: "Helvetica Neue" no macOS, Helvetica onde
-   * ela existe de verdade, e Arial no Windows — que não traz Helvetica, mas
-   * traz uma fonte metricamente idêntica a ela, desenhada para substituí-la.
-   * Nenhuma é baixada: são todas locais, e a página pinta o texto no primeiro
-   * quadro, sem o lampejo de fonte trocando.
+   * O Geist chega pelo `next/font`, que o hospeda junto com o site (nenhuma
+   * requisição a terceiros) e reserva o espaço com as métricas da fonte de
+   * reserva — o texto não pula quando a fonte troca. Faz par com o Geist Mono
+   * dos números, que já estava aqui: mesma altura de x, mesmo desenho de
+   * algarismo, e a tabela para de parecer montada com duas famílias.
    */
-  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: var(--font-geist-sans), "Helvetica Neue", Helvetica, Arial, sans-serif;
 
   /*
    * O mono continua sendo o Geist: ele é quem desenha os NÚMEROS.
    *
    * Preço, medida e área usam `tabular-nums` para que a coluna não dance a cada
-   * dígito, e Helvetica não tem versão monoespaçada. Trocar por um mono
-   * genérico devolveria o desalinhamento que a tabela de custos existe para
-   * evitar.
+   * dígito. Trocar por um mono genérico devolveria o desalinhamento que a
+   * tabela de custos existe para evitar.
    */
   --font-mono: var(--font-geist-mono);
 
-  --font-heading: var(--font-sans);
+  /*
+   * Os títulos: Bricolage Grotesque.
+   *
+   * É onde a página tem voz. Um grotesco com contraste e tinta nas junções —
+   * lembra letra de carimbo, de etiqueta de embalagem — usado só em título:
+   * texto corrido nele cansaria, e número nele desalinharia.
+   */
+  --font-heading: var(--font-bricolage), var(--font-sans);
+
+  /*
+   * Sombras em duas camadas: uma curta e nítida (a borda que separa o cartão
+   * do fundo) e uma longa e difusa (a altura). Uma sombra só, forte, é o que
+   * faz interface parecer de 2015.
+   *
+   * Tingidas com o azul-tinta do texto, e não pretas: sombra preta sobre fundo
+   * levemente azulado suja a cor em volta.
+   */
+  --shadow-xs: 0 1px 2px oklch(0.25 0.03 255 / 6%);
+  --shadow-card:
+    0 1px 2px oklch(0.25 0.03 255 / 5%), 0 6px 20px -8px oklch(0.25 0.03 255 / 10%);
+  --shadow-elevado:
+    0 2px 4px oklch(0.25 0.03 255 / 5%), 0 18px 44px -16px oklch(0.25 0.03 255 / 22%);
+  --shadow-marca: 0 14px 40px -14px oklch(0.528 0.152 250.7 / 45%);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -79,6 +101,16 @@
    */
   --color-brand-on-inverted: var(--brand-on-inverted);
 
+  /*
+   * O kraft — a cor do papelão.
+   *
+   * Segunda cor da identidade, e só da identidade: aparece em ilustração e em
+   * detalhe da página de vendas, nunca em controle. O azul continua sendo a
+   * única cor que significa "clicável".
+   */
+  --color-kraft: var(--kraft);
+  --color-kraft-suave: var(--kraft-suave);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -105,31 +137,49 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /*
+   * Neutros com uma gota de azul.
+   *
+   * Eram cinzas puros (croma zero), que ao lado do azul da marca ficam
+   * levemente amarelados por contraste — o olho compensa a cor vizinha. Com o
+   * mesmo matiz da marca em croma mínimo, cinza e azul passam a ser da mesma
+   * família, e a página ganha temperatura sem ganhar cor.
+   *
+   * O fundo deixa de ser branco puro para o BRANCO sobrar para os cartões: é a
+   * diferença entre os dois que desenha a superfície, antes de qualquer borda.
+   */
+  --background: oklch(0.985 0.004 250);
+  --foreground: oklch(0.21 0.028 258);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.21 0.028 258);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.21 0.028 258);
+
+  /* O primário continua tinta: quem manda na tela é o preço, não o botão. */
+  --primary: oklch(0.23 0.032 258);
+  --primary-foreground: oklch(0.985 0.004 250);
+  --secondary: oklch(0.962 0.008 250);
+  --secondary-foreground: oklch(0.23 0.032 258);
+  --muted: oklch(0.962 0.008 250);
+
+  /* 0,5 de luminosidade dá 5,9:1 sobre o fundo — passa em AA com folga. */
+  --muted-foreground: oklch(0.5 0.024 256);
+  --accent: oklch(0.955 0.014 250);
+  --accent-foreground: oklch(0.23 0.032 258);
   --destructive: oklch(0.577 0.245 27.325);
 
   /* #006dbf. No claro a mesma cor serve de fundo e de texto: 5,33:1 nos dois. */
   --brand: oklch(0.528 0.152 250.7);
   --brand-strong: oklch(0.528 0.152 250.7);
 
-  /* #3aa0ea sobre o preto do tema claro: 5,40:1. */
+  /* #3aa0ea sobre a tinta do tema claro: 5,40:1. */
   --brand-on-inverted: oklch(0.681 0.143 244.5);
 
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --kraft: oklch(0.74 0.088 75);
+  --kraft-suave: oklch(0.95 0.028 80);
+
+  --border: oklch(0.918 0.01 250);
+  --input: oklch(0.9 0.012 250);
 
   /*
    * O anel de foco passa a ser a marca.
@@ -139,37 +189,39 @@
    * de enfeitar.
    */
   --ring: oklch(0.528 0.152 250.7);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Os gráficos descem do azul da marca à tinta: uma escala, não cinco cores. */
+  --chart-1: oklch(0.78 0.1 245);
+  --chart-2: oklch(0.66 0.14 247);
+  --chart-3: oklch(0.528 0.152 250.7);
+  --chart-4: oklch(0.42 0.12 254);
+  --chart-5: oklch(0.3 0.07 257);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.975 0.006 250);
+  --sidebar-foreground: oklch(0.21 0.028 258);
+  --sidebar-primary: oklch(0.23 0.032 258);
+  --sidebar-primary-foreground: oklch(0.985 0.004 250);
+  --sidebar-accent: oklch(0.948 0.014 250);
+  --sidebar-accent-foreground: oklch(0.23 0.032 258);
+  --sidebar-border: oklch(0.918 0.01 250);
+  --sidebar-ring: oklch(0.528 0.152 250.7);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: oklch(0.17 0.02 258);
+  --foreground: oklch(0.975 0.005 250);
+  --card: oklch(0.215 0.024 258);
+  --card-foreground: oklch(0.975 0.005 250);
+  --popover: oklch(0.215 0.024 258);
+  --popover-foreground: oklch(0.975 0.005 250);
+  --primary: oklch(0.93 0.008 250);
+  --primary-foreground: oklch(0.21 0.028 258);
+  --secondary: oklch(0.275 0.026 258);
+  --secondary-foreground: oklch(0.975 0.005 250);
+  --muted: oklch(0.275 0.026 258);
+  --muted-foreground: oklch(0.72 0.02 254);
+  --accent: oklch(0.275 0.026 258);
+  --accent-foreground: oklch(0.975 0.005 250);
   --destructive: oklch(0.704 0.191 22.216);
 
   /*
@@ -186,24 +238,27 @@
   /* Escurece: no tema escuro a superfície invertida é quase branca. 5,33:1. */
   --brand-on-inverted: oklch(0.528 0.152 250.7);
 
+  --kraft: oklch(0.74 0.088 75);
+  --kraft-suave: oklch(0.3 0.03 75);
+
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
 
   /* O anel acompanha o texto, não o preenchimento: ele É uma linha fina. */
   --ring: oklch(0.681 0.143 244.5);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --chart-1: oklch(0.86 0.07 245);
+  --chart-2: oklch(0.76 0.11 245);
+  --chart-3: oklch(0.681 0.143 244.5);
+  --chart-4: oklch(0.56 0.15 249);
+  --chart-5: oklch(0.45 0.12 253);
+  --sidebar: oklch(0.195 0.022 258);
+  --sidebar-foreground: oklch(0.975 0.005 250);
+  --sidebar-primary: oklch(0.93 0.008 250);
+  --sidebar-primary-foreground: oklch(0.21 0.028 258);
+  --sidebar-accent: oklch(0.275 0.026 258);
+  --sidebar-accent-foreground: oklch(0.975 0.005 250);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.681 0.143 244.5);
 }
 
 @layer base {
@@ -215,8 +270,308 @@
   }
   html {
     @apply font-sans;
+
+    /* Âncoras do menu da vitrine deslizam; quem pediu menos movimento, salta. */
+    scroll-behavior: smooth;
+  }
+
+  /*
+   * Título é título em qualquer tela.
+   *
+   * Aplicado na tag, e não com uma classe em cada <h1>: o sistema tem trinta e
+   * tantas telas, e a que esquecesse a classe sairia com a fonte do texto —
+   * diferença pequena o bastante para ninguém notar e grande o bastante para a
+   * tela parecer de outro produto.
+   *
+   * `text-wrap: balance` reparte as linhas por igual: acaba com o título de
+   * duas linhas em que a segunda é uma palavra sozinha.
+   */
+  h1,
+  h2 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--brand) 22%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 }
+
+/* ── O palco do visualizador 3D ─────────────────────────────────────────────
+ *
+ * Um foco de luz atrás da peça, em CSS. O Canvas é transparente; isto é o que
+ * aparece por trás dele. Faz o trabalho de um fundo de estúdio — clareia o
+ * centro, onde a caixa está, e deixa as bordas caírem — sem custar um único
+ * triângulo à cena.
+ */
+.palco-3d {
+  background:
+    radial-gradient(ellipse 62% 46% at 50% 44%, var(--card) 0%, transparent 100%),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--brand) 5%, var(--background)) 0%,
+      var(--background) 62%,
+      color-mix(in oklch, var(--kraft) 10%, var(--background)) 100%
+    );
+}
+
+/* ── Movimento da vitrine ───────────────────────────────────────────────────
+ *
+ * Tudo abaixo anima `opacity` e `transform`, e só. São as duas propriedades
+ * que o navegador resolve no compositor, sem recalcular layout nem repintar:
+ * a página pode estar ocupada baixando script que a animação não engasga.
+ *
+ * E tudo abaixo está dentro de `prefers-reduced-motion: no-preference`. Quem
+ * pediu menos movimento não recebe uma versão mais lenta das animações — recebe
+ * a página pronta, sem estado escondido nenhum.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  /* Entrada ao rolar: ver <Revelar />, que só marca `data-visivel`. */
+  [data-revelar] {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) var(--atraso, 0ms),
+      transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) var(--atraso, 0ms);
+  }
+
+  [data-revelar][data-visivel] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /*
+   * Entrada do herói: animação de CSS pura, sem esperar JavaScript.
+   *
+   * O herói está na tela no primeiro quadro, então não pode depender do
+   * observador de rolagem — ficaria invisível até a hidratação, que em rede
+   * lenta é justamente quando o visitante desiste. `both` segura o estado
+   * inicial durante o atraso e o final depois dele.
+   */
+  .entra {
+    animation: entra 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: var(--atraso, 0ms);
+  }
+
+  .entra-escala {
+    animation: entra-escala 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: var(--atraso, 0ms);
+  }
+
+  /* As manchas de cor atrás do herói: derivam devagar, cada uma no seu tempo. */
+  .deriva {
+    animation: deriva 22s ease-in-out infinite alternate;
+  }
+
+  .deriva-lenta {
+    animation: deriva 31s ease-in-out infinite alternate-reverse;
+  }
+
+  /* O ponto do selo "feito para cartonagem": pulsa como luz de equipamento. */
+  .pulso::after {
+    animation: pulso 2.4s ease-out infinite;
+  }
+
+  /* A faixa de modelos: duas cópias lado a lado, andando meia largura. */
+  .esteira {
+    animation: esteira 38s linear infinite;
+  }
+
+  .esteira:hover {
+    animation-play-state: paused;
+  }
+
+  /* Peças do plano de corte: caem na chapa uma a uma. */
+  .peca {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: peca 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: var(--atraso, 0ms);
+  }
+
+  /* A lâmina: uma passada só, depois some. */
+  .lamina {
+    animation: lamina 1.5s cubic-bezier(0.6, 0, 0.3, 1) both;
+    animation-delay: var(--atraso, 0ms);
+  }
+
+  /* Trechos da barra de composição: crescem da esquerda, em fila. */
+  .barra {
+    transform-origin: left center;
+    animation: barra 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: var(--atraso, 0ms);
+  }
+
+  /* O risco sob a segunda linha do título: desenhado como caneta. */
+  .risco {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: risco 0.9s cubic-bezier(0.6, 0, 0.2, 1) forwards;
+    animation-delay: var(--atraso, 0ms);
+  }
+
+  /* O brilho que atravessa o botão principal ao passar o mouse. */
+  .brilho::before {
+    transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .brilho:hover::before {
+    transform: translateX(260%) skewX(-18deg);
+  }
+}
+
+@keyframes entra {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes entra-escala {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.97);
+  }
+}
+
+@keyframes deriva {
+  from {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(4%, 5%, 0) scale(1.12);
+  }
+}
+
+@keyframes pulso {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+
+@keyframes esteira {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes peca {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.92);
+  }
+}
+
+@keyframes lamina {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  12%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(var(--curso, 1000px));
+  }
+}
+
+@keyframes barra {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes risco {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/*
+ * As peças decorativas que as animações acima movem.
+ *
+ * Fora do bloco de movimento de propósito: com animação desligada elas
+ * continuam existindo, só que paradas.
+ */
+.pulso {
+  position: relative;
+}
+
+.pulso::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  opacity: 0;
+}
+
+.brilho {
+  position: relative;
+  overflow: hidden;
+}
+
+.brilho::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 22%), transparent);
+  transform: translateX(-140%) skewX(-18deg);
+  pointer-events: none;
+}
+
+/*
+ * A malha de desenho técnico: o fundo das seções de destaque.
+ *
+ * Duas grades sobrepostas (fina e de seção), como papel milimetrado, apagadas
+ * nas bordas por uma máscara radial — a malha aparece atrás do conteúdo e some
+ * antes de encostar no limite da seção, sem precisar de degradê por cima.
+ */
+.malha {
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--foreground) 3.5%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 3.5%, transparent) 1px, transparent 1px),
+    linear-gradient(to right, color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px);
+  background-size:
+    24px 24px,
+    24px 24px,
+    120px 120px,
+    120px 120px;
+  mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, black 20%, transparent 100%);
+}
+
+/* A mesma malha sobre fundo escuro: traço claro. */
+.malha-clara {
+  background-image:
+    linear-gradient(to right, oklch(1 0 0 / 5%) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 5%) 1px, transparent 1px),
+    linear-gradient(to right, oklch(1 0 0 / 9%) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 9%) 1px, transparent 1px);
+  background-size:
+    24px 24px,
+    24px 24px,
+    120px 120px,
+    120px 120px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 10%, transparent 100%);
+}
+
 /**
  * Impressão.
  *

@@ -1,0 +1,335 @@
+/*
+ * A caixa do herói: seis faces de CSS, uma dobradiça, nenhum WebGL.
+ *
+ * Tudo aqui é `transform` e `opacity` — as duas propriedades que o navegador
+ * anima no compositor, sem recalcular layout. A caixa balança e abre a tampa
+ * sem acordar a thread principal, que é a que precisa estar livre para a
+ * página terminar de carregar.
+ *
+ * As medidas são em `cqw` (fração da largura do palco): a peça escala com a
+ * coluna em vez de ter três tamanhos escritos à mão por breakpoint.
+ */
+
+.palco {
+  position: relative;
+  container-type: inline-size;
+  aspect-ratio: 1;
+  width: 100%;
+  perspective: 240cqw;
+  perspective-origin: 50% 35%;
+}
+
+.cena {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  /* O centro da peça fica um pouco abaixo do meio: a tampa aberta sobe. */
+  transform: translateY(12cqw);
+}
+
+.caixa {
+  --w: 52cqw;
+  --h: 24cqw;
+  --d: 39cqw;
+
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  animation: balanco 9s ease-in-out infinite alternate;
+}
+
+/*
+ * Balança, não gira.
+ *
+ * A luz de cada face é pintada (um degradê fixo), então uma volta completa
+ * levaria a face "iluminada" para o lado da sombra e a mentira apareceria.
+ * Dentro de um arco de trinta graus a luz pintada continua plausível.
+ */
+@keyframes balanco {
+  from {
+    transform: rotateX(-27deg) rotateY(-44deg);
+  }
+  to {
+    transform: rotateX(-21deg) rotateY(-16deg);
+  }
+}
+
+.face {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 0.35cqw solid oklch(0.42 0.07 70 / 45%);
+  border-radius: 0.5cqw;
+}
+
+/* Frente e trás: W × H. */
+.frente,
+.tras {
+  width: var(--w);
+  height: var(--h);
+  margin-left: calc(var(--w) / -2);
+  margin-top: calc(var(--h) / -2);
+}
+
+.frente {
+  transform: translateZ(calc(var(--d) / 2));
+  background: linear-gradient(180deg, oklch(0.78 0.085 76), oklch(0.7 0.09 72));
+  display: grid;
+  place-items: center;
+}
+
+.tras {
+  transform: rotateY(180deg) translateZ(calc(var(--d) / 2));
+  background: linear-gradient(180deg, oklch(0.62 0.085 70), oklch(0.55 0.08 68));
+}
+
+/* Laterais: D × H. */
+.esquerda,
+.direita {
+  width: var(--d);
+  height: var(--h);
+  margin-left: calc(var(--d) / -2);
+  margin-top: calc(var(--h) / -2);
+}
+
+.direita {
+  transform: rotateY(90deg) translateZ(calc(var(--w) / 2));
+  background: linear-gradient(180deg, oklch(0.68 0.09 72), oklch(0.6 0.088 70));
+}
+
+.esquerda {
+  transform: rotateY(-90deg) translateZ(calc(var(--w) / 2));
+  background: linear-gradient(180deg, oklch(0.6 0.085 70), oklch(0.53 0.08 68));
+}
+
+/* Fundo: W × D. */
+.fundo {
+  width: var(--w);
+  height: var(--d);
+  margin-left: calc(var(--w) / -2);
+  margin-top: calc(var(--d) / -2);
+  transform: rotateX(-90deg) translateZ(calc(var(--h) / 2));
+  background: oklch(0.58 0.08 70);
+}
+
+/*
+ * A tampa: nasce na aresta de cima da parede de trás e gira em torno dela.
+ *
+ * `transform-origin` na borda superior do elemento é a dobradiça. A 90° ela
+ * deita sobre a caixa; passando de 180° ela cai um pouco para trás, que é a
+ * pose de uma tampa de papelão aberta — parar em pé, reta, é pose de metal.
+ */
+.tampa {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--w);
+  height: var(--d);
+  margin-left: calc(var(--w) / -2);
+  transform-origin: 50% 0;
+  transform-style: preserve-3d;
+  border: 0.35cqw solid oklch(0.42 0.07 70 / 45%);
+  border-radius: 0.5cqw;
+  background: linear-gradient(180deg, oklch(0.82 0.08 78), oklch(0.76 0.085 76));
+  animation: tampa 9s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+}
+
+@keyframes tampa {
+  0%,
+  8% {
+    transform: translate3d(0, calc(var(--h) / -2), calc(var(--d) / -2)) rotateX(90deg);
+  }
+  38%,
+  72% {
+    transform: translate3d(0, calc(var(--h) / -2), calc(var(--d) / -2)) rotateX(203deg);
+  }
+  96%,
+  100% {
+    transform: translate3d(0, calc(var(--h) / -2), calc(var(--d) / -2)) rotateX(90deg);
+  }
+}
+
+/* A língua da tampa: desce pela frente fechada, estica quando a tampa abre. */
+.lingua {
+  position: absolute;
+  left: -0.35cqw;
+  top: 100%;
+  width: calc(100% + 0.7cqw);
+  height: calc(var(--h) * 0.62);
+  transform-origin: 50% 0;
+  border: 0.35cqw solid oklch(0.42 0.07 70 / 45%);
+  border-radius: 0 0 1.4cqw 1.4cqw;
+  background: linear-gradient(180deg, oklch(0.76 0.085 76), oklch(0.72 0.088 74));
+  animation: lingua 9s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+}
+
+@keyframes lingua {
+  0%,
+  8% {
+    transform: rotateX(-90deg);
+  }
+  30%,
+  78% {
+    transform: rotateX(-18deg);
+  }
+  96%,
+  100% {
+    transform: rotateX(-90deg);
+  }
+}
+
+/* O selo na frente: a única cor de marca na peça. */
+.selo {
+  display: grid;
+  place-items: center;
+  width: 9cqw;
+  height: 9cqw;
+  border-radius: 2cqw;
+  background: var(--primary);
+  color: var(--brand-on-inverted);
+  box-shadow: 0 0.4cqw 1cqw oklch(0.2 0.03 255 / 25%);
+}
+
+.selo svg {
+  width: 5cqw;
+  height: 5cqw;
+}
+
+/*
+ * A plataforma: dois anéis de desenho técnico deitados no chão da cena.
+ *
+ * Giram devagar em sentidos opostos. É o único movimento contínuo do palco, e
+ * existe para a cena não parecer congelada nos segundos em que a tampa está
+ * parada.
+ */
+.anel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  border: 0.4cqw dashed color-mix(in oklch, var(--brand) 45%, transparent);
+}
+
+.anelFora {
+  width: 92cqw;
+  height: 92cqw;
+  margin: -46cqw 0 0 -46cqw;
+  animation: anel 48s linear infinite;
+}
+
+.anelDentro {
+  width: 66cqw;
+  height: 66cqw;
+  margin: -33cqw 0 0 -33cqw;
+  border-style: solid;
+  border-color: color-mix(in oklch, var(--brand) 18%, transparent);
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--brand) 9%, transparent),
+    transparent 68%
+  );
+  animation: anel 64s linear infinite reverse;
+}
+
+@keyframes anel {
+  from {
+    transform: translateY(calc(var(--h) / 2 + 0.6cqw)) rotateX(90deg) rotateZ(0deg);
+  }
+  to {
+    transform: translateY(calc(var(--h) / 2 + 0.6cqw)) rotateX(90deg) rotateZ(360deg);
+  }
+}
+
+/* A sombra de contato, no mesmo plano dos anéis. */
+.sombra {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--w) * 1.5);
+  height: calc(var(--d) * 1.6);
+  margin-left: calc(var(--w) * -0.75);
+  margin-top: calc(var(--d) * -0.8);
+  transform: translateY(calc(var(--h) / 2 + 0.4cqw)) rotateX(90deg);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, oklch(0.2 0.03 255 / 30%), transparent);
+}
+
+/* As cotas: flutuam em volta da peça, como num desenho técnico. */
+.cota {
+  position: absolute;
+  z-index: 1;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--card) 88%, transparent);
+  backdrop-filter: blur(6px);
+  box-shadow:
+    0 1px 2px oklch(0.25 0.03 255 / 5%),
+    0 6px 20px -8px oklch(0.25 0.03 255 / 14%);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  animation: flutua 5.5s ease-in-out infinite alternate;
+}
+
+.cota strong {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.cotaTopo {
+  top: 6%;
+  right: 4%;
+}
+
+.cotaBase {
+  bottom: 7%;
+  left: 3%;
+  animation-delay: -2.6s;
+}
+
+@keyframes flutua {
+  from {
+    transform: translateY(-3px);
+  }
+  to {
+    transform: translateY(4px);
+  }
+}
+
+/*
+ * Quem pediu menos movimento vê a caixa aberta e parada.
+ *
+ * Aberta, e não fechada: fechada ela é um paralelepípedo, e é a tampa erguida
+ * que diz "embalagem" sem precisar de legenda.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .caixa,
+  .anel,
+  .cota {
+    animation: none;
+  }
+
+  .caixa {
+    transform: rotateX(-24deg) rotateY(-30deg);
+  }
+
+  .anel {
+    transform: translateY(calc(var(--h) / 2 + 0.6cqw)) rotateX(90deg);
+  }
+
+  .tampa {
+    animation: none;
+    transform: translate3d(0, calc(var(--h) / -2), calc(var(--d) / -2)) rotateX(203deg);
+  }
+
+  .lingua {
+    animation: none;
+    transform: rotateX(-18deg);
+  }
+}
