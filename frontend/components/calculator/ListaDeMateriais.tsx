@@ -19,7 +19,8 @@ import {
   selectComponents,
   useQuoteStore,
 } from "@/store/useQuoteStore";
-import { formatCurrency, isMagnet, isRigid } from "@/lib/pricing/engine";
+import { isMagnet, isRigid } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import type { ComponentInput, CradleType, Material } from "@/lib/pricing/types";
 
 /**

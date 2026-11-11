@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useShallow } from "zustand/react/shallow";
-import { RefreshCw, RotateCcw, TriangleAlert } from "lucide-react";
+import Link from "next/link";
+import { Lock, RefreshCw, RotateCcw, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,8 +23,10 @@ import {
   selectDimensions,
   selectActiveMaterial,
   selectBootstrapFailed,
+  selectDemoMode,
   selectIsFreeModel,
 } from "@/store/useQuoteStore";
+import { useAccount, selectSemPlano } from "@/store/useAccount";
 
 /**
  * O Canvas 3D é carregado apenas no cliente.
@@ -74,17 +77,39 @@ export default function CalculadoraPage() {
   // import dinâmico acima).
   const modeloLivre = useQuoteStore(selectIsFreeModel);
 
+  /*
+   * Sem assinatura a calculadora vira demonstração: a caixa de exemplo do
+   * servidor, precificada de verdade, com tudo congelado. Ver
+   * `carregarDemonstracao` na store.
+   */
+  const semPlano = useAccount(selectSemPlano);
+  const contaResolvida = useAccount((s) => !s.loading);
+  const demo = useQuoteStore(selectDemoMode);
+  const carregarDemonstracao = useQuoteStore((s) => s.carregarDemonstracao);
+
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  // Depois do bootstrap: a prévia precisa dos materiais carregados para pintar
+  // a caixa com a cor e a espessura do papelão certo.
+  useEffect(() => {
+    if (semPlano && !isBootstrapping) void carregarDemonstracao();
+  }, [semPlano, isBootstrapping, carregarDemonstracao]);
 
   // `?duplicar=12` ou `?editar=12` reabrem um orçamento gravado. Depende do
   // bootstrap: sem materiais carregados o formulário abriria sem o material
   // selecionado.
   const reabertura = useReabrirOrcamento(!isBootstrapping);
 
-  // Mantém o servidor sincronizado em debounce a cada mudança da especificação.
-  useServerSync();
+  /*
+   * Mantém o servidor sincronizado em debounce a cada mudança da especificação.
+   *
+   * Só depois de saber se há plano. Antes disso, a conta sem assinatura levava
+   * um 403 do `simulate` e a tela pintava um erro vermelho ao lado da
+   * demonstração funcionando — ver a nota do hook.
+   */
+  useServerSync({ ativo: contaResolvida && !semPlano });
 
   if (bootstrapFailed) {
     return <BootstrapError onRetry={() => void bootstrap()} />;
@@ -124,8 +149,33 @@ export default function CalculadoraPage() {
       </section>
 
       {/* ── Decidir: a especificação ────────────────────────────────────── */}
-      <div className="order-2 p-6 lg:order-1 lg:h-full lg:overflow-y-auto">
-        {isBootstrapping ? <FormSkeleton /> : <DimensionForm />}
+      <div className="order-2 space-y-4 p-6 lg:order-1 lg:h-full lg:overflow-y-auto">
+        {demo && <AvisoDeDemonstracao />}
+
+        {isBootstrapping ? (
+          <FormSkeleton />
+        ) : demo ? (
+          /*
+            Congelado por DUAS vias, e nenhuma delas sozinha basta.
+
+            `fieldset disabled` desliga todo controle nativo lá dentro — input,
+            select, button — inclusive por teclado, e é a que o leitor de tela
+            anuncia. `pointer-events-none` cobre o que não é controle nativo: o
+            slider do Radix é um span com role="slider" e o fieldset não o
+            alcança.
+
+            `display: contents` no fieldset porque ele é uma caixa de bloco com
+            estilo próprio de navegador, e envolvê-lo cru quebraria o
+            espaçamento da coluna.
+          */
+          <fieldset disabled className="contents">
+            <div className="pointer-events-none">
+              <DimensionForm />
+            </div>
+          </fieldset>
+        ) : (
+          <DimensionForm />
+        )}
       </div>
 
       {/* ── Concluir: preço e ações ─────────────────────────────────────── */}
@@ -136,10 +186,41 @@ export default function CalculadoraPage() {
           <>
             <PriceSummary />
             <Separator />
-            <ActionPanel disabled={!hasResult} reabertura={reabertura} />
+            {/* Sem plano não há o que salvar: o botão sumiria em 403. O lugar
+                da conversa é o aviso da coluna da esquerda. */}
+            {!demo && <ActionPanel disabled={!hasResult} reabertura={reabertura} />}
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * O aviso do modo demonstração.
+ *
+ * Fica ACIMA do formulário, e não sobre ele: uma tarja por cima esconderia
+ * justamente o que a pessoa entrou para ver. O papel do aviso é explicar por que
+ * os campos não respondem — sem ele, a tela congelada é indistinguível de uma
+ * tela quebrada, e a primeira impressão do produto vira um bug.
+ */
+function AvisoDeDemonstracao() {
+  return (
+    <div className="rounded-lg border border-brand/40 bg-brand/5 p-4">
+      <p className="flex items-center gap-2 text-sm font-medium">
+        <Lock className="size-4 text-brand" aria-hidden />
+        Demonstração
+      </p>
+
+      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+        Esta é uma caixa de exemplo, com o preço calculado pelos seus custos
+        cadastrados. Os campos ficam congelados até você escolher um plano —
+        aí eles passam a valer para as suas caixas.
+      </p>
+
+      <Button asChild size="sm" className="mt-3 w-full">
+        <Link href="/assinatura">Ver os planos</Link>
+      </Button>
     </div>
   );
 }

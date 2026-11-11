@@ -76,7 +76,7 @@ export default function CadastroPage() {
   return (
     <TelaPublica
       titulo="Cadastre sua empresa"
-      descricao="Três dias de teste no plano completo. Depois, a conta continua funcionando no plano gratuito — nada é bloqueado."
+      descricao="A conta abre na hora, sem cartão. Você entra e vê a calculadora funcionando com um exemplo pronto; para orçar as suas caixas, escolha um plano."
       rodape={
         <p className="text-muted-foreground">
           Já tem conta?{" "}

@@ -60,6 +60,27 @@ async function esperaEmDia() {
 
 const consoleErrors = [];
 page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
+
+/**
+ * Toda requisição que sai do nosso domínio.
+ *
+ * Existe por um caso concreto: o `<Environment preset="city" />` do drei baixava
+ * um HDR de 1,5 MB de `raw.githubusercontent.com` a cada abertura da
+ * calculadora — o maior recurso do sistema, vindo de um servidor que não é
+ * nosso, e ninguém percebeu por meses. Nenhum check via, porque a tela
+ * funcionava: só ficava lenta, e dependia do GitHub estar de pé.
+ *
+ * A regra é simples de manter e cara de violar sem querer: um `preset`, uma
+ * fonte, um ícone de CDN entram sem alarde e levam junto latência que não
+ * controlamos, cache que não configuramos e uma indisponibilidade de terceiro.
+ */
+const requisicoesExternas = new Set();
+page.on("request", (r) => {
+  const u = r.url();
+  if (u.startsWith("data:") || u.startsWith("blob:")) return;
+  if (u.startsWith(BASE) || u.startsWith(API.replace("/api", ""))) return;
+  requisicoesExternas.add(new URL(u).host);
+});
 page.on("pageerror", (e) => consoleErrors.push("pageerror: " + e.message));
 
 // ── 0. A vitrine: a raiz pertence a quem ainda não é cliente ─────────────
@@ -90,14 +111,107 @@ const textoDosPlanos = await page.locator("#precos").innerText();
 
 check(
   "a tabela de preços vem do servidor",
-  precosDoServidor.data.planos
-    .filter((p) => p.pago)
-    .every((p) =>
-      textoDosPlanos.includes(
-        p.mensalidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
-      ),
+  precosDoServidor.data.planos.every((p) =>
+    textoDosPlanos.includes(
+      p.mensalidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
     ),
+  ),
   textoDosPlanos.replace(/\s+/g, " ").slice(0, 90),
+);
+
+/*
+ * Nada de graça na vitrine.
+ *
+ * O plano gratuito e o teste de alguns dias saíram do produto por decisão
+ * comercial, e a página é onde a promessa antiga sobreviveria mais tempo: um
+ * texto esquecido aqui é um compromisso que o servidor não cumpre mais, lido
+ * justamente por quem ainda está decidindo.
+ *
+ * A regra procura as FRASES que prometem, e não a palavra "grátis" solta. A
+ * primeira versão fazia isso e reprovou a própria pergunta do FAQ — "Por que não
+ * tem teste grátis?" — que é o oposto de uma promessa: é a objeção respondida de
+ * frente, e é justamente o que se quer manter na página.
+ *
+ * Cada padrão abaixo é uma frase que o visitante leria como oferta.
+ */
+const PROMESSAS_GRATUITAS = [
+  /come[çc]ar? gr[áa]tis/i,
+  /criar conta gr[áa]tis/i,
+  /conta gr[áa]tis/i,
+  /teste gr[áa]tis de/i,
+  /testar? \d+ dias/i,
+  /\d+ dias de teste/i,
+  /gr[áa]tis por \d+/i,
+  /plano gratuito/i,
+  /experimente gr[áa]tis/i,
+];
+
+const textoDaVitrine = await page.locator("main").innerText();
+const promessaGratuita = PROMESSAS_GRATUITAS.map((r) => r.exec(textoDaVitrine)).find(Boolean);
+
+check(
+  "a vitrine não promete nada de graça",
+  promessaGratuita === undefined,
+  promessaGratuita ? `ainda diz "${promessaGratuita[0]}"` : "nenhuma promessa gratuita",
+);
+
+/*
+ * Preço riscado só existe acompanhado do que ele é.
+ *
+ * O Profissional está com preço de LANÇAMENTO: R$ 224,85 riscado, R$ 149,90
+ * cobrado, com o compromisso de subir. Isso é legítimo — e o que o torna
+ * legítimo é a etiqueta. O CDC (art. 37, §1º) e o Decreto 5.903/2006 tratam
+ * como enganosa a oferta que anuncia um preço anterior sem que ele tenha sido
+ * praticado ou vá ser; um número riscado e mudo é o "de/por" fantasma que o
+ * Procon autua, e quem responde é a empresa anunciante.
+ *
+ * O check não é sobre gosto: é sobre alguém "limpar" a etiqueta um dia achando
+ * que é enfeite e deixar o risco sozinho no ar.
+ */
+const precoRiscado = precosDoServidor.data.planos.find((p) => p.mensalidade_cheia !== null);
+
+if (precoRiscado) {
+  check(
+    "o preço riscado vem acompanhado de 'preço de lançamento'",
+    /pre[çc]o de lan[çc]amento/i.test(textoDosPlanos) &&
+      textoDosPlanos.includes(
+        precoRiscado.mensalidade_cheia.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
+      ),
+    `${precoRiscado.tipo}: risca ${precoRiscado.mensalidade_cheia}, cobra ${precoRiscado.mensalidade}`,
+  );
+
+  check(
+    "o valor riscado é maior que o cobrado",
+    precoRiscado.mensalidade_cheia > precoRiscado.mensalidade,
+    `${precoRiscado.mensalidade_cheia} > ${precoRiscado.mensalidade}`,
+  );
+} else {
+  check("nenhum plano em lançamento: nada a riscar", true);
+}
+
+/*
+ * A garantia, por outro lado, PRECISA estar visível.
+ *
+ * Ela é o que ocupou o lugar do teste grátis: sete dias de arrependimento com
+ * devolução integral, que o SubscriptionManager cumpre. Estava enterrada num
+ * acordeão fechado no fim da página; encostada no preço, é a resposta para a
+ * objeção que acontece ali. Um dia alguém "limpa" a seção e o argumento some
+ * sem que nada quebre — este check é o que denuncia.
+ */
+const textoDosPrecosComGarantia = await page.locator("#precos").innerText();
+
+check(
+  "a garantia de devolução aparece junto do preço",
+  /garantia/i.test(textoDosPrecosComGarantia) &&
+    /dinheiro de volta|devolu[çc][ãa]o integral/i.test(textoDosPrecosComGarantia),
+  textoDosPrecosComGarantia.replace(/\s+/g, " ").slice(-95),
+);
+
+check(
+  "o catálogo tem dois planos, os dois pagos",
+  precosDoServidor.data.planos.length === 2 &&
+    precosDoServidor.data.planos.every((p) => p.mensalidade > 0),
+  precosDoServidor.data.planos.map((p) => `${p.tipo}=${p.mensalidade}`).join(" "),
 );
 
 // Renderizada no SERVIDOR: o preço precisa estar no HTML que o buscador lê, não
@@ -1280,9 +1394,161 @@ check(
   errosNaVitrine[0] ?? "atalho para /painel no cabeçalho",
 );
 
-// ── 10. Console limpo ────────────────────────────────────────────────────
+// ── 9f. Modo demonstração: a conta que ainda não assinou ─────────────────
+//
+// O plano gratuito e o teste grátis saíram do produto. A conta nasce SEM PLANO
+// e fica em modo demonstração: lê tudo, escreve nada, e a calculadora mostra uma
+// caixa de exemplo precificada de verdade.
+//
+// Roda numa ABA PRÓPRIA, com sessão própria. Duas razões: a sessão do admin
+// desta suíte tem plano (o seeder o promove), e o 403 esperado do `simulate`
+// sujaria a contagem de erros de console do check 10, que fala do outro fluxo.
+
+const paginaDemo = await browser.newPage({ viewport: { width: 1440, height: 950 } });
+
+const emailDemo = `e2e-demo-${Date.now()}@teste.local`;
+const senhaDemo = "demonstracao-longa";
+
+const cadastro = await fetch(`${API}/register`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json", Accept: "application/json" },
+  body: JSON.stringify({
+    empresa: "Cartonagem da Demonstração",
+    nome: "Ana Demonstração",
+    email: emailDemo,
+    password: senhaDemo,
+    password_confirmation: senhaDemo,
+  }),
+}).then((r) => r.json());
+
+const tokenDemo = cadastro.data?.token;
+
+check(
+  "a empresa nova nasce sem plano",
+  cadastro.data?.tenant?.plan_type === null && cadastro.data?.tenant?.plan_status === null,
+  JSON.stringify(cadastro.data?.tenant ?? cadastro),
+);
+
+const comToken = (extra = {}) => ({
+  Accept: "application/json",
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${tokenDemo}`,
+  ...extra,
+});
+
+// Escrita recusada, e com o motivo certo: quem nunca assinou não pode ser
+// mandado procurar uma fatura vencida.
+const escritaRecusada = await fetch(`${API}/clients`, {
+  method: "POST",
+  headers: comToken(),
+  body: JSON.stringify({ name: "Cliente que não entra" }),
+});
+
+const corpoRecusa = await escritaRecusada.json();
+
+check(
+  "sem plano, o servidor recusa gravar",
+  escritaRecusada.status === 403 && corpoRecusa.error === "assinatura_necessaria",
+  `HTTP ${escritaRecusada.status} · ${corpoRecusa.error ?? "-"}`,
+);
+
+// Leitura livre: é o que sustenta a demonstração e o que a LGPD exige.
+const leitura = await fetch(`${API}/quotes`, { headers: comToken() });
+check("sem plano, a leitura continua liberada", leitura.status === 200, `HTTP ${leitura.status}`);
+
+// A caixa de exemplo, com preço calculado pelo motor de verdade.
+const demo = await fetch(`${API}/quotes/demo`, { headers: comToken() }).then((r) => r.json());
+
+check(
+  "a demonstração devolve preço calculado",
+  demo.data?.resultado?.unit_price > 0,
+  `unitário ${demo.data?.resultado?.unit_price}`,
+);
+
+// Congelada NO SERVIDOR: mandar outras medidas não move o preço.
+const demoForcada = await fetch(`${API}/quotes/demo?width_mm=2000&quantity=99999`, {
+  headers: comToken(),
+}).then((r) => r.json());
+
+check(
+  "a demonstração ignora as medidas que o cliente manda",
+  demoForcada.data?.resultado?.unit_price === demo.data?.resultado?.unit_price,
+  `${demo.data?.resultado?.unit_price} = ${demoForcada.data?.resultado?.unit_price}`,
+);
+
+// E agora a tela.
+await paginaDemo.goto(`${BASE}/login`, { waitUntil: "networkidle", timeout: 60000 });
+await paginaDemo.fill("#email", emailDemo);
+await paginaDemo.fill("#password", senhaDemo);
+await paginaDemo.click('button[type="submit"]');
+await paginaDemo.waitForURL((u) => !u.toString().includes("/login"), { timeout: 60000 });
+
+await paginaDemo.goto(`${BASE}/calculadora`, { waitUntil: "networkidle", timeout: 60000 });
+await paginaDemo.waitForTimeout(3500);
+
+check(
+  "a faixa de demonstração aparece na casca",
+  await paginaDemo.locator("text=Modo demonstração").first().isVisible(),
+);
+
+const precoNaDemo = await paginaDemo.locator("text=/PREÇO DE VENDA/i").first().isVisible();
+check("a calculadora congelada ainda mostra o preço", precoNaDemo);
+
+// Os campos não respondem — é o que "valores congelados" quer dizer.
+const larguraDemo = paginaDemo.locator("#width");
+const valorAntes = await larguraDemo.inputValue();
+await larguraDemo.fill("999").catch(() => {});
+const valorDepois = await larguraDemo.inputValue();
+
+check(
+  "os campos ficam congelados",
+  (await larguraDemo.isDisabled()) && valorAntes === valorDepois,
+  `${valorAntes} → ${valorDepois}`,
+);
+
+check(
+  "sem plano não há botão de salvar orçamento",
+  (await paginaDemo.locator('button:has-text("Salvar orçamento")').count()) === 0,
+);
+
+// Nenhuma tarja vermelha: a demonstração não pode se apresentar como defeito.
+check(
+  "a demonstração não mostra erro na tela",
+  (await paginaDemo.locator('[role="alert"], .text-destructive').count()) === 0 ||
+    !(await paginaDemo.locator("text=/não foi possível|falha/i").first().isVisible().catch(() => false)),
+);
+
+await paginaDemo.close();
+
+/*
+ * Faxina: a empresa de demonstração sai do banco.
+ *
+ * Sem isto, cada rodada da suíte deixaria um inquilino inteiro para trás — e o
+ * painel de plataforma, que conta empresas, passaria a somar o próprio teste.
+ * Usa o caminho real de exclusão, então é também o único lugar da suíte que o
+ * exercita ponta a ponta.
+ */
+const faxina = await fetch(`${API}/account`, {
+  method: "DELETE",
+  headers: comToken(),
+  // `confirmacao` vai junto: a exclusão exige a palavra escrita, no espírito do
+  // "sim, eu entendi" — a ação não tem desfazer nem lixeira.
+  body: JSON.stringify({ password: senhaDemo, confirmacao: "EXCLUIR" }),
+});
+
+check("a conta de demonstração é removida ao fim", faxina.ok, `HTTP ${faxina.status}`);
+
+// ── 10. Console limpo e nada vindo de fora ───────────────────────────────
 const relevantes = consoleErrors.filter((e) => !/favicon|DevTools/i.test(e));
 check("sem erros de console", relevantes.length === 0, relevantes.slice(0, 3).join(" | "));
+
+check(
+  "nenhuma requisição sai do nosso domínio",
+  requisicoesExternas.size === 0,
+  requisicoesExternas.size === 0
+    ? "tudo servido daqui"
+    : `${[...requisicoesExternas].join(", ")}`,
+);
 
 await browser.close();
 log(`\n${failures === 0 ? "TODOS OS CHECKS PASSARAM" : failures + " CHECK(S) FALHARAM"}`);

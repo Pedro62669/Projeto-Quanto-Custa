@@ -18,8 +18,8 @@ import { ErrorState } from "@/components/data/states";
 import { useApi } from "@/hooks/useApi";
 import { api, type Installment, type QuoteListItem } from "@/lib/api";
 import { useAccount } from "@/store/useAccount";
-import { formatCurrency } from "@/lib/pricing/engine";
-import { ROTULO_STATUS, TOM_STATUS } from "@/lib/rotulos";
+import { formatCurrency } from "@/lib/rotulos";
+import { ROTULO_STATUS, SEM_PLANO, TOM_STATUS } from "@/lib/rotulos";
 
 /**
  * Painel inicial — o dia da empresa em uma tela.
@@ -200,7 +200,9 @@ export default function PainelPage() {
       </div>
 
       {/* ── Consumo do plano ─────────────────────────────────────────────── */}
-      {conta?.cotas && <ConsumoDoPlano cotas={conta.cotas} plano={conta.plano?.rotulo} />}
+      {conta?.cotas && (
+        <ConsumoDoPlano cotas={conta.cotas} plano={conta.plano?.rotulo ?? SEM_PLANO} />
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AppHeader } from "@/components/shell/AppHeader";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { AvisoDeVerificacao } from "@/components/shell/AvisoDeVerificacao";
+import { AvisoDeDemonstracao } from "@/components/shell/AvisoDeDemonstracao";
 import { session } from "@/lib/auth";
 import { useAccount } from "@/store/useAccount";
 
@@ -71,7 +72,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             : "flex min-h-dvh flex-col bg-background"
         }
       >
+        {/* A ordem importa: confirmar o e-mail é PRÉ-REQUISITO de assinar, e o
+            aviso de demonstração manda assinar. Invertê-los ofereceria o passo
+            dois antes do passo um. */}
         <AvisoDeVerificacao />
+        <AvisoDeDemonstracao />
         <AppHeader />
 
         <div className="flex min-h-0 flex-1">

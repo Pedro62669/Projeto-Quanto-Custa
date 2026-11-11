@@ -1524,23 +1524,3 @@ function round(value: number, precision: number): number {
 function money(value: number, precision = 4): number {
   return round(value, precision);
 }
-
-/** Formatação monetária pt-BR, usada em toda a UI. */
-export function formatCurrency(value: number, currency = "BRL", maxDigits = 2): string {
-  /*
-   * Um lucro exatamente zero saía como "−R$ 0,00".
-   *
-   * O resíduo da conta (preço − custo − imposto) chega aqui como −5,6e-14 ou
-   * como o zero negativo do IEEE-754, e o Intl é fiel ao sinal. Na tela isso
-   * vira um sinal de menos na frente de um zero — que lê como prejuízo, e
-   * prejuízo de valor nenhum. Arredondar antes de formatar resolve: `|| 0`
-   * captura −0 porque zero negativo é falsy.
-   */
-  const arredondado = Number(value.toFixed(maxDigits)) || 0;
-
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: maxDigits,
-  }).format(arredondado);
-}

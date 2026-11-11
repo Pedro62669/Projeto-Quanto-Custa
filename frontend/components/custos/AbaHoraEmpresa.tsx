@@ -15,7 +15,8 @@ import { ErrorState } from "@/components/data/states";
 
 import { useApi, mensagemDeErro } from "@/hooks/useApi";
 import { api, type CostSettingVersion } from "@/lib/api";
-import { calculateCompanyHour, formatCurrency } from "@/lib/pricing/engine";
+import { calculateCompanyHour } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import type { CompanyHourParams, EfficiencyPercent } from "@/lib/pricing/types";
 
 /**

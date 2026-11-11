@@ -21,6 +21,16 @@ export class ApiError extends Error {
     public readonly status: number,
     /** Erros de validação do Laravel: { campo: [mensagens] } */
     public readonly errors: Record<string, string[]> = {},
+    /**
+     * O motivo em vocabulário fechado, quando o servidor manda um.
+     *
+     * O backend carimba `error` nas recusas que a interface precisa DISTINGUIR,
+     * e não só mostrar: `assinatura_necessaria`, `assinatura_expirada`,
+     * `limite_atingido`, `email_nao_verificado`. Sem ele, a única forma de a
+     * tela reagir diferente a cada caso seria comparar a mensagem em português —
+     * que muda de redação sem aviso e quebra em silêncio.
+     */
+    public readonly code: string | null = null,
   ) {
     super(message);
     this.name = "ApiError";
@@ -59,6 +69,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
       body.message ?? `Falha na requisição (HTTP ${response.status})`,
       response.status,
       body.errors ?? {},
+      typeof body.error === "string" ? body.error : null,
     );
   }
 

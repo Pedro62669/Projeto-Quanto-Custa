@@ -68,3 +68,18 @@ export const selectIsPlatformAdmin = (s: AccountState) =>
   s.account !== null && s.account.tenant === null;
 
 export const selectCompanyName = (s: AccountState) => s.account?.tenant?.name ?? null;
+
+/**
+ * A empresa ainda não assinou: o sistema inteiro fica em modo demonstração.
+ *
+ * Lê `plano.tipo === null`, que é como o servidor diz "sem plano" — não é campo
+ * faltando, é o estado em que toda conta nasce desde que o gratuito saiu do
+ * produto.
+ *
+ * O admin de PLATAFORMA cai fora por construção: ele não tem empresa, então
+ * `plano` vem null inteiro e não há assinatura a cobrar dele. Testar
+ * `plano?.tipo == null` sem checar `tenant` colocaria quem opera o SaaS em modo
+ * demonstração dentro do próprio SaaS.
+ */
+export const selectSemPlano = (s: AccountState) =>
+  s.account !== null && s.account.tenant !== null && s.account.plano?.tipo == null;

@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ErrorState } from "@/components/data/states";
 import { useApi } from "@/hooks/useApi";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 
 const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",

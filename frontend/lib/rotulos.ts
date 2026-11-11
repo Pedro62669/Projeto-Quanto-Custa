@@ -83,17 +83,24 @@ export const ROTULO_CATEGORIA: Record<string, string> = {
 };
 
 export const ROTULO_PLANO: Record<string, string> = {
-  free: "Gratuito",
   basic: "Básico",
   pro: "Profissional",
 };
 
 export const ROTULO_SITUACAO_PLANO: Record<string, string> = {
-  trialing: "Em teste",
   active: "Ativa",
   past_due: "Pagamento pendente",
   canceled: "Cancelada",
 };
+
+/**
+ * O que se lê quando `plan_type` vem NULL.
+ *
+ * NULL é estado de domínio, e não dado faltando: é a empresa que se cadastrou e
+ * ainda não assinou. Um "—" no lugar sugeriria erro de carregamento na exata
+ * tela onde a pessoa precisa entender que falta contratar.
+ */
+export const SEM_PLANO = "Sem plano";
 
 /** Data ISO (YYYY-MM-DD ou ISO completo) em dd/mm/aaaa. */
 export function formatarData(iso: string | null | undefined): string {
@@ -104,4 +111,38 @@ export function formatarData(iso: string | null | undefined): string {
   const [ano, mes, dia] = iso.slice(0, 10).split("-");
 
   return `${dia}/${mes}/${ano}`;
+}
+
+/**
+ * Formatação monetária pt-BR, usada em toda a UI.
+ *
+ * Mora AQUI, e não no motor de precificação, por um motivo de carregamento.
+ *
+ * Ela nasceu em `lib/pricing/engine.ts` porque é lá que o dinheiro é calculado —
+ * e virou o único símbolo que vinte telas importavam daquele módulo de 1500
+ * linhas. O empacotador não consegue separar: um `import { formatCurrency }` na
+ * lista de orçamentos arrastava o motor inteiro para o chunk COMPARTILHADO, e
+ * toda tela autenticada baixava a matemática de cartonagem para escrever
+ * "R$ 79,90". Medido: 47 KB de código da calculadora carregando em /orcamentos.
+ *
+ * Aqui ela fica junto de `formatarData`, que faz o mesmo trabalho para o outro
+ * tipo de valor — e num arquivo que não puxa nada além de um `type`.
+ */
+export function formatCurrency(value: number, currency = "BRL", maxDigits = 2): string {
+  /*
+   * Um lucro exatamente zero saía como "−R$ 0,00".
+   *
+   * O resíduo da conta (preço − custo − imposto) chega aqui como −5,6e-14 ou
+   * como o zero negativo do IEEE-754, e o Intl é fiel ao sinal. Na tela isso
+   * vira um sinal de menos na frente de um zero — que lê como prejuízo, e
+   * prejuízo de valor nenhum. Arredondar antes de formatar resolve: `|| 0`
+   * captura −0 porque zero negativo é falsy.
+   */
+  const arredondado = Number(value.toFixed(maxDigits)) || 0;
+
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: maxDigits,
+  }).format(arredondado);
 }

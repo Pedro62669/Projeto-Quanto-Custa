@@ -145,6 +145,21 @@ export const api = {
         "/quotes/simulate",
         { method: "POST", body: JSON.stringify(spec), signal },
       ).then((r) => r.data),
+
+    /**
+     * A caixa de exemplo, para a conta que ainda não assinou.
+     *
+     * GET, e é o que a faz funcionar: sem plano o servidor recusa toda escrita,
+     * e `simulate` é POST. A especificação é FIXA e sai do servidor — mandar
+     * medidas aqui não muda nada, de propósito.
+     */
+    demo: () =>
+      request<{
+        data: {
+          specification: Partial<QuoteSpecification>;
+          resultado: PricingBreakdown & { currency: string; engine_version: string };
+        };
+      }>("/quotes/demo").then((r) => r.data),
   },
 
   /* ── Orçamentos ──────────────────────────────────────────────────────── */

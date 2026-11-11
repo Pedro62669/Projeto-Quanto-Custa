@@ -36,7 +36,7 @@ import {
   type MaterialUnitValue,
 } from "@/lib/api";
 import { mensagemDeErro } from "@/hooks/useApi";
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import { ROTULO_FIBRA, ROTULO_TIPO_MATERIAL, ROTULO_UNIDADE } from "@/lib/rotulos";
 
 /** O que o formulário edita. Números vazios são `null`, nunca zero. */

@@ -26,7 +26,7 @@ import {
 
 import { useApi } from "@/hooks/useApi";
 import { api, type QuoteListItem } from "@/lib/api";
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import { ROTULO_MODELO, ROTULO_STATUS, TOM_STATUS, formatarData } from "@/lib/rotulos";
 import { useDebounce } from "@/hooks/useDebounce";
 

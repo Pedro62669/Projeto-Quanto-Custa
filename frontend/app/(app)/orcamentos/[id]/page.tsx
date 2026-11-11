@@ -48,7 +48,7 @@ import { Label } from "@/components/ui/label";
 import { ErrorState } from "@/components/data/states";
 import { useApi, mensagemDeErro } from "@/hooks/useApi";
 import { api, baixarArquivo, type QuoteStatusValue } from "@/lib/api";
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import { ROTULO_MODELO, ROTULO_STATUS, TOM_STATUS, formatarData } from "@/lib/rotulos";
 
 /**

@@ -44,7 +44,7 @@ import {
   type TransactionPayload,
   type TransactionTypeValue,
 } from "@/lib/api";
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import { ROTULO_CATEGORIA, formatarData } from "@/lib/rotulos";
 
 const TODOS = "todos";

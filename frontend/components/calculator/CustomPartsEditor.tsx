@@ -28,7 +28,8 @@ import {
   selectCustomParts,
   useQuoteStore,
 } from "@/store/useQuoteStore";
-import { customPartsConsumption, formatCurrency } from "@/lib/pricing/engine";
+import { customPartsConsumption } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import type { ComponentRole, CustomPartInput, Material } from "@/lib/pricing/types";
 
 /**

@@ -45,13 +45,16 @@ export interface AccountContext {
     acesso_liberado: boolean;
   } | null;
 
+  /**
+   * O plano da empresa. `tipo` NULL = nunca assinou.
+   *
+   * Não é campo faltando: é o estado em que toda conta nasce, já que não existe
+   * mais plano gratuito. É por ele que a interface entra em modo demonstração.
+   */
   plano: {
-    /** VIGENTE, não contratado: é ele que manda nas cotas. */
-    tipo: string;
-    rotulo: string;
-    contratado: string;
-    situacao: string;
-    trial_ends_at: string | null;
+    tipo: string | null;
+    rotulo: string | null;
+    situacao: string | null;
     subscription_ends_at: string | null;
   } | null;
 
@@ -532,7 +535,16 @@ export interface Plano {
   tipo: string;
   rotulo: string;
   mensalidade: number;
-  pago: boolean;
+
+  /**
+   * Preço cheio, quando a mensalidade atual é de LANÇAMENTO.
+   *
+   * NULL = o praticado já é o cheio, e não há nada a riscar. Vem do servidor
+   * (`PlanType::fullPrice()`) pelo mesmo motivo da mensalidade: um preço escrito
+   * na interface envelhece no reajuste, e o riscado é justamente o número que o
+   * visitante usa para achar que está fazendo negócio.
+   */
+  mensalidade_cheia: number | null;
   /** Null = ilimitado, o mesmo contrato do resumo de cotas. */
   limites: {
     materiais: number | null;
@@ -544,22 +556,21 @@ export interface Plano {
 /** A tabela de preços pública, com as promessas que a landing anuncia. */
 export interface Vitrine {
   planos: Plano[];
-  dias_de_teste: number;
   dias_de_arrependimento: number;
 }
 
 export interface SubscriptionContext {
+  /** Tudo nulo = nunca contratou. Ver `sem_plano`. */
   plano: {
-    tipo: string;
-    rotulo: string;
-    mensalidade: number;
-    contratado: string;
-    situacao: string;
-    situacao_rotulo: string;
+    tipo: string | null;
+    rotulo: string | null;
+    mensalidade: number | null;
+    situacao: string | null;
+    situacao_rotulo: string | null;
   };
   acesso_liberado: boolean;
-  em_teste: boolean;
-  trial_ends_at: string | null;
+  /** Nunca assinou — distinto de assinatura vencida ou cancelada. */
+  sem_plano: boolean;
   subscription_ends_at: string | null;
   assinatura: {
     id: number;
@@ -588,10 +599,9 @@ export interface PlatformTenant {
   id: number;
   name: string;
   document: string | null;
-  plan_type: string;
-  plan_status: string;
+  plan_type: string | null;
+  plan_status: string | null;
   is_active: boolean;
-  trial_ends_at: string | null;
   created_at: string | null;
   [key: string]: unknown;
 }

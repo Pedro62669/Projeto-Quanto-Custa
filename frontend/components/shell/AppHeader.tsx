@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useShallow } from "zustand/react/shallow";
-import { ChevronDown, CloudOff, Loader2, LogOut, Menu, Package } from "lucide-react";
+import { ChevronDown, CloudOff, LogOut, Menu, Package } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,8 +26,24 @@ import {
 import { session } from "@/lib/auth";
 import { useOnline } from "@/hooks/useOnline";
 import { useAccount, selectCompanyName } from "@/store/useAccount";
-import { useQuoteStore } from "@/store/useQuoteStore";
 import { Sidebar } from "./Sidebar";
+
+/**
+ * Carregado tarde, e é o ponto de todo o arranjo.
+ *
+ * O import estático deste componente arrastava a `useQuoteStore` — e com ela o
+ * motor de precificação, 66 KB — para o pacote da casca, que desce em TODA tela
+ * do sistema. Aqui o pacote só é buscado quando o usuário abre a calculadora.
+ *
+ * `ssr: false` porque ele descreve estado de cliente (o debounce da
+ * sincronização) que não existe no servidor; `loading: null` porque o lugar dele
+ * no cabeçalho é vazio até haver o que dizer — um esqueleto piscando ali seria
+ * mais chamativo que a informação.
+ */
+const IndicadorDeCalculo = dynamic(
+  () => import("./IndicadorDeCalculo").then((m) => m.IndicadorDeCalculo),
+  { ssr: false, loading: () => null },
+);
 
 /**
  * Cabeçalho da casca.
@@ -168,21 +184,27 @@ function iniciais(nome: string | undefined): string {
 }
 
 /**
- * Estado da sincronia — só na calculadora.
+ * Estado da conexão e do cálculo.
  *
- * É o único lugar do sistema onde a tela calcula sozinha, em debounce, e o
- * usuário precisa saber se o número que está lendo já foi confirmado pelo
- * servidor. Nas outras telas o dado é gravado por ação explícita, e um "em dia
- * com o servidor" permanente no cabeçalho seria enfeite — pior, seria um
- * enfeite que continuaria aceso descrevendo um cálculo de outra tela.
+ * ## Por que são dois componentes, e não um
+ *
+ * Eram um só, e o import custava caro em toda tela do sistema.
+ *
+ * O indicador de cálculo lê a `useQuoteStore`, e a store importa o motor de
+ * precificação — 66 KB de matemática de cartonagem. Como o import é ESTÁTICO, o
+ * empacotador não tem como saber que o componente só desenha em `/calculadora`:
+ * o motor entrava no pacote da casca e descia junto com a lista de orçamentos, a
+ * tela de clientes, o financeiro, todas.
+ *
+ * Medido: 66 KB de código que aquelas telas nunca executam, em toda visita.
+ *
+ * O aviso de OFFLINE não pode ir junto para dentro do carregamento tardio — ele
+ * vale em qualquer tela, e é justamente quando a rede cai que não dá para contar
+ * com um pedaço de JavaScript ainda por baixar. Por isso ele fica aqui, estático
+ * e sem dependência nenhuma de store.
  */
 function SyncIndicator() {
   const caminho = usePathname();
-
-  const { isSyncing, isConfirmed } = useQuoteStore(
-    useShallow((s) => ({ isSyncing: s.isSyncing, isConfirmed: s.confirmed !== null })),
-  );
-
   const online = useOnline();
 
   if (!online) {
@@ -197,29 +219,14 @@ function SyncIndicator() {
     );
   }
 
+  /*
+   * Só na calculadora. É o único lugar do sistema onde a tela calcula sozinha,
+   * em debounce, e o usuário precisa saber se o número que está lendo já foi
+   * confirmado pelo servidor. Nas outras telas o dado é gravado por ação
+   * explícita, e um "em dia com o servidor" permanente seria enfeite — pior,
+   * um enfeite aceso descrevendo o cálculo de outra tela.
+   */
   if (caminho !== "/calculadora") return null;
 
-  if (isSyncing) {
-    return (
-      <span
-        aria-live="polite"
-        className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
-      >
-        <Loader2 className="size-3.5 animate-spin" />
-        calculando
-      </span>
-    );
-  }
-
-  if (!isConfirmed) return null;
-
-  return (
-    <span
-      aria-live="polite"
-      className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
-    >
-      <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
-      em dia com o servidor
-    </span>
-  );
+  return <IndicadorDeCalculo />;
 }

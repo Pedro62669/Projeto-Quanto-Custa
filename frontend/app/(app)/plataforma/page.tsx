@@ -22,7 +22,7 @@ import { ErrorState } from "@/components/data/states";
 
 import { useApi, mensagemDeErro } from "@/hooks/useApi";
 import { api, type PlatformTenant, type PlatformUser } from "@/lib/api";
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import { formatarData } from "@/lib/rotulos";
 import { useAccount, selectIsPlatformAdmin } from "@/store/useAccount";
 

@@ -26,7 +26,7 @@ import {
 
 import { useApi, mensagemDeErro } from "@/hooks/useApi";
 import { api, type Installment } from "@/lib/api";
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import { formatarData } from "@/lib/rotulos";
 
 const TODAS = "todas";

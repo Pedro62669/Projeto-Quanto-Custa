@@ -19,7 +19,8 @@ import {
   selectCustomParts,
   selectIsFreeModel,
 } from "@/store/useQuoteStore";
-import { formatCurrency, isCylindrical } from "@/lib/pricing/engine";
+import { isCylindrical } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import type { PricingBreakdown } from "@/lib/pricing/types";
 
 /**

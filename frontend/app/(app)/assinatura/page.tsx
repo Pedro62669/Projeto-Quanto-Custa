@@ -26,8 +26,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { ErrorState } from "@/components/data/states";
 import { useApi, mensagemDeErro } from "@/hooks/useApi";
 import { api, type SubscriptionContext } from "@/lib/api";
-import { formatCurrency } from "@/lib/pricing/engine";
-import { formatarData } from "@/lib/rotulos";
+import { formatCurrency } from "@/lib/rotulos";
+import { formatarData, SEM_PLANO } from "@/lib/rotulos";
+import { cn } from "@/lib/utils";
 import { session } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
@@ -65,7 +66,16 @@ export default function AssinaturaPage() {
       />
 
       <PlanoAtual assinatura={a} />
-      <Cotas cotas={a.cotas} />
+
+      {/*
+        Sem plano não há consumo a mostrar, e mostrar mesmo assim seria pior que
+        inútil. O painel imprimia "matérias-primas 4 / 0" com a barra laranja de
+        cota estourada — acusando de excesso quem acabou de se cadastrar, por
+        causa das quatro matérias-primas que o PRÓPRIO sistema semeia no
+        provisionamento. A primeira tela de assinatura passava a mensagem de que
+        a pessoa já tinha feito algo errado.
+      */}
+      {!a.sem_plano && <Cotas cotas={a.cotas} />}
       <EscolhaDePlano atual={a.plano.tipo} planos={a.planos_disponiveis} />
 
       {a.assinatura && (
@@ -78,46 +88,46 @@ export default function AssinaturaPage() {
 }
 
 function PlanoAtual({ assinatura: a }: { assinatura: SubscriptionContext }) {
-  const divergente = a.plano.tipo !== a.plano.contratado;
-
   return (
-    <Card className="border-primary/20 bg-primary/5">
+    <Card
+      className={cn(
+        a.sem_plano ? "border-brand/40 bg-brand/5" : "border-primary/20 bg-primary/5",
+      )}
+    >
       <CardContent className="space-y-2 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Plano vigente
+              {a.sem_plano ? "Sua conta" : "Plano vigente"}
             </p>
-            <p className="text-2xl font-semibold">{a.plano.rotulo}</p>
+            <p className="text-2xl font-semibold">{a.plano.rotulo ?? SEM_PLANO}</p>
             <p className="text-sm text-muted-foreground">
-              {a.plano.mensalidade > 0
-                ? `${formatCurrency(a.plano.mensalidade)} por mês`
-                : "Sem mensalidade"}
+              {a.plano.mensalidade === null
+                ? "Escolha um plano abaixo para começar"
+                : `${formatCurrency(a.plano.mensalidade)} por mês`}
             </p>
           </div>
 
-          <Badge variant={a.acesso_liberado ? "secondary" : "destructive"}>
-            {a.plano.situacao_rotulo}
+          {/*
+            Sem plano NÃO é `destructive`. Vermelho é o vocabulário do erro e da
+            inadimplência; quem acabou de se cadastrar não errou nada — só ainda
+            não escolheu. O vermelho fica para a assinatura que venceu.
+          */}
+          <Badge
+            variant={
+              a.sem_plano ? "outline" : a.acesso_liberado ? "secondary" : "destructive"
+            }
+          >
+            {a.plano.situacao_rotulo ?? "Nunca assinou"}
           </Badge>
         </div>
 
-        {a.em_teste && a.trial_ends_at && (
+        {a.sem_plano && (
           <p className="rounded-md bg-background/70 px-3 py-2 text-xs">
-            Teste até <strong className="font-medium">{formatarData(a.trial_ends_at)}</strong>.
-            Terminado o prazo, a conta passa para o plano gratuito — nada é
-            bloqueado, e os orçamentos continuam onde estão.
-          </p>
-        )}
-
-        {/*
-          Contratado ≠ vigente acontece entre o fim do teste e a passagem do
-          cron. Mostrar só o contratado faria a tela prometer um limite que o
-          servidor recusa.
-        */}
-        {divergente && !a.em_teste && (
-          <p className="text-xs text-muted-foreground">
-            Plano contratado: {a.plano.contratado}. As cotas abaixo seguem o
-            vigente.
+            A conta está em <strong className="font-medium">modo demonstração</strong>:
+            você navega por todas as telas e a calculadora mostra um exemplo
+            calculado de verdade. Para orçar as suas caixas, salvar propostas e
+            usar o financeiro, escolha um plano.
           </p>
         )}
       </CardContent>
@@ -170,7 +180,8 @@ function EscolhaDePlano({
   atual,
   planos,
 }: {
-  atual: string;
+  /** NULL enquanto a empresa não assinou: nenhum cartão fica marcado. */
+  atual: string | null;
   planos: SubscriptionContext["planos_disponiveis"];
 }) {
   const [contratando, setContratando] = useState<string | null>(null);
@@ -218,9 +229,30 @@ function EscolhaDePlano({
                   {vigente && <CheckCircle2 className="size-4 text-primary" />}
                 </div>
 
+                {/*
+                  O mesmo riscado da vitrine, pela mesma fonte.
+
+                  Aqui é onde a incoerência custa mais caro: quem chega nesta
+                  tela viu a página pública e está com o número dela na cabeça.
+                  Mostrar só o preço cheio de um lado e só o de lançamento do
+                  outro é o erro que este projeto já cometeu com R$ 99,90 contra
+                  R$ 149,90 — e que a pessoa descobre na fatura.
+                */}
+                {typeof plano.mensalidade_cheia === "number" && (
+                  <p className="font-mono text-xs tabular-nums text-muted-foreground line-through">
+                    {formatCurrency(plano.mensalidade_cheia)}
+                  </p>
+                )}
+
                 <p className="font-mono text-lg font-semibold tabular-nums">
-                  {plano.pago ? formatCurrency(plano.mensalidade) : "Grátis"}
+                  {formatCurrency(plano.mensalidade)}
                 </p>
+
+                {typeof plano.mensalidade_cheia === "number" && (
+                  <p className="text-[10px] font-medium text-brand-strong">
+                    preço de lançamento
+                  </p>
+                )}
 
                 {/* O que o plano entrega, ao lado do que ele custa: um cartão
                     só com preço vende sem dizer o que está vendendo. */}
@@ -232,7 +264,7 @@ function EscolhaDePlano({
                   <li>{descreveLimite(plano.limites.clientes, "clientes")}</li>
                 </ul>
 
-                {!vigente && plano.pago && (
+                {!vigente && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -323,8 +355,8 @@ function CancelamentoCard({
               <AlertDialogTitle>Cancelar a assinatura?</AlertDialogTitle>
               <AlertDialogDescription>
                 {arrependimento
-                  ? "O valor pago será devolvido integralmente e o acesso ao plano termina hoje. A conta continua existindo no plano gratuito."
-                  : `Sem devolução, e o acesso ao plano segue até ${formatarData(a.assinatura?.current_period_ends_at)}. Depois disso a conta passa para o plano gratuito.`}
+                  ? "O valor pago será devolvido integralmente e o acesso termina hoje. A conta e os dados continuam existindo, em modo somente-leitura."
+                  : `Sem devolução, e o acesso segue até ${formatarData(a.assinatura?.current_period_ends_at)}. Depois disso a conta passa a somente-leitura: você continua vendo e exportando tudo, sem gravar coisas novas.`}
               </AlertDialogDescription>
             </AlertDialogHeader>
 

@@ -19,7 +19,7 @@ import {
 
 import { SeletorDeCliente } from "@/components/cadastro/SeletorDeCliente";
 import { api, ApiError, type Product } from "@/lib/api";
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 
 /**
  * Vender do catálogo.

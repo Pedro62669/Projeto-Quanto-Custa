@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import {
   calculatePricing,
   ENGINE_VERSION,
@@ -298,6 +298,20 @@ interface QuoteState {
 
   isBootstrapping: boolean;
 
+  /**
+   * Modo demonstração: a empresa ainda não assinou.
+   *
+   * Congela a calculadora inteira. A especificação e o preço vêm de
+   * `GET /quotes/demo` — uma caixa fixa, escolhida pelo servidor, precificada
+   * pelo motor de verdade com os custos da própria empresa.
+   *
+   * Mora na store, e não só na tela, por causa do `syncWithServer`: ele dispara
+   * em debounce a cada mudança de `spec` e chamaria `simulate`, que o servidor
+   * recusa com 403 sem plano. O erro apareceria na tela como se a calculadora
+   * estivesse quebrada, em vez de congelada.
+   */
+  demoMode: boolean;
+
   // ── Especificação editável ──────────────────────────────────────────────
   spec: QuoteSpecification;
 
@@ -313,6 +327,16 @@ interface QuoteState {
 
   // ── Ações ───────────────────────────────────────────────────────────────
   bootstrap: () => Promise<void>;
+
+  /**
+   * Entra em modo demonstração e carrega a caixa de exemplo.
+   *
+   * Chamada pela página da calculadora quando a conta não tem plano. Idempotente
+   * de propósito: a casca remonta a cada navegação e recarregar o exemplo a cada
+   * volta seria uma requisição por clique sem nada de novo a dizer.
+   */
+  carregarDemonstracao: () => Promise<void>;
+
   updateSpec: (patch: Partial<QuoteSpecification>) => void;
   selectMaterial: (materialId: number) => void;
   syncWithServer: () => Promise<void>;
@@ -357,6 +381,7 @@ export const useQuoteStore = create<QuoteState>()(
     currency: "BRL",
     boxModels: [],
     isBootstrapping: true,
+    demoMode: false,
 
     spec: DEFAULT_SPEC,
 
@@ -458,6 +483,17 @@ export const useQuoteStore = create<QuoteState>()(
      * mantém esta ação síncrona e trivial de testar.
      */
     updateSpec(patch) {
+      /*
+       * Em demonstração a especificação é imutável — é o que "valores
+       * congelados" quer dizer.
+       *
+       * A tela já desabilita os controles, e esta linha existe porque desabilitar
+       * é decisão de APRESENTAÇÃO: um componente novo que esqueça o `disabled`
+       * passaria a mexer no exemplo, e o preço mostrado deixaria de descrever a
+       * caixa mostrada. Aqui a garantia é do dado.
+       */
+      if (get().demoMode) return;
+
       const bruto = { ...get().spec, ...patch };
       const { materials, settings } = get();
 
@@ -681,11 +717,55 @@ export const useQuoteStore = create<QuoteState>()(
     },
 
     /**
+     * Carrega a caixa de exemplo e congela a calculadora.
+     *
+     * Roda DEPOIS do bootstrap: a prévia precisa dos materiais carregados para
+     * pintar a caixa com a cor e a espessura certas.
+     *
+     * `set` direto na spec, e não `updateSpec`: a mescla derivaria campos do que
+     * já estava na tela, e o exemplo tem que ser exatamente o que o servidor
+     * mandou — é ele que corresponde ao preço.
+     */
+    async carregarDemonstracao() {
+      if (get().demoMode && get().confirmed !== null) return;
+
+      set({ demoMode: true, isSyncing: true, error: null });
+
+      try {
+        const { specification, resultado } = await api.pricing.demo();
+
+        set({
+          spec: { ...DEFAULT_SPEC, ...specification },
+          confirmed: resultado,
+          preview: null,
+          currency: resultado.currency,
+          isSyncing: false,
+        });
+      } catch (error) {
+        set({
+          isSyncing: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Não foi possível carregar a demonstração.",
+        });
+      }
+    },
+
+    /**
      * Confirma o cálculo no servidor. É a fonte de verdade exibida como
      * resultado final; o preview local serve apenas de ponte visual.
      */
     async syncWithServer() {
-      const { spec } = get();
+      const { spec, demoMode } = get();
+
+      /*
+       * Em demonstração o preço já está na tela e é fixo. Sem esta saída, o
+       * debounce chamaria `simulate` — que o servidor recusa com 403 sem plano —
+       * e a calculadora congelada pareceria quebrada.
+       */
+      if (demoMode) return;
+
       if (!spec.material_id) return;
 
       /*
@@ -722,6 +802,22 @@ export const useQuoteStore = create<QuoteState>()(
         });
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
+
+        /*
+         * 403 por falta de assinatura não é falha: é a resposta certa.
+         *
+         * A tela mostrava esse caso como erro vermelho ao lado da demonstração
+         * funcionando — o produto se apresentando quebrado no primeiro acesso.
+         * A página já evita a chamada quando sabe que não há plano, mas o
+         * `bootstrap` também sincroniza, e ele roda ANTES de `/api/me`
+         * responder. Aqui o servidor diz o que a tela ainda não sabia, e a
+         * calculadora entra em demonstração em vez de acusar defeito.
+         */
+        if (error instanceof ApiError && error.code === "assinatura_necessaria") {
+          void get().carregarDemonstracao();
+
+          return;
+        }
 
         set({
           isSyncing: false,
@@ -820,6 +916,9 @@ export const selectComponents = (s: QuoteState): ComponentInput[] =>
   s.spec.components ?? SEM_ITENS;
 
 export const selectIsFreeModel = (s: QuoteState) => isFree(s.spec.box_model);
+
+/** A calculadora está congelada por falta de assinatura? */
+export const selectDemoMode = (s: QuoteState) => s.demoMode;
 
 /**
  * O carregamento inicial falhou.

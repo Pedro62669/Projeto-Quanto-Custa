@@ -19,7 +19,7 @@ import { MaterialSheet } from "@/components/materiais/MaterialSheet";
 import { useApi } from "@/hooks/useApi";
 import { useDebounce } from "@/hooks/useDebounce";
 import { api, type MaterialAdmin } from "@/lib/api";
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import { ROTULO_TIPO_MATERIAL } from "@/lib/rotulos";
 
 /**
