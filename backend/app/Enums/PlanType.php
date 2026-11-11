@@ -20,9 +20,6 @@ namespace App\Enums;
  */
 enum PlanType: string
 {
-    /** Grátis. Dimensionado para conhecer o sistema, não para operar nele. */
-    case Free = 'free';
-
     /** O plano da cartonagem que trabalha sozinha ou com um ajudante. */
     case Basic = 'basic';
 
@@ -32,19 +29,55 @@ enum PlanType: string
     public function label(): string
     {
         return match ($this) {
-            self::Free => 'Gratuito',
             self::Basic => 'Básico',
             self::Pro => 'Profissional',
         };
     }
 
-    /** Mensalidade em reais. Zero no gratuito. */
+    /** Mensalidade em reais. Todo plano é pago — não existe plano de R$ 0,00. */
     public function monthlyPrice(): float
     {
         return match ($this) {
-            self::Free => 0.0,
             self::Basic => 79.90,
             self::Pro => 149.90,
+        };
+    }
+
+    /**
+     * Preço cheio, para quando a mensalidade praticada é de LANÇAMENTO.
+     *
+     * NULL significa "o preço praticado já é o cheio" — não há nada a riscar. É
+     * o padrão, e é para onde o Profissional volta no dia em que a mensalidade
+     * subir: apaga-se este valor e a tabela deixa de mostrar o riscado sozinha,
+     * sem ninguém precisar caçar um número escrito na interface.
+     *
+     * ## Por que mora aqui, e não na tela
+     *
+     * Pela mesma razão que `monthlyPrice()` mora aqui, e a razão tem história:
+     * a tela de assinatura já mostrou R$ 99,90 num cartão enquanto o cabeçalho
+     * da MESMA página dizia R$ 149,90, porque a interface mantinha a própria
+     * lista. Um preço riscado escrito à mão repete o erro no lugar em que ele é
+     * mais caro — o número que o visitante usa para decidir que está fazendo
+     * negócio.
+     *
+     * ## Por que ele PRECISA ser um compromisso, e não um enfeite
+     *
+     * Preço riscado tem regra: o CDC (art. 37, §1º) e o Decreto 5.903/2006
+     * exigem que o valor anunciado como anterior tenha sido efetivamente
+     * praticado, ou — no caso de lançamento — que a subida seja real e
+     * informada. Um "de/por" com um número que ninguém nunca cobrou é
+     * publicidade enganosa, e quem responde é a empresa anunciante.
+     *
+     * Este valor está aqui porque existe a decisão de subir o Profissional para
+     * ele. No dia em que subir, `monthlyPrice()` passa a devolver 224.85 e este
+     * método volta a NULL. Se a decisão mudar e a subida não acontecer, o certo
+     * é apagar daqui — e não deixar o riscado no ar.
+     */
+    public function fullPrice(): ?float
+    {
+        return match ($this) {
+            self::Basic => null,
+            self::Pro => 224.85,
         };
     }
 
@@ -57,7 +90,6 @@ enum PlanType: string
     public function maxMaterials(): ?int
     {
         return match ($this) {
-            self::Free => 10,
             self::Basic => 60,
             self::Pro => null,
         };
@@ -69,7 +101,6 @@ enum PlanType: string
     public function maxClients(): ?int
     {
         return match ($this) {
-            self::Free => 15,
             self::Basic => 300,
             self::Pro => null,
         };
@@ -91,16 +122,9 @@ enum PlanType: string
     public function maxQuotesPerMonth(): ?int
     {
         return match ($this) {
-            self::Free => 20,
             self::Basic => 250,
             self::Pro => null,
         };
-    }
-
-    /** É plano pago? Só estes passam pelo gateway. */
-    public function isPaid(): bool
-    {
-        return $this !== self::Free;
     }
 
     /**
@@ -112,7 +136,7 @@ enum PlanType: string
      * reajuste, a que fica desatualizada é sempre a que o visitante lê antes de
      * assinar. O compromisso errado é o que gera reclamação no Procon.
      *
-     * @return array{tipo: string, rotulo: string, mensalidade: float, pago: bool, limites: array{materiais: int|null, clientes: int|null, orcamentos_por_mes: int|null}}
+     * @return array{tipo: string, rotulo: string, mensalidade: float, mensalidade_cheia: float|null, limites: array{materiais: int|null, clientes: int|null, orcamentos_por_mes: int|null}}
      */
     public function toArray(): array
     {
@@ -120,7 +144,9 @@ enum PlanType: string
             'tipo' => $this->value,
             'rotulo' => $this->label(),
             'mensalidade' => $this->monthlyPrice(),
-            'pago' => $this->isPaid(),
+
+            // Null = sem preço de lançamento; a tela não risca nada.
+            'mensalidade_cheia' => $this->fullPrice(),
 
             // Null = ilimitado, o mesmo contrato do resumo de cotas.
             'limites' => [
@@ -133,7 +159,7 @@ enum PlanType: string
 
     /**
      * A tabela de preços inteira, na ordem em que os planos foram declarados —
-     * do grátis ao completo, que é como se lê uma tabela de preços.
+     * do mais barato ao mais completo, que é como se lê uma tabela de preços.
      *
      * @return list<array<string, mixed>>
      */

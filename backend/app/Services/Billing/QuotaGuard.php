@@ -30,10 +30,15 @@ class QuotaGuard
      * Cortesia manual vence o plano; na ausência dela, vale o padrão do enum.
      * Ver a migration de planos para o motivo de a coluna ser nullable.
      *
-     * `planoVigente()` e não `plan_type`: entre o fim do período de teste e a
-     * passagem do cron da madrugada, a coluna ainda diz "Pro" e a verdade já é
-     * "gratuito". Ler a coluna daria cotas ilimitadas de graça por até um dia a
-     * cada empresa que testou o produto.
+     * SEM PLANO o teto é ZERO, e a ordem importa: a cortesia é consultada antes,
+     * de propósito. Ela é a exceção concedida à empresa (uma conta de
+     * demonstração para a equipe de vendas, um cliente em negociação) e precisa
+     * funcionar justamente em quem ainda não assinou — que é o único momento em
+     * que conceder cortesia faz sentido.
+     *
+     * Zero, e não null. Null significa ILIMITADO neste contrato, e devolvê-lo
+     * para quem não tem plano liberaria cadastro infinito a toda conta nova. É a
+     * inversão de significado mais cara que este arquivo poderia esconder.
      */
     public function limite(Tenant $tenant, TenantQuota $quota): ?int
     {
@@ -43,7 +48,11 @@ class QuotaGuard
             return (int) $cortesia;
         }
 
-        return $quota->padraoDoPlano($tenant->planoVigente());
+        if ($tenant->plan_type === null) {
+            return 0;
+        }
+
+        return $quota->padraoDoPlano($tenant->plan_type);
     }
 
     /**

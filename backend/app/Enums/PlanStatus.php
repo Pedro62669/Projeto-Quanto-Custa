@@ -12,12 +12,13 @@ namespace App\Enums;
  * é uma consequência do PAGAMENTO. Misturar os dois faria uma fatura em atraso
  * ser indistinguível de um banimento — e a reativação automática ao pagar
  * reabriria a conta de quem foi suspenso por outro motivo.
+ *
+ * NULL em `tenants.plan_status` é um estado do domínio, e não dado faltando:
+ * significa "nunca contratou". Ele não é caso deste enum porque não descreve
+ * situação de assinatura nenhuma — não há assinatura. Ver Tenant::semPlano().
  */
 enum PlanStatus: string
 {
-    /** Em período de teste, ainda sem cobrança. */
-    case Trialing = 'trialing';
-
     /** Em dia. */
     case Active = 'active';
 
@@ -37,7 +38,6 @@ enum PlanStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Trialing => 'Em teste',
             self::Active => 'Ativa',
             self::PastDue => 'Pagamento pendente',
             self::Canceled => 'Cancelada',

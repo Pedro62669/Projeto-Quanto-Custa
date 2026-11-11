@@ -37,18 +37,6 @@ Schedule::command('compliance:expurgar-acessos')
  * lento pode atravessar a execução seguinte e disparar tudo duas vezes.
  */
 /*
- * Fecha os períodos de teste vencidos, REBAIXANDO para o gratuito.
- *
- * De madrugada e antes do expediente: a empresa que perdeu o teste ontem já
- * acorda com as cotas certas, em vez de descobrir a mudança no meio do dia de
- * trabalho. A cota já está correta desde a virada por Tenant::planoVigente() —
- * este comando existe para os agregados SQL do painel de plataforma.
- */
-Schedule::command('billing:encerrar-testes')
-    ->dailyAt('04:00')
-    ->onOneServer();
-
-/*
  * Reconciliação dos webhooks de cobrança que chegaram e não foram aplicados.
  *
  * De hora em hora, e não diária: o caso que ela cobre é dinheiro que entrou no

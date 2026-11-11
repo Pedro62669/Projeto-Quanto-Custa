@@ -44,8 +44,6 @@ class Tenant extends Model
      */
     protected $attributes = [
         'is_active' => true,
-        'plan_type' => PlanType::Free->value,
-        'plan_status' => PlanStatus::Trialing->value,
     ];
 
     protected function casts(): array
@@ -54,7 +52,6 @@ class Tenant extends Model
             'is_active' => 'boolean',
             'plan_type' => PlanType::class,
             'plan_status' => PlanStatus::class,
-            'trial_ends_at' => 'datetime',
             'subscription_ends_at' => 'datetime',
         ];
     }
@@ -105,39 +102,41 @@ class Tenant extends Model
     }
 
     /**
-     * O plano que vale AGORA, para efeito de cota.
+     * A empresa nunca contratou plano nenhum?
      *
-     * Diferente de `plan_type`, que é o plano CONTRATADO. Os dois divergem numa
-     * única situação, e ela é frequente: o período de teste acabou e o cron
-     * ainda não passou. Durante essa janela a coluna diz "Pro" e a verdade é
-     * "gratuito".
+     * `plan_type` NULL é o estado de quem acabou de se cadastrar: a conta
+     * existe, o login funciona, e não há assinatura. Não é dado faltando — é o
+     * ponto de partida de toda conta, já que não existe mais plano gratuito
+     * para onde cair.
      *
-     * Este método é a fonte da verdade na hora de aplicar limite — ver
-     * QuotaGuard::limite(). O EncerraTestesExpirados materializa a mesma
-     * conclusão na coluna, mas por outro motivo: os agregados do painel de
-     * plataforma são SQL e não conseguem chamar método PHP. Método para
-     * decidir, coluna para somar.
-     *
-     * Repare que teste vencido NÃO bloqueia nada: só rebaixa. Quem estava
-     * avaliando o produto não é inadimplente, e prender os dados de quem ainda
-     * não pagou nada seria a pior primeira impressão possível.
+     * Distinto de assinatura CANCELADA, que mantém `plan_type` preenchido: ali
+     * houve contrato, e o período já pago ainda corre. Ver acessoLiberado().
      */
-    public function planoVigente(): PlanType
+    public function semPlano(): bool
     {
-        $testeAcabou = $this->plan_status === PlanStatus::Trialing
-            && $this->trial_ends_at !== null
-            && $this->trial_ends_at->isPast();
-
-        return $testeAcabou ? PlanType::Free : $this->plan_type;
+        return $this->plan_type === null;
     }
 
     /**
-     * O acesso ao sistema está liberado?
+     * O acesso de ESCRITA está liberado?
      *
-     * Três portas, e a ordem importa. `is_active` é decisão administrativa e
-     * vence tudo — ver PlanStatus para o motivo de não ser o mesmo campo. Depois
-     * vem a validade paga; e quem nunca teve assinatura (gratuito) passa, porque
-     * o plano Free é um plano, não uma ausência de plano.
+     * Leitura nunca passa por aqui — ver EnsureSubscriptionIsActive para o
+     * motivo de o inadimplente continuar enxergando e exportando o que é dele.
+     *
+     * Duas portas, e a ordem importa. `is_active` é decisão administrativa e
+     * vence tudo (ver PlanStatus para o motivo de não ser o mesmo campo). Depois
+     * vem a validade do que foi pago.
+     *
+     * `subscription_ends_at` NULL agora significa NÃO LIBERADO, e essa linha é a
+     * regra inteira do "nada grátis". Ela já dizia o contrário, com uma
+     * justificativa que deixou de valer: enquanto existia plano gratuito, quem
+     * nunca assinou estava num plano — pequeno, mas um plano — e travar a
+     * escrita seria travar quem não devia nada. Sem gratuito, quem nunca assinou
+     * não tem plano nenhum, e o sistema inteiro é o que se paga para usar.
+     *
+     * O resultado prático é o mesmo para os três casos que não pagam: nunca
+     * assinou, assinatura vencida, assinatura cancelada e período esgotado.
+     * Todos leem tudo, nenhum escreve nada.
      */
     public function acessoLiberado(): bool
     {
@@ -145,11 +144,7 @@ class Tenant extends Model
             return false;
         }
 
-        if ($this->subscription_ends_at !== null) {
-            return $this->subscription_ends_at->isFuture();
-        }
-
-        return true;
+        return $this->subscription_ends_at?->isFuture() === true;
     }
 
     /**

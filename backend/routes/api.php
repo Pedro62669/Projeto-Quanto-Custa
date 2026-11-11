@@ -191,6 +191,15 @@ Route::middleware(['auth:sanctum', EnsureSubscriptionIsActive::class])->group(fu
 
     // Cálculo em tempo real. Throttle generoso: é chamada em debounce a cada
     // alteração de input, mas ainda assim limitada para não virar vetor de abuso.
+    /*
+     * A calculadora congelada de quem ainda não assinou.
+     *
+     * GET, e é o que faz ela funcionar: EnsureSubscriptionIsActive corta
+     * escrita e deixa leitura passar, então a rota atende a conta sem plano sem
+     * precisar de exceção nenhuma na lista de liberadas. Ver QuoteController::demo().
+     */
+    Route::get('/quotes/demo', [QuoteController::class, 'demo']);
+
     Route::post('/quotes/simulate', [QuoteController::class, 'simulate'])
         ->middleware('throttle:120,1');
 

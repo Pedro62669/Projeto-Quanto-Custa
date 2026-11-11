@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\PlanStatus;
 use App\Enums\PlanType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CancelarAssinaturaRequest;
@@ -46,24 +45,20 @@ class SubscriptionController extends Controller
 
         return response()->json([
             'data' => [
+                /*
+                 * Tudo nulo = nunca contratou. A tela distingue esse caso do
+                 * cancelado pelo `situacao`, que só existe quando houve
+                 * assinatura. Ver Tenant::semPlano().
+                 */
                 'plano' => [
-                    /*
-                     * O plano VIGENTE, não o contratado. Os dois divergem entre
-                     * o fim do teste e a passagem do cron — e é o vigente que
-                     * manda nas cotas logo abaixo. Mostrar o contratado faria a
-                     * tela prometer um limite que o servidor recusa.
-                     */
-                    'tipo' => $tenant->planoVigente()->value,
-                    'rotulo' => $tenant->planoVigente()->label(),
-                    'mensalidade' => $tenant->planoVigente()->monthlyPrice(),
-                    'contratado' => $tenant->plan_type->value,
-                    'situacao' => $tenant->plan_status->value,
-                    'situacao_rotulo' => $tenant->plan_status->label(),
+                    'tipo' => $tenant->plan_type?->value,
+                    'rotulo' => $tenant->plan_type?->label(),
+                    'mensalidade' => $tenant->plan_type?->monthlyPrice(),
+                    'situacao' => $tenant->plan_status?->value,
+                    'situacao_rotulo' => $tenant->plan_status?->label(),
                 ],
                 'acesso_liberado' => $tenant->acessoLiberado(),
-                'em_teste' => $tenant->plan_status === PlanStatus::Trialing
-                    && $tenant->trial_ends_at?->isFuture() === true,
-                'trial_ends_at' => $tenant->trial_ends_at?->toIso8601String(),
+                'sem_plano' => $tenant->semPlano(),
                 'subscription_ends_at' => $tenant->subscription_ends_at?->toIso8601String(),
                 'assinatura' => $assinatura === null ? null : [
                     'id' => $assinatura->id,
@@ -141,14 +136,9 @@ class SubscriptionController extends Controller
             'plan_type' => ['required', Rule::enum(PlanType::class)],
         ]);
 
+        // Todo plano do enum é pago desde que o gratuito saiu do produto: não há
+        // mais o que recusar aqui. `Rule::enum` acima já barra valor inventado.
         $plano = PlanType::from($dados['plan_type']);
-
-        if (! $plano->isPaid()) {
-            return response()->json([
-                'message' => 'O plano gratuito não passa pelo checkout. '
-                    .'Para voltar a ele, cancele a assinatura atual.',
-            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
-        }
 
         $sessao = $gateway->criaCheckout($tenant, $plano);
 

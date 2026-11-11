@@ -66,17 +66,24 @@ class SubscriptionTest extends TestCase
         $this->assertSame(149.90, $planos['pro']['mensalidade']);
         $this->assertNull($planos['pro']['limites']['orcamentos_por_mes']);
 
-        // As duas promessas que a vitrine anuncia em texto grande. Vêm do
-        // servidor porque é o servidor quem as cumpre.
-        $this->assertSame(
-            config('billing.dias_de_teste'),
-            $resposta->json('data.dias_de_teste'),
-        );
-
+        /*
+         * A promessa que a vitrine anuncia em texto grande. Vem do servidor
+         * porque é o servidor quem a cumpre.
+         *
+         * Era um par: o prazo de teste vinha junto. Ele saiu com o teste grátis,
+         * e a ausência dele na resposta é verificada logo abaixo — uma landing
+         * antiga em cache não pode voltar a prometer dias grátis.
+         */
         $this->assertSame(
             config('billing.dias_de_arrependimento'),
             $resposta->json('data.dias_de_arrependimento'),
         );
+
+        $this->assertArrayNotHasKey('dias_de_teste', $resposta->json('data'));
+
+        // E o catálogo tem DOIS planos, os dois pagos.
+        $this->assertCount(2, $planos);
+        $this->assertArrayNotHasKey('free', $planos->all());
     }
 
     #[Test]
@@ -97,6 +104,49 @@ class SubscriptionTest extends TestCase
     }
 
     #[Test]
+    public function o_preco_de_lancamento_e_sempre_maior_que_o_cobrado(): void
+    {
+        /*
+         * A trava que impede a tabela de mentir.
+         *
+         * `mensalidade_cheia` é o valor RISCADO, e riscar exige compromisso: o
+         * CDC (art. 37, §1º) trata como enganosa a oferta cujo preço anterior
+         * nunca foi praticado nem será. O risco prático não é alguém inventar o
+         * número de propósito — é o reajuste do dia em que a mensalidade sobe e
+         * ninguém lembra de apagar o preço de lançamento. A tabela passaria a
+         * riscar um valor MENOR que o cobrado, anunciando um desconto negativo.
+         *
+         * Vale para todo plano, inclusive os que ainda não têm lançamento: quem
+         * criar um amanhã cai neste teste sem precisar lembrar dele.
+         */
+        foreach (PlanType::cases() as $plano) {
+            $cheio = $plano->fullPrice();
+
+            if ($cheio === null) {
+                continue;
+            }
+
+            $this->assertGreaterThan(
+                $plano->monthlyPrice(),
+                $cheio,
+                "O preço de lançamento do {$plano->label()} precisa ser MAIOR que a mensalidade "
+                    .'cobrada — riscar um valor menor anuncia um desconto que não existe.',
+            );
+        }
+    }
+
+    #[Test]
+    public function o_catalogo_expoe_o_preco_cheio_de_quem_esta_em_lancamento(): void
+    {
+        $catalogo = collect(PlanType::catalogo())->keyBy('tipo');
+
+        // A tela não escreve o riscado à mão: ela lê daqui, como lê a
+        // mensalidade. Ver PlanType::fullPrice().
+        $this->assertSame(PlanType::Pro->fullPrice(), $catalogo['pro']['mensalidade_cheia']);
+        $this->assertNull($catalogo['basic']['mensalidade_cheia']);
+    }
+
+    #[Test]
     public function a_tela_de_assinatura_recebe_os_precos_do_servidor(): void
     {
         /*
@@ -112,7 +162,8 @@ class SubscriptionTest extends TestCase
 
         $planos = collect($resposta->json('data.planos_disponiveis'))->keyBy('tipo');
 
-        $this->assertEquals(0.0, $planos['free']['mensalidade']);
+        // Dois planos, os dois pagos: não existe mais mensalidade zero na lista.
+        $this->assertCount(2, $planos);
         $this->assertSame(79.90, $planos['basic']['mensalidade']);
         $this->assertSame(149.90, $planos['pro']['mensalidade']);
 
@@ -228,7 +279,7 @@ class SubscriptionTest extends TestCase
     }
 
     #[Test]
-    public function cancelar_rebaixa_a_empresa_para_o_plano_gratuito(): void
+    public function cancelar_marca_a_situacao_e_preserva_o_plano_contratado(): void
     {
         $this->assinatura();
 
@@ -238,10 +289,24 @@ class SubscriptionTest extends TestCase
 
         $recarregada = $this->empresa->fresh();
 
-        // Sem isto, uma conta cancelada e reativada administrativamente voltaria
-        // com as cotas do plano pago sem pagar por elas.
-        $this->assertSame(PlanType::Free, $recarregada->plan_type);
+        /*
+         * Este teste dizia o contrário até o plano gratuito sair: o cancelamento
+         * REBAIXAVA `plan_type` para Free, e a justificativa era impedir que uma
+         * conta reativada voltasse com cotas de plano pago.
+         *
+         * Sem gratuito não há para onde rebaixar, e zerar o campo seria pior que
+         * impreciso: quem cancela fora do prazo de arrependimento continua com o
+         * período JÁ PAGO correndo, e perderia as cotas que pagou enquanto ainda
+         * tem direito de usá-las.
+         *
+         * O risco original continua coberto, e por quem sempre deveria cobri-lo:
+         * `subscription_ends_at`. Passada a data, `acessoLiberado()` fecha a
+         * escrita sozinho, e `plan_type` deixa de conceder qualquer coisa — vira
+         * o registro do que foi contratado, que é o que o churn lê.
+         */
         $this->assertSame(PlanStatus::Canceled, $recarregada->plan_status);
+        $this->assertNotNull($recarregada->plan_type);
+        $this->assertNotNull($recarregada->subscription_ends_at);
     }
 
     #[Test]

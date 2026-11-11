@@ -47,26 +47,25 @@ class InitialDataSeeder extends Seeder
             nomeDoResponsavel: 'Administrador',
             email: env('ADMIN_EMAIL', 'admin@quantocusta.local'),
             senha: env('ADMIN_PASSWORD', 'admin123'),
-
-            /*
-             * Sem período de teste: um teste de 3 dias faria a instalação local
-             * rebaixar sozinha no meio da semana e alguém perderia uma tarde
-             * descobrindo por que a cota apertou.
-             */
-            comTeste: false,
         );
 
         /*
-         * Demonstração no Profissional, e não no gratuito.
+         * Demonstração no Profissional e com período pago em aberto.
          *
-         * O ambiente local não deve brigar com cota: quem está desenvolvendo
-         * cadastra vinte materiais de teste sem que isso signifique nada sobre o
-         * plano. Quem testa cota escolhe o plano explicitamente — ver
-         * TenantFactory::gratuito().
+         * A empresa nasce sem plano — é o estado real de quem se cadastra — e o
+         * seeder a promove porque o ambiente local não deve brigar com cota nem
+         * com o bloqueio de escrita: quem está desenvolvendo cadastra vinte
+         * materiais de teste sem que isso diga nada sobre plano.
+         *
+         * `subscription_ends_at` é a linha que importa. Sem ela, a instalação
+         * local abriria em modo somente-leitura e o primeiro POST devolveria 403
+         * — ver Tenant::acessoLiberado(). Um ano à frente para não vencer no meio
+         * de uma semana de trabalho.
          */
         $tenant->forceFill([
             'plan_type' => PlanType::Pro,
             'plan_status' => PlanStatus::Active,
+            'subscription_ends_at' => now()->addYear(),
         ])->save();
 
         /*

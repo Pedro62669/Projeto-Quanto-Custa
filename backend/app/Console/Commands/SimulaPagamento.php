@@ -56,7 +56,7 @@ class SimulaPagamento extends Command
 
         $plano = PlanType::tryFrom((string) $this->argument('plano'));
 
-        if ($plano === null || ! $plano->isPaid()) {
+        if ($plano === null) {
             $this->error('Plano inválido. Use basic ou pro.');
 
             return self::FAILURE;

@@ -90,8 +90,9 @@ class SubscriptionManager
 
         /*
          * Fim do acesso. Com estorno, é agora. Sem estorno, é o fim do período
-         * pago — e `?? $agora` cobre o cancelamento durante o teste gratuito,
-         * onde não há período pago nenhum a respeitar.
+         * pago — e `?? $agora` cobre a assinatura que nunca chegou a ter período
+         * fechado (checkout iniciado e webhook incompleto), onde não há período
+         * pago nenhum a respeitar.
          */
         $acessoAte = $estorno !== null
             ? $agora
@@ -111,18 +112,22 @@ class SubscriptionManager
                 'canceled_at' => $agora,
             ])->save();
 
+            /*
+             * `plan_type` fica COMO ESTÁ, e isso mudou junto com o fim do plano
+             * gratuito. Antes ele era rebaixado para Free na hora do
+             * cancelamento; hoje não há para onde rebaixar, e zerá-lo seria
+             * pior que impreciso: quem cancela fora do prazo de arrependimento
+             * continua com o período JÁ PAGO correndo, e perderia as cotas do
+             * plano que pagou enquanto ainda tem direito a usá-lo.
+             *
+             * Quem corta o acesso é `subscription_ends_at`, logo acima. Passada
+             * a data, `Tenant::acessoLiberado()` fecha a escrita sozinho e o
+             * valor de `plan_type` deixa de conceder qualquer coisa — ele vira
+             * o registro do que foi contratado, que é o que o churn lê.
+             */
             $assinatura->tenant->forceFill([
                 'plan_status' => PlanStatus::Canceled,
                 'subscription_ends_at' => $acessoAte,
-
-                /*
-                 * Rebaixa para o gratuito. O histórico do que foi contratado
-                 * fica em `subscriptions`; o que a coluna do tenant guarda é o
-                 * que vale AGORA — e o que vale agora, sem assinatura, é Free.
-                 * Sem isto, uma conta cancelada e depois reativada
-                 * administrativamente voltaria com cotas de Pro sem pagar.
-                 */
-                'plan_type' => PlanType::Free,
             ])->save();
         });
 
@@ -294,9 +299,10 @@ class SubscriptionManager
             'canceled_at' => $assinatura->canceled_at ?? now(),
         ])->save();
 
+        // `plan_type` preservado pelo mesmo motivo do cancelamento manual —
+        // ver cancelar().
         $assinatura->tenant->forceFill([
             'plan_status' => PlanStatus::Canceled,
-            'plan_type' => PlanType::Free,
             'subscription_ends_at' => $acessoAte,
         ])->save();
     }

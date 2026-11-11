@@ -63,13 +63,15 @@ class MeController extends Controller
                     'acesso_liberado' => $tenant->acessoLiberado(),
                 ],
 
+                /*
+                 * NULL em `tipo` não é campo faltando: é a empresa que ainda não
+                 * contratou. A tela lê exatamente isso para entrar em modo
+                 * demonstração — ver Tenant::semPlano().
+                 */
                 'plano' => $tenant === null ? null : [
-                    // Vigente, não contratado: é ele que manda nas cotas abaixo.
-                    'tipo' => $tenant->planoVigente()->value,
-                    'rotulo' => $tenant->planoVigente()->label(),
-                    'contratado' => $tenant->plan_type->value,
-                    'situacao' => $tenant->plan_status->value,
-                    'trial_ends_at' => $tenant->trial_ends_at?->toIso8601String(),
+                    'tipo' => $tenant->plan_type?->value,
+                    'rotulo' => $tenant->plan_type?->label(),
+                    'situacao' => $tenant->plan_status?->value,
                     'subscription_ends_at' => $tenant->subscription_ends_at?->toIso8601String(),
                 ],
 

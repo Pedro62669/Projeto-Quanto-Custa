@@ -20,11 +20,13 @@ use Illuminate\Http\JsonResponse;
  * configuração, o que a torna barata o bastante para a página inicial chamar a
  * cada revalidação sem pesar.
  *
- * O prazo de teste e o de arrependimento vêm juntos porque a landing os anuncia
- * como promessa ("3 dias grátis", "7 dias para desistir"). São compromissos que
- * o servidor cumpre — `billing.dias_de_teste` abre o teste em ProvisionaEmpresa
- * e `dias_de_arrependimento` decide o estorno no cancelamento. Escrevê-los à mão
- * no HTML criaria uma promessa que ninguém garante.
+ * O prazo de arrependimento vem junto porque a landing o anuncia como promessa
+ * ("7 dias para desistir"), e é um compromisso que o servidor cumpre:
+ * `dias_de_arrependimento` decide o estorno no cancelamento. Escrevê-lo à mão no
+ * HTML criaria uma promessa que ninguém garante.
+ *
+ * Não há mais prazo de teste a anunciar. Todo plano é pago desde a primeira
+ * hora — ver PlanType.
  */
 class PlanController extends Controller
 {
@@ -33,7 +35,6 @@ class PlanController extends Controller
         return response()->json([
             'data' => [
                 'planos' => PlanType::catalogo(),
-                'dias_de_teste' => (int) config('billing.dias_de_teste', 3),
                 'dias_de_arrependimento' => (int) config('billing.dias_de_arrependimento', 7),
             ],
         ]);

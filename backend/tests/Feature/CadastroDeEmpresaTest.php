@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Enums\PlanStatus;
-use App\Enums\PlanType;
 use App\Enums\UserRole;
 use App\Models\Material;
 use App\Models\Scopes\TenantScope;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Pricing\PricingEngine;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -48,37 +47,42 @@ class CadastroDeEmpresaTest extends TestCase
     /* ── O provisionamento ─────────────────────────────────────────────── */
 
     #[Test]
-    public function a_empresa_nova_consegue_calcular_no_primeiro_request(): void
+    public function a_empresa_nova_ve_a_demonstracao_no_primeiro_request(): void
     {
         $resposta = $this->postJson('/api/register', $this->formulario())->assertCreated();
 
         $token = $resposta->json('data.token');
 
-        $material = Material::query()
-            ->withoutGlobalScope(TenantScope::class)
-            ->where('tenant_id', $resposta->json('data.tenant.id'))
-            ->firstOrFail();
-
         /*
-         * Ponta a ponta com o token recém-emitido, sem nenhum setup adicional.
-         * É o cenário exato de quem acabou de se cadastrar e clicou em
-         * "calcular" — e o que prova que os custos padrão foram semeados.
+         * Este teste mudou de sentido quando o plano gratuito saiu do produto.
+         *
+         * Antes ele fazia a empresa recém-cadastrada CALCULAR ponta a ponta, e
+         * era o que provava que os custos padrão tinham sido semeados. Hoje ela
+         * não calcula: `simulate` é escrita, e a conta sem plano não escreve.
+         *
+         * A prova continua sendo necessária — uma empresa sem CostSetting não
+         * produz preço nenhum, e a demonstração é o primeiro lugar onde isso
+         * apareceria. Ela só passou a vir por outra porta: `/quotes/demo`, que é
+         * GET, calcula com os mesmos custos e devolve o mesmo motor.
          */
         $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson('/api/quotes/simulate', [
-                'material_id' => $material->id,
-                'box_model' => 'rsc',
-                'width_mm' => 300,
-                'height_mm' => 200,
-                'depth_mm' => 150,
-                'quantity' => 100,
-                'waste_percent' => 10,
-                'production_minutes_per_unit' => 2.5,
-                'profit_margin_percent' => 30,
-                'pricing_mode' => 'markup',
-            ])
+            ->getJson('/api/quotes/demo')
             ->assertOk()
-            ->assertJsonPath('data.engine_version', fn ($v) => $v !== null);
+            ->assertJsonPath('data.resultado.engine_version', PricingEngine::VERSION);
+    }
+
+    #[Test]
+    public function a_empresa_nova_nao_grava_nada_antes_de_assinar(): void
+    {
+        $token = $this->postJson('/api/register', $this->formulario())
+            ->assertCreated()
+            ->json('data.token');
+
+        // O outro lado da mesma moeda: a conta abre, mostra e não deixa gravar.
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/clients', ['name' => 'Cliente novo'])
+            ->assertForbidden()
+            ->assertJsonPath('error', 'assinatura_necessaria');
     }
 
     #[Test]
@@ -128,28 +132,39 @@ class CadastroDeEmpresaTest extends TestCase
         $this->assertSame(1, Tenant::query()->count());
     }
 
-    /* ── Período de teste ──────────────────────────────────────────────── */
+    /* ── Sem plano ─────────────────────────────────────────────────────── */
 
     #[Test]
-    public function a_empresa_nova_comeca_no_profissional_em_teste(): void
+    public function a_empresa_nova_comeca_sem_plano_nenhum(): void
     {
-        config(['billing.dias_de_teste' => 3]);
-
         $this->postJson('/api/register', $this->formulario())->assertCreated();
 
         $tenant = Tenant::query()->sole();
 
-        $this->assertSame(PlanType::Pro, $tenant->plan_type);
-        $this->assertSame(PlanStatus::Trialing, $tenant->plan_status);
-        $this->assertSame(now()->addDays(3)->toDateString(), $tenant->trial_ends_at->toDateString());
-
         /*
-         * A linha que decide se o fim do teste rebaixa ou bloqueia. Preenchido,
-         * este campo jogaria a empresa no EnsureSubscriptionIsActive assim que o
-         * teste vencesse — e quem estava avaliando seria tratado como
-         * inadimplente.
+         * Os três campos nulos são o estado inteiro: sem plano contratado, sem
+         * situação de assinatura e sem período pago. Não existe mais gratuito
+         * para onde apontar nem teste para expirar.
+         *
+         * `subscription_ends_at` é o que decide na prática — é ele que
+         * `Tenant::acessoLiberado()` lê para fechar a escrita.
          */
+        $this->assertNull($tenant->plan_type);
+        $this->assertNull($tenant->plan_status);
         $this->assertNull($tenant->subscription_ends_at);
+
+        $this->assertFalse($tenant->acessoLiberado());
+    }
+
+    #[Test]
+    public function o_cadastro_responde_com_o_plano_nulo_e_nao_o_esconde(): void
+    {
+        // A tela de boas-vindas lê estes campos para saber que precisa oferecer
+        // a assinatura. Omiti-los faria a interface tratar como erro de carga.
+        $this->postJson('/api/register', $this->formulario())
+            ->assertCreated()
+            ->assertJsonPath('data.tenant.plan_type', null)
+            ->assertJsonPath('data.tenant.plan_status', null);
     }
 
     /* ── Verificação de e-mail ─────────────────────────────────────────── */

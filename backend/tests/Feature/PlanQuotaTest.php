@@ -21,10 +21,15 @@ use Tests\TestCase;
 /**
  * Cotas de plano e bloqueio por assinatura vencida.
  *
- * A cota é o que transforma o plano em produto: sem ela, "gratuito" e
+ * A cota é o que transforma o plano em produto: sem ela, "básico" e
  * "profissional" são o mesmo software com preços diferentes. Cada teste aqui
  * descreve ou um jeito de a cota falhar em barrar, ou um jeito de ela barrar
  * demais — os dois erros custam dinheiro, em direções opostas.
+ *
+ * A empresa da suíte é BÁSICA, e era gratuita até o plano gratuito sair do
+ * produto. Continua sendo a escolha certa pelo mesmo motivo de sempre: é o plano
+ * com teto, e teto é o que estes testes existem para exercitar. O Profissional
+ * não tem nenhum.
  */
 class PlanQuotaTest extends TestCase
 {
@@ -40,7 +45,7 @@ class PlanQuotaTest extends TestCase
     {
         parent::setUp();
 
-        $this->empresa = Tenant::factory()->gratuito()->create();
+        $this->empresa = Tenant::factory()->noPlano(PlanType::Basic)->create();
 
         $this->admin = User::factory()->create([
             'tenant_id' => $this->empresa->id,
@@ -80,7 +85,7 @@ class PlanQuotaTest extends TestCase
     #[Test]
     public function o_cadastro_de_material_para_no_teto_do_plano(): void
     {
-        $teto = (int) PlanType::Free->maxMaterials();
+        $teto = (int) PlanType::Basic->maxMaterials();
 
         // O setUp já criou um; completa até um a menos que o teto.
         Material::factory()->count($teto - 2)->create(['tenant_id' => $this->empresa->id]);
@@ -111,7 +116,7 @@ class PlanQuotaTest extends TestCase
     public function estourar_a_cota_nao_impede_editar_nem_apagar(): void
     {
         Material::factory()
-            ->count((int) PlanType::Free->maxMaterials())
+            ->count((int) PlanType::Basic->maxMaterials())
             ->create(['tenant_id' => $this->empresa->id]);
 
         /*
@@ -134,7 +139,7 @@ class PlanQuotaTest extends TestCase
     #[Test]
     public function a_cota_de_orcamentos_e_mensal_e_nao_acumulada(): void
     {
-        $teto = (int) PlanType::Free->maxQuotesPerMonth();
+        $teto = (int) PlanType::Basic->maxQuotesPerMonth();
 
         /*
          * O ponto do desenho. Orçamento é o lastro da venda aprovada — a
@@ -157,7 +162,7 @@ class PlanQuotaTest extends TestCase
     public function orcamentos_do_mes_corrente_contam_para_a_cota(): void
     {
         Quote::factory()
-            ->count((int) PlanType::Free->maxQuotesPerMonth())
+            ->count((int) PlanType::Basic->maxQuotesPerMonth())
             ->create(['tenant_id' => $this->empresa->id]);
 
         $this->actingAs($this->admin)
@@ -171,7 +176,7 @@ class PlanQuotaTest extends TestCase
     public function apagar_orcamento_nao_libera_vaga_no_mes(): void
     {
         $orcamentos = Quote::factory()
-            ->count((int) PlanType::Free->maxQuotesPerMonth())
+            ->count((int) PlanType::Basic->maxQuotesPerMonth())
             ->create(['tenant_id' => $this->empresa->id]);
 
         // Exclusão lógica: a linha continua no banco, e a cota existe para
@@ -188,12 +193,12 @@ class PlanQuotaTest extends TestCase
     public function a_simulacao_nao_consome_cota(): void
     {
         Quote::factory()
-            ->count((int) PlanType::Free->maxQuotesPerMonth())
+            ->count((int) PlanType::Basic->maxQuotesPerMonth())
             ->create(['tenant_id' => $this->empresa->id]);
 
         /*
          * A calculadora dispara em debounce a cada tecla. Se simular consumisse
-         * cota, o plano gratuito acabaria antes do primeiro orçamento salvo.
+         * cota, o plano acabaria antes do primeiro orçamento salvo.
          */
         $this->actingAs($this->admin)
             ->postJson('/api/quotes/simulate', $this->orcamento())
@@ -227,7 +232,7 @@ class PlanQuotaTest extends TestCase
         $guarda = app(QuotaGuard::class);
 
         $this->assertSame(
-            PlanType::Free->maxClients(),
+            PlanType::Basic->maxClients(),
             $guarda->limite($this->empresa, TenantQuota::Clients),
             'Sem cortesia, vale o número do plano.',
         );
@@ -250,7 +255,7 @@ class PlanQuotaTest extends TestCase
         $this->empresa->forceFill(['max_clients' => null])->save();
 
         $this->assertSame(
-            PlanType::Free->maxClients(),
+            PlanType::Basic->maxClients(),
             app(QuotaGuard::class)->limite($this->empresa->fresh(), TenantQuota::Clients),
         );
     }
@@ -258,7 +263,7 @@ class PlanQuotaTest extends TestCase
     #[Test]
     public function clientes_inativos_continuam_ocupando_cota(): void
     {
-        $teto = (int) PlanType::Free->maxClients();
+        $teto = (int) PlanType::Basic->maxClients();
 
         Client::factory()->count($teto)->create([
             'tenant_id' => $this->empresa->id,
@@ -294,7 +299,7 @@ class PlanQuotaTest extends TestCase
         $recarregada = $this->empresa->fresh();
 
         $this->assertSame('Nome novo', $recarregada->name);
-        $this->assertSame(PlanType::Free, $recarregada->plan_type);
+        $this->assertSame(PlanType::Basic, $recarregada->plan_type);
         $this->assertNull($recarregada->max_materials);
     }
 
@@ -375,8 +380,8 @@ class PlanQuotaTest extends TestCase
         $this->actingAs($this->admin)
             ->getJson('/api/subscription')
             ->assertOk()
-            ->assertJsonPath('data.plano.tipo', 'free')
-            ->assertJsonPath('data.cotas.materials.limite', PlanType::Free->maxMaterials())
+            ->assertJsonPath('data.plano.tipo', 'basic')
+            ->assertJsonPath('data.cotas.materials.limite', PlanType::Basic->maxMaterials())
             // 3 criados aqui + 1 do setUp.
             ->assertJsonPath('data.cotas.materials.usado', 4)
             ->assertJsonPath('data.cotas.quotes.mensal', true);

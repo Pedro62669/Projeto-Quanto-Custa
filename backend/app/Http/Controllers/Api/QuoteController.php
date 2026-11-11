@@ -69,6 +69,103 @@ class QuoteController extends Controller
     }
 
     /**
+     * GET /api/quotes/demo — a calculadora congelada, para quem ainda não assinou.
+     *
+     * ## Por que existe
+     *
+     * Sem plano gratuito, a conta recém-criada não escreve nada — e `simulate` é
+     * POST, então o preço que a calculadora mostra some junto. A tela ficaria
+     * pedindo assinatura na frente de um formulário que não responde: a pessoa
+     * não veria o produto uma única vez antes de decidir pagar por ele.
+     *
+     * Este endpoint devolve UMA caixa pronta, com o preço calculado pelo motor
+     * de verdade e pelos custos da própria empresa. É demonstração, não amostra
+     * grátis: a especificação é FIXA e sai daqui, do servidor. Trocar as medidas
+     * na tela não muda número nenhum, porque nada do que o cliente manda é lido.
+     *
+     * ## Por que não liberar o `simulate` em vez disto
+     *
+     * Seria uma linha na lista de rotas liberadas do EnsureSubscriptionIsActive,
+     * e seria o produto inteiro de graça: precificar a caixa do cliente É o
+     * produto. Quem quisesse usar sem pagar bastava chamar a API direto.
+     *
+     * ## Por que não cravar os números no frontend
+     *
+     * Seria a terceira cópia da tabela de preços — o erro que este projeto já
+     * cometeu e consertou duas vezes (ver PlanType::catalogo()). Um preço
+     * escrito à mão na tela envelhece no primeiro reajuste de papelão, e a
+     * demonstração passaria a mostrar uma conta que o motor não faz mais.
+     */
+    public function demo(): JsonResponse
+    {
+        /*
+         * O papelão mais barato que a empresa tem, e não um id fixo: a
+         * demonstração roda no estoque provisionado no cadastro, que a pessoa
+         * pode ter editado antes de assinar.
+         */
+        $material = Material::active()
+            ->orderBy('cost_per_unit')
+            ->first();
+
+        if ($material === null) {
+            return response()->json([
+                'message' => 'Cadastre uma matéria-prima para ver a demonstração.',
+            ], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $spec = self::ESPECIFICACAO_DEMO + ['material_id' => $material->id];
+
+        $result = $this->calculateFrom($spec, $material, $settings);
+
+        return response()->json([
+            'data' => [
+                /*
+                 * A especificação volta junto para a tela poder PREENCHER os
+                 * campos com ela. Sem isso o formulário mostraria as medidas
+                 * padrão dele e o preço de outras medidas — a incoerência exata
+                 * que a demonstração não pode ter.
+                 */
+                'specification' => $spec,
+
+                'resultado' => $result->toArray() + [
+                    'currency' => $settings->currency,
+                    'engine_version' => PricingEngine::VERSION,
+                    'material' => [
+                        'id' => $material->id,
+                        'name' => $material->name,
+                        'color_hex' => $material->color_hex,
+                        'texture_url' => $material->texture_url,
+                        'thickness_mm' => $material->thickness_mm,
+                    ],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * A caixa da demonstração.
+     *
+     * Uma rígida telescópica de 200 × 150 × 100 e cem unidades: medida de caixa
+     * de presente, quantidade de pedido pequeno real. Números redondos de
+     * propósito — quem olha a tela precisa reconhecer que são um exemplo, e não
+     * achar que o sistema mediu alguma coisa.
+     *
+     * O modelo é o telescópico porque ele tem tampa separada e é o que a
+     * cartonagem rígida mais faz. Deixa a demonstração mostrar o 3D com a caixa
+     * abrindo, que é o que convence antes do preço.
+     */
+    private const ESPECIFICACAO_DEMO = [
+        'width_mm' => 200,
+        'height_mm' => 100,
+        'depth_mm' => 150,
+        'box_model' => 'rigid_telescopic',
+        'quantity' => 100,
+        'production_minutes_per_unit' => 6,
+        'profit_margin_percent' => 30,
+        'pricing_mode' => 'markup',
+    ];
+
+    /**
      * GET /api/quotes — histórico do usuário autenticado.
      */
     public function index(Request $request): AnonymousResourceCollection

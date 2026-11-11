@@ -51,24 +51,4 @@ return [
 
     'dias_de_arrependimento' => 7,
 
-    /*
-    |--------------------------------------------------------------------------
-    | Teste gratuito
-    |--------------------------------------------------------------------------
-    | Dias com as cotas do plano Profissional para quem acabou de se cadastrar.
-    |
-    | Configurável porque é o número que mais provavelmente muda depois de olhar
-    | a conversão real — e mudá-lo não pode significar caçar literais espalhados.
-    |
-    | Repare que é MENOR que o prazo de arrependimento acima, e isso é bom: quem
-    | assina no fim do teste ainda tem os sete dias do CDC para desistir com
-    | estorno integral. O teste curto não gera cobrança que a pessoa não consiga
-    | desfazer.
-    |
-    | Ao acabar, a empresa é REBAIXADA para o gratuito — nunca bloqueada. Ver
-    | EncerraTestesExpirados e Tenant::planoVigente().
-    */
-
-    'dias_de_teste' => 3,
-
 ];

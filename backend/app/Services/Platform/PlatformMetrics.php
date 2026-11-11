@@ -65,7 +65,7 @@ class PlatformMetrics
                 'ativos' => Tenant::query()
                     ->where('plan_type', $plano)
                     ->where('is_active', true)
-                    ->whereIn('plan_status', [PlanStatus::Active, PlanStatus::Trialing])
+                    ->where('plan_status', PlanStatus::Active)
                     ->count(),
             ];
         }
@@ -129,11 +129,9 @@ class PlatformMetrics
 
         $mrr = 0.0;
 
+        // Todo plano é pago: o filtro que existia aqui pulava o gratuito, e o
+        // gratuito não existe mais.
         foreach (PlanType::cases() as $plano) {
-            if (! $plano->isPaid()) {
-                continue;
-            }
-
             $ativos = Tenant::query()
                 ->where('plan_type', $plano)
                 ->where('is_active', true)

@@ -35,7 +35,7 @@ class CheckoutTest extends TestCase
     {
         parent::setUp();
 
-        $this->empresa = Tenant::factory()->gratuito()->create();
+        $this->empresa = Tenant::factory()->semPlano()->create();
 
         $this->admin = User::factory()->create([
             'tenant_id' => $this->empresa->id,
@@ -69,7 +69,10 @@ class CheckoutTest extends TestCase
          * passaria a contar receita que não existe.
          */
         $this->assertDatabaseCount('subscriptions', 0);
-        $this->assertSame(PlanType::Free, $this->empresa->fresh()->plan_type);
+
+        // Continua SEM PLANO. Carimbar o plano ao abrir o checkout entregaria o
+        // sistema a quem só chegou até a tela do cartão.
+        $this->assertNull($this->empresa->fresh()->plan_type);
     }
 
     #[Test]
@@ -105,8 +108,17 @@ class CheckoutTest extends TestCase
     }
 
     #[Test]
-    public function o_plano_gratuito_nao_passa_pelo_checkout(): void
+    public function o_plano_extinto_e_recusado_como_qualquer_outro_inexistente(): void
     {
+        /*
+         * `free` já foi um plano deste sistema, e a rota o recusava com uma
+         * mensagem própria. Hoje ele não existe mais no enum, e a recusa passa a
+         * vir de `Rule::enum` — o mesmo caminho de "enterprise" logo abaixo.
+         *
+         * O teste sobrevive à remoção porque o risco sobrevive: um cliente
+         * antigo com a tela em cache ainda pode mandar `free`, e isso não pode
+         * abrir sessão de pagamento de R$ 0,00 no gateway.
+         */
         $this->actingAs($this->admin)
             ->postJson('/api/subscriptions/checkout', ['plan_type' => 'free'])
             ->assertUnprocessable();
@@ -150,8 +162,10 @@ class CheckoutTest extends TestCase
     }
 
     #[Test]
-    public function a_simulacao_recusa_plano_gratuito_e_empresa_inexistente(): void
+    public function a_simulacao_recusa_plano_extinto_e_empresa_inexistente(): void
     {
+        // `free` saiu do enum: o comando precisa falhar em vez de simular um
+        // pagamento de plano que não existe mais.
         $this->artisan('billing:simular-pagamento', [
             'tenant' => $this->empresa->id,
             'plano' => 'free',

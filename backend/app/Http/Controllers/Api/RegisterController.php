@@ -58,12 +58,13 @@ class RegisterController extends Controller
                     'role' => $admin->role->value,
                     'email_verified' => false,
                 ],
+                // A empresa nasce sem plano: os dois campos vêm nulos, e é
+                // assim que a tela sabe que precisa oferecer a assinatura.
                 'tenant' => [
                     'id' => $tenant->id,
                     'name' => $tenant->name,
-                    'plan_type' => $tenant->plan_type->value,
-                    'plan_status' => $tenant->plan_status->value,
-                    'trial_ends_at' => $tenant->trial_ends_at?->toIso8601String(),
+                    'plan_type' => $tenant->plan_type?->value,
+                    'plan_status' => $tenant->plan_status?->value,
                 ],
                 'cotas' => $quotas->resumo($tenant),
 

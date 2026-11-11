@@ -23,26 +23,43 @@ class TenantFactory extends Factory
 
             /*
              * Plano SEM limites como padrão da suíte, ao contrário do banco, que
-             * nasce no gratuito.
+             * nasce SEM PLANO NENHUM.
              *
              * Mesma razão do daSuite() logo abaixo: um teste de precificação que
              * cadastra doze materiais estaria falhando por causa da cota do
              * plano — um motivo que não é o dele, num arquivo que não fala de
-             * cobrança. Quem testa cota escolhe o plano explicitamente, com
-             * ->gratuito() ou ->noPlano(), e é justamente aí que o limite vira o
-             * assunto do teste.
+             * cobrança. Quem testa cota ou bloqueio escolhe o estado
+             * explicitamente, com ->semPlano(), ->noPlano() ou ->vencido(), e é
+             * justamente aí que o limite vira o assunto do teste.
              */
             'plan_type' => PlanType::Pro,
             'plan_status' => PlanStatus::Active,
+
+            /*
+             * Período pago em aberto, e não NULL.
+             *
+             * Desde que o plano gratuito saiu, `subscription_ends_at` NULL
+             * significa "nunca assinou" e fecha a escrita inteira
+             * (Tenant::acessoLiberado()). Sem esta linha, toda a suíte passaria
+             * a receber 403 em qualquer POST — um plano "Pro ativo" sem período
+             * pago é um estado que o sistema real nunca produz.
+             */
+            'subscription_ends_at' => now()->addMonth(),
         ];
     }
 
-    /** Plano gratuito — os tetos apertados. É o default de quem se cadastra. */
-    public function gratuito(): static
+    /**
+     * Sem plano: o estado de quem acabou de se cadastrar e ainda não pagou.
+     *
+     * Os três campos vão a NULL juntos, e `subscription_ends_at` é o que decide
+     * — é ele que fecha a escrita. Lê tudo, não grava nada.
+     */
+    public function semPlano(): static
     {
         return $this->state([
-            'plan_type' => PlanType::Free,
-            'plan_status' => PlanStatus::Trialing,
+            'plan_type' => null,
+            'plan_status' => null,
+            'subscription_ends_at' => null,
         ]);
     }
 

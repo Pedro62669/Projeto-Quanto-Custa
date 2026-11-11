@@ -6,8 +6,6 @@ namespace App\Services\Onboarding;
 
 use App\Enums\MaterialType;
 use App\Enums\MaterialUnit;
-use App\Enums\PlanStatus;
-use App\Enums\PlanType;
 use App\Enums\UserRole;
 use App\Models\CostSetting;
 use App\Models\Material;
@@ -62,6 +60,16 @@ class ProvisionaEmpresa
      * Tudo numa transação: uma empresa que existe sem custos é pior do que uma
      * empresa que não existe — a primeira o usuário descobre quebrada depois de
      * já ter confiado a senha dela.
+     *
+     * A empresa nasce SEM PLANO — `plan_type` e `plan_status` ficam NULL — e o
+     * método não toca nesses campos justamente por isso. Não existe mais período
+     * de teste nem plano gratuito para onde apontar: até o pagamento entrar, a
+     * conta lê tudo e não escreve nada (ver EnsureSubscriptionIsActive).
+     *
+     * Os custos e os materiais iniciais continuam sendo criados. Não são
+     * cortesia: são o que faz a conta abrir num estado que se consegue OLHAR.
+     * Sem CostSetting a calculadora devolve erro em vez de tela, e a
+     * demonstração que a pessoa entrou para ver não acontece.
      */
     public function executar(
         string $nomeDaEmpresa,
@@ -69,10 +77,9 @@ class ProvisionaEmpresa
         string $email,
         string $senha,
         ?string $documento = null,
-        bool $comTeste = true,
     ): Tenant {
         return DB::transaction(function () use (
-            $nomeDaEmpresa, $nomeDoResponsavel, $email, $senha, $documento, $comTeste
+            $nomeDaEmpresa, $nomeDoResponsavel, $email, $senha, $documento
         ): Tenant {
             $tenant = Tenant::create([
                 'name' => $nomeDaEmpresa,
@@ -80,10 +87,6 @@ class ProvisionaEmpresa
                 'email' => $email,
                 'is_active' => true,
             ]);
-
-            if ($comTeste) {
-                $this->iniciaTeste($tenant);
-            }
 
             $admin = new User([
                 'name' => $nomeDoResponsavel,
@@ -113,31 +116,6 @@ class ProvisionaEmpresa
 
             return $tenant->refresh();
         });
-    }
-
-    /**
-     * Abre o período de teste.
-     *
-     * Cotas do Profissional por alguns dias — ver `billing.dias_de_teste`.
-     *
-     * `subscription_ends_at` fica NULL de propósito, e é a linha mais importante
-     * do método. Teste vencido não é assinatura vencida: preencher esse campo
-     * jogaria a empresa no EnsureSubscriptionIsActive e ela seria BLOQUEADA ao
-     * fim do teste, quando a regra é ser REBAIXADA para o gratuito. Quem estava
-     * avaliando o produto não pode ser tratado como inadimplente.
-     */
-    private function iniciaTeste(Tenant $tenant): void
-    {
-        $dias = (int) config('billing.dias_de_teste', 3);
-
-        // forceFill: os campos de plano estão fora do $fillable do Tenant, para
-        // que nenhuma tela de perfil vire um upgrade grátis.
-        $tenant->forceFill([
-            'plan_type' => PlanType::Pro,
-            'plan_status' => PlanStatus::Trialing,
-            'trial_ends_at' => now()->addDays($dias),
-            'subscription_ends_at' => null,
-        ])->save();
     }
 
     /**

@@ -141,10 +141,12 @@ class PlatformTenantController extends Controller
             'state' => $tenant->state,
             'is_active' => $tenant->is_active,
             'acesso_liberado' => $tenant->acessoLiberado(),
-            'plan_type' => $tenant->plan_type->value,
-            'plan_label' => $tenant->plan_type->label(),
-            'plan_status' => $tenant->plan_status->value,
-            'plan_status_label' => $tenant->plan_status->label(),
+            // Sem plano vem tudo nulo, com o rótulo dito por extenso: a lista
+            // da plataforma precisa distinguir "nunca assinou" de "cancelou".
+            'plan_type' => $tenant->plan_type?->value,
+            'plan_label' => $tenant->plan_type?->label() ?? 'Sem plano',
+            'plan_status' => $tenant->plan_status?->value,
+            'plan_status_label' => $tenant->plan_status?->label() ?? 'Nunca assinou',
             'subscription_ends_at' => $tenant->subscription_ends_at?->toIso8601String(),
             'users_count' => $tenant->users_count ?? $tenant->users()->count(),
             'created_at' => $tenant->created_at?->toIso8601String(),

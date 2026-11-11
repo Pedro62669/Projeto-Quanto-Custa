@@ -31,7 +31,7 @@ class Subscription extends Model
     protected $fillable = [
         'tenant_id', 'plan_type', 'status',
         'gateway', 'gateway_subscription_id', 'amount',
-        'started_at', 'trial_ends_at', 'current_period_ends_at', 'canceled_at',
+        'started_at', 'current_period_ends_at', 'canceled_at',
     ];
 
     protected function casts(): array
@@ -41,7 +41,6 @@ class Subscription extends Model
             'status' => PlanStatus::class,
             'amount' => 'float',
             'started_at' => 'datetime',
-            'trial_ends_at' => 'datetime',
             'current_period_ends_at' => 'datetime',
             'canceled_at' => 'datetime',
         ];
