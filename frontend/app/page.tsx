@@ -11,6 +11,7 @@ import {
   Grid2x2,
   Package,
   Scissors,
+  ShieldCheck,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import { CartaoDePreco } from "@/components/landing/CartaoDePreco";
 import { FaixaDeModelos, TOTAL_DE_MODELOS } from "@/components/landing/FaixaDeModelos";
 import { PlanoDeCorteIlustrado } from "@/components/landing/PlanoDeCorteIlustrado";
 import { Revelar } from "@/components/landing/Revelar";
+import { SistemaPorDentro } from "@/components/landing/SistemaPorDentro";
 import { TabelaDePrecos } from "@/components/landing/TabelaDePrecos";
 import {
   ESTILO_CTA,
@@ -49,10 +51,17 @@ const atraso = (ms: number) => ({ "--atraso": `${ms}ms` }) as CSSProperties;
  * que precisa saber se quem chegou já tem sessão.
  *
  * Nenhum número aqui é invenção de marketing. As mensalidades vêm de
- * `PlanType`, o prazo de teste de `billing.dias_de_teste`, o de arrependimento
- * de `dias_de_arrependimento`, e cada recurso listado corresponde a uma tela que
- * existe. Uma landing que promete o que o produto não faz não perde o cliente na
- * assinatura — perde no primeiro dia de uso, que é mais caro.
+ * `PlanType`, o prazo de arrependimento de `dias_de_arrependimento`, e cada
+ * recurso listado corresponde a uma tela que existe. Uma landing que promete o
+ * que o produto não faz não perde o cliente na assinatura — perde no primeiro
+ * dia de uso, que é mais caro.
+ *
+ * Não há nada grátis a anunciar, e a página não anuncia. Sumiram o "começar
+ * grátis", o teste de alguns dias e a coluna do plano gratuito: os dois planos
+ * são pagos desde a primeira hora. O que a conta nova ganha é uma DEMONSTRAÇÃO
+ * — entra, navega e vê a calculadora com um exemplo pronto, sem gravar nada.
+ * Prometer isso como "grátis" seria repetir o problema que esta rodada
+ * desmontou.
  */
 export const metadata: Metadata = {
   title: "quantoCusta — Precificação e orçamento para cartonagem",
@@ -88,14 +97,18 @@ export default async function VitrinePage() {
       <CabecalhoPublico />
 
       <main className="flex-1">
-        <Heroi dias={vitrine?.dias_de_teste ?? null} />
+        <Heroi />
         <FaixaDeModelos />
         <ContasQueAPlanilhaErra />
+        {/* A prova vem logo depois da queixa, na mesma ordem: problema, tela que
+            o resolve. Sem teste grátis e sem cliente para depor, é o produto se
+            mostrando que faz o trabalho de convencer. */}
+        <SistemaPorDentro />
         <Recursos />
         <ComoFunciona />
         <Precos vitrine={vitrine} />
         <Perguntas vitrine={vitrine} />
-        <Fechamento dias={vitrine?.dias_de_teste ?? null} />
+        <Fechamento />
       </main>
 
       <Rodape />
@@ -117,7 +130,7 @@ export default async function VitrinePage() {
  * transparente: o fundo do herói começa na borda da janela, e não numa faixa
  * branca de 64px acima dele.
  */
-function Heroi({ dias }: { dias: number | null }) {
+function Heroi() {
   return (
     <section className="relative -mt-16 overflow-hidden pt-16">
       {/* Fundo: malha de desenho técnico e duas manchas de cor que derivam
@@ -188,8 +201,14 @@ function Heroi({ dias }: { dias: number | null }) {
           </p>
 
           <div className="entra mt-8 flex flex-wrap items-center gap-3" style={atraso(270)}>
+            {/*
+              O botão nomeia o que ACONTECE ao clicar, e não o que o visitante
+              tem de fazer. "Criar minha conta" descreve trabalho; "ver o sistema
+              calculando" descreve o que ele ganha — e é literalmente a próxima
+              tela, então a promessa se cumpre em segundos.
+            */}
             <Link href="/cadastro" className={cn(ESTILO_CTA, "group h-12 px-6 text-base")}>
-              Começar grátis
+              Ver o sistema calculando
               <ArrowRight
                 className="size-4 text-brand-on-inverted transition-[translate] duration-200 group-hover:translate-x-1"
                 aria-hidden
@@ -200,10 +219,28 @@ function Heroi({ dias }: { dias: number | null }) {
             </a>
           </div>
 
+          {/*
+            A linha de risco, logo abaixo do botão.
+
+            Aqui morava a promessa do teste grátis, e depois de removê-la sobrou
+            uma constatação seca — "para orçar as suas caixas, escolha um plano"
+            — que se lê como "pague primeiro". A mesma verdade, dita na ordem em
+            que o visitante decide, é o argumento mais forte da página: ele ENTRA
+            e VÊ antes de pagar, e quando paga tem sete dias para desistir com o
+            dinheiro de volta.
+
+            Nada aqui é promessa nova: a conta sem plano abre com a calculadora
+            em modo demonstração (ver EnsureSubscriptionIsActive e /quotes/demo),
+            e o estorno integral é o que o SubscriptionManager executa.
+          */}
           <p className="entra mt-4 text-sm text-muted-foreground" style={atraso(340)}>
-            {dias === null
-              ? "Sem cartão de crédito. O plano gratuito não expira."
-              : `${dias} dias com o plano completo, sem cartão de crédito. Depois a conta continua no gratuito — nada é bloqueado.`}
+            Sem cartão para criar a conta. Você entra, navega e vê a calculadora
+            precificando uma caixa de verdade — com os seus custos. Se assinar e
+            não gostar,{" "}
+            <span className="font-medium text-foreground">
+              tem 7 dias para pedir o dinheiro de volta
+            </span>
+            .
           </p>
 
           {/*
@@ -507,15 +544,61 @@ function Precos({ vitrine }: { vitrine: Awaited<ReturnType<typeof buscarVitrine>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Planos</h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
             O plano decide o volume, nunca o que você pode fazer. Todos os recursos
-            estão em todos os planos, inclusive no gratuito.
+            estão nos dois planos.
           </p>
         </Revelar>
 
         <div className="mt-12">
           <TabelaDePrecos vitrine={vitrine} />
         </div>
+
+        <GarantiaDeArrependimento vitrine={vitrine} />
       </div>
     </section>
+  );
+}
+
+/**
+ * A garantia, colada no preço.
+ *
+ * É a peça que ocupa o lugar que o teste grátis deixou vago — e é melhor que
+ * ele em dois aspectos: vale para o produto INTEIRO (não uma versão limitada por
+ * alguns dias) e é uma obrigação legal que o sistema cumpre sozinho, não uma
+ * cortesia que alguém pode esquecer de honrar.
+ *
+ * Fica AQUI, encostada na tabela, porque é aqui que a objeção acontece: o
+ * visitante acabou de ler R$ 149,90 e a pergunta seguinte é "e se não servir
+ * para mim?". A resposta estava a dois cliques de distância, dentro de um
+ * acordeão fechado no fim da página.
+ *
+ * O prazo vem do servidor (`dias_de_arrependimento`), como as mensalidades. É o
+ * mesmo número que o `SubscriptionManager` usa para decidir o estorno — escrever
+ * "7" à mão aqui criaria uma promessa que ninguém garante.
+ */
+function GarantiaDeArrependimento({
+  vitrine,
+}: {
+  vitrine: Awaited<ReturnType<typeof buscarVitrine>>;
+}) {
+  const dias = vitrine?.dias_de_arrependimento ?? null;
+
+  return (
+    <div className="mx-auto mt-8 flex max-w-3xl items-start gap-3.5 rounded-xl border border-brand/30 bg-brand/5 p-5">
+      <ShieldCheck className="mt-0.5 size-5 shrink-0 text-brand" aria-hidden />
+
+      <div>
+        <p className="font-medium">
+          {dias === null
+            ? "Garantia de devolução integral"
+            : `${dias} dias de garantia, dinheiro de volta`}
+        </p>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+          {dias === null
+            ? "Você tem o direito de arrependimento previsto no Código de Defesa do Consumidor, com devolução integral do valor pago."
+            : `Cancelou dentro de ${dias} dias corridos, o valor volta inteiro — é o art. 49 do Código de Defesa do Consumidor, e o cancelamento é um botão na tela de assinatura. Enquanto o prazo corre, o sistema mostra até que dia o seu direito vale.`}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -524,11 +607,23 @@ function Precos({ vitrine }: { vitrine: Awaited<ReturnType<typeof buscarVitrine>
 function Perguntas({ vitrine }: { vitrine: Awaited<ReturnType<typeof buscarVitrine>> }) {
   const perguntas = [
     {
-      pergunta: "Preciso de cartão de crédito para testar?",
+      /*
+       * A objeção que o visitante faz em silêncio, respondida primeiro.
+       *
+       * Um produto pago que não oferece teste levanta a pergunta querendo ou
+       * não. Deixá-la sem resposta faz o visitante inventar a dele — quase
+       * sempre "devem estar escondendo alguma coisa". Respondida de frente, e
+       * com um motivo que só é possível dizer quando é verdade, ela deixa de ser
+       * objeção e vira argumento.
+       */
+      pergunta: "Por que não tem teste grátis?",
       resposta:
-        vitrine === null
-          ? "Não. O cadastro abre a conta na hora, sem cartão, e o plano gratuito não expira."
-          : `Não. O cadastro abre a conta na hora e você fica ${vitrine.dias_de_teste} dias com as cotas do plano completo. Quando o teste acaba, a conta é rebaixada para o gratuito — nunca bloqueada, e nada do que você cadastrou é apagado.`,
+        "Porque teste grátis obriga a inventar uma versão pela metade — e o que trava numa versão pela metade é exatamente o que você precisa avaliar. Aqui a conta abre sem cartão e mostra o sistema inteiro funcionando, com a calculadora precificando uma caixa de verdade. Você só não grava nada até assinar. E, se assinar e não gostar, tem o prazo de arrependimento do CDC para receber tudo de volta — o que é mais do que um teste de alguns dias oferece.",
+    },
+    {
+      pergunta: "Dá para ver o sistema antes de assinar?",
+      resposta:
+        "Dá. O cadastro abre a conta na hora, sem cartão, e você entra e navega por todas as telas. A calculadora vem com uma caixa de exemplo já precificada pelo mesmo motor que os assinantes usam — o preço que aparece ali é uma conta de verdade. O que a conta sem plano não faz é gravar: para orçar as suas caixas, salvar propostas e usar o financeiro, é preciso assinar.",
     },
     {
       pergunta: "E se eu assinar e me arrepender?",
@@ -605,7 +700,7 @@ function Perguntas({ vitrine }: { vitrine: Awaited<ReturnType<typeof buscarVitri
  * mudar. As manchas azuis derivam por trás, como no herói — a página fecha com
  * o mesmo gesto com que abriu.
  */
-function Fechamento({ dias }: { dias: number | null }) {
+function Fechamento() {
   return (
     <section className="px-5 pb-6">
       <Revelar className="mx-auto max-w-6xl">
@@ -620,10 +715,24 @@ function Fechamento({ dias }: { dias: number | null }) {
             <h2 className="mx-auto max-w-2xl text-3xl font-semibold tracking-tight sm:text-[2.6rem] sm:leading-[1.08]">
               O próximo orçamento pode sair com o número certo
             </h2>
+            {/*
+              O fechamento diz o CAMINHO, e não uma exortação.
+
+              Aqui morava a promessa do teste grátis, e depois de removê-la sobrou
+              um "crie a conta e faça a primeira conta em poucos minutos" que não
+              responde nenhuma das duas perguntas de quem chegou até o fim da
+              página: o que acontece quando eu clicar, e o que eu arrisco.
+
+              Os dois passos estão em ordem e são verificáveis: a conta abre sem
+              cartão, e o pagamento só entra depois — com o prazo do CDC correndo.
+            */}
             <p className="mx-auto mt-5 max-w-xl text-primary-foreground/70">
-              {dias === null
-                ? "Crie a conta, cadastre o seu papelão e faça a primeira conta em poucos minutos."
-                : `Crie a conta, cadastre o seu papelão e faça a primeira conta em poucos minutos. São ${dias} dias com tudo liberado, sem cartão.`}
+              Crie a conta sem cartão e veja a calculadora funcionando na primeira
+              tela. Quando fizer sentido, assine — com{" "}
+              <span className="font-medium text-primary-foreground">
+                garantia de devolução integral
+              </span>{" "}
+              no prazo do Código de Defesa do Consumidor.
             </p>
 
             <div className="mt-9 flex flex-wrap justify-center gap-3">
@@ -631,7 +740,7 @@ function Fechamento({ dias }: { dias: number | null }) {
                 href="/cadastro"
                 className={cn(ESTILO_CTA_INVERTIDO, "group h-12 px-7 text-base")}
               >
-                Criar conta grátis
+                Criar conta e ver funcionando
                 <ArrowRight
                   className="size-4 text-brand transition-[translate] duration-200 group-hover:translate-x-1"
                   aria-hidden

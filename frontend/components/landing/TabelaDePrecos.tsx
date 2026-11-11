@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 import { cn } from "@/lib/utils";
 import type { Vitrine } from "@/lib/api";
 
@@ -36,10 +36,20 @@ export function TabelaDePrecos({ vitrine }: { vitrine: Vitrine | null }) {
     );
   }
 
+  /*
+    Duas colunas, e não três. A grade nasceu para três planos porque o gratuito
+    ocupava a primeira; com ele fora, `md:grid-cols-3` deixaria dois cartões
+    esticados ocupando dois terços e um vazio no fim.
+
+    `max-w-3xl mx-auto` segura a largura: dois cartões espalhados por 72rem
+    ficam com mais respiro interno do que texto, e a tabela perde a leitura de
+    comparação lado a lado que é a função dela.
+  */
   return (
-    <div className="grid items-stretch gap-5 md:grid-cols-3">
+    <div className="mx-auto grid max-w-3xl items-stretch gap-5 sm:grid-cols-2">
       {vitrine.planos.map((plano, indice) => {
         const destacado = plano.tipo === "pro";
+        const temRiscado = typeof plano.mensalidade_cheia === "number";
 
         return (
           // A entrada (Revelar) fica num invólucro, e o cartão dentro dele: as
@@ -76,11 +86,49 @@ export function TabelaDePrecos({ vitrine }: { vitrine: Vitrine | null }) {
                 )}
               </div>
 
-              <p className="mt-4 flex items-baseline gap-1.5">
+              {/*
+                O preço de lançamento, quando existe.
+
+                O riscado sai do SERVIDOR (`mensalidade_cheia`), nunca escrito
+                aqui. No dia em que a mensalidade subir, apaga-se o valor no
+                `PlanType` e a tabela para de riscar sozinha — ninguém precisa
+                lembrar de vir mexer nesta linha.
+
+                A etiqueta "preço de lançamento" NÃO é decoração: é o que torna a
+                oferta legítima. O CDC (art. 37, §1º) e o Decreto 5.903/2006
+                exigem que o valor anunciado como anterior tenha sido praticado
+                ou, num lançamento, que a subida seja real e informada. Riscar um
+                número sem dizer o que ele é vira "de/por" fantasma, que é o caso
+                que o Procon autua.
+
+                `line-through` com `text-muted-foreground`: o riscado é referência,
+                não a informação principal. Quem manda no olho é o preço que se
+                paga.
+
+                O teste é `typeof === "number"`, e não `!== null`. A resposta desta
+                rota fica em cache por uma HORA (ver `buscarVitrine`), de propósito
+                — é o que permite mudar o preço no enum PHP sem novo build. O
+                efeito colateral é uma janela de até 60 minutos em que a tela é mais
+                nova que o dado guardado, e o campo chega `undefined` em vez de
+                `null`. `!== null` passa por undefined e chama `formatCurrency`
+                com ele: a home inteira caiu com 500 assim, uma vez.
+              */}
+              {typeof plano.mensalidade_cheia === "number" && (
+                <p className="mt-4 flex items-baseline gap-2">
+                  <span className="font-mono text-lg tabular-nums text-muted-foreground line-through">
+                    {formatCurrency(plano.mensalidade_cheia)}
+                  </span>
+                  <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[0.7rem] font-medium text-brand-strong">
+                    preço de lançamento
+                  </span>
+                </p>
+              )}
+
+              <p className={cn("flex items-baseline gap-1.5", temRiscado ? "mt-1.5" : "mt-4")}>
                 <span className="font-mono text-[2rem] font-semibold tracking-tight tabular-nums">
-                  {plano.pago ? formatCurrency(plano.mensalidade) : "Grátis"}
+                  {formatCurrency(plano.mensalidade)}
                 </span>
-                {plano.pago && <span className="text-sm text-muted-foreground">/mês</span>}
+                <span className="text-sm text-muted-foreground">/mês</span>
               </p>
 
               <ul className="mt-6 flex-1 space-y-2.5 text-sm">
@@ -103,7 +151,7 @@ export function TabelaDePrecos({ vitrine }: { vitrine: Vitrine | null }) {
                 */}
                 <li className="flex items-start gap-2 text-muted-foreground">
                   <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
-                  <span>Todos os recursos, inclusive no gratuito</span>
+                  <span>Todos os recursos nos dois planos</span>
                 </li>
                 <li className="flex items-start gap-2 text-muted-foreground">
                   <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
@@ -118,7 +166,7 @@ export function TabelaDePrecos({ vitrine }: { vitrine: Vitrine | null }) {
                   "mt-6 h-11 w-full px-5 text-[0.95rem]",
                 )}
               >
-                {plano.pago ? `Testar ${vitrine.dias_de_teste} dias` : "Começar grátis"}
+                Assinar o {plano.rotulo}
               </Link>
             </div>
           </Revelar>

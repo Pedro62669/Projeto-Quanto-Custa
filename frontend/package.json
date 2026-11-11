@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test:parity": "tsx scripts/parity-check.ts",
     "test:e2e": "node e2e/smoke.mjs",
-    "verify": "tsc --noEmit && eslint . && npm run test:parity && next build"
+    "verify": "tsc --noEmit && eslint . && npm run test:parity && next build",
+    "capturas": "node e2e/capturas.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

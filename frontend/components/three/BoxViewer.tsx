@@ -28,6 +28,18 @@ export interface BoxViewerProps extends BoxMeshProps {
   /** Rótulo exibido no canto (ex.: nome do material selecionado). */
   materialLabel?: string;
   className?: string;
+
+  /**
+   * Avisa quando o Canvas está de pé e desenhando.
+   *
+   * Existe para a vitrine, onde a caixa entra por cima de um pôster e a troca
+   * precisa ser invisível: revelar o 3D cedo demais mostra um retângulo vazio
+   * pelos quadros que os shaders levam para compilar.
+   *
+   * Um `setTimeout` resolveria em quase toda máquina — e falharia justamente nas
+   * lentas, que são as que mais precisam do pôster.
+   */
+  onPronto?: () => void;
 }
 
 /**
@@ -41,6 +53,7 @@ export interface BoxViewerProps extends BoxMeshProps {
 export function BoxViewer({
   materialLabel,
   className = "",
+  onPronto,
   ...boxProps
 }: BoxViewerProps) {
   /*
@@ -101,6 +114,17 @@ export function BoxViewer({
           alpha: true,
           preserveDrawingBuffer: true,
           toneMapping: THREE.NeutralToneMapping,
+        }}
+        /*
+         * `onCreated` dispara com o contexto WebGL pronto, mas ainda ANTES do
+         * primeiro quadro pintado. Os dois `requestAnimationFrame` esperam esse
+         * quadro acontecer — sem eles, quem escuta revelaria a cena um piscar
+         * cedo demais e veria o retângulo vazio que o pôster existe para cobrir.
+         */
+        onCreated={() => {
+          if (!onPronto) return;
+
+          requestAnimationFrame(() => requestAnimationFrame(onPronto));
         }}
       >
         <Suspense fallback={<LoadingIndicator />}>

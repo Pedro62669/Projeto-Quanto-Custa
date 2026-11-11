@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-import { formatCurrency } from "@/lib/pricing/engine";
+import { formatCurrency } from "@/lib/rotulos";
 
 import { Contador } from "./Contador";
 
